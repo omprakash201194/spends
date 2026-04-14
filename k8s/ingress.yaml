@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spends-ingress
+  namespace: homelab
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"   # allow XLS uploads up to 50 MB
+    cert-manager.io/cluster-issuer: "homelab-ca-issuer"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - spends.homelab.local
+      secretName: spends-tls
+  rules:
+    - host: spends.homelab.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spends-frontend
+                port:
+                  number: 80

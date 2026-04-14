@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spends-config
+  namespace: homelab
+data:
+  SPRING_PROFILES_ACTIVE: "k8s"

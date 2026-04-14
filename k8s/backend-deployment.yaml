@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spends-backend
+  namespace: homelab
+  labels:
+    app: spends-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spends-backend
+  template:
+    metadata:
+      labels:
+        app: spends-backend
+    spec:
+      containers:
+        - name: spends-backend
+          # Image is updated by CI on each push to main:
+          # localhost:30500/homelab/spends-backend:<sha>
+          image: localhost:30500/homelab/spends-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: spends-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+            - name: APP_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: spends-secret
+                  key: jwt-secret
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

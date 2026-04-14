@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres.homelab.svc.cluster.local:5432/homelab
+    username: homelab
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.omprakashgautam: INFO

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spends-frontend
+  namespace: homelab
+  labels:
+    app: spends-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spends-frontend
+  template:
+    metadata:
+      labels:
+        app: spends-frontend
+    spec:
+      containers:
+        - name: spends-frontend
+          image: localhost:30500/homelab/spends-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
