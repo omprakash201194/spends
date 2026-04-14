@@ -23,6 +23,8 @@ Thumbs.db
 .env
 .env.local
 *.env
+.dev-secrets
+.dev-pids
 
 # Logs
 *.log
