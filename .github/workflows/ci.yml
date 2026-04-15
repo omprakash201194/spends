@@ -130,5 +130,5 @@ jobs:
           kubectl set image deployment/spends-frontend \
             spends-frontend=$REGISTRY/homelab/spends-frontend:$IMAGE_TAG \
             -n homelab
-          kubectl rollout status deployment/spends-backend -n homelab --timeout=120s
-          kubectl rollout status deployment/spends-frontend -n homelab --timeout=60s
+          kubectl rollout status deployment/spends-backend -n homelab --timeout=300s
+          kubectl rollout status deployment/spends-frontend -n homelab --timeout=90s

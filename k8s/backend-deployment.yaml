@@ -41,14 +41,16 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 20
+            initialDelaySeconds: 45
             periodSeconds: 10
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 40
+            initialDelaySeconds: 90
             periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests:
               memory: "256Mi"
