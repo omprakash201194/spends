@@ -15,6 +15,9 @@ spec:
       labels:
         app: spends-backend
     spec:
+      # Allow Spring Boot to finish draining in-flight requests before SIGKILL.
+      # Must be > server.shutdown timeout (20s) + a small buffer.
+      terminationGracePeriodSeconds: 30
       containers:
         - name: spends-backend
           # Image is updated by CI on each push to main:

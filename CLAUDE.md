@@ -317,8 +317,21 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - `frontend/src/api/alerts.ts` — `getAlerts`
 - `DashboardPage` — collapsible amber alerts panel between stat cards and charts; hidden when no alerts; each row shows type icon, title, detail message, and amount
 
-### Phase 8 — Productionize 🔲 NEXT
+### Phase 8 — Productionize ✅ COMPLETE
 - ~~Add `spends.homelab.local` to Windows hosts file~~ ✅ done via `scripts/windows/setup-hosts.ps1`
-- Self-hosted runner setup instructions
-- Health checks, resource tuning
-- Backup considerations for PostgreSQL data
+- **Self-hosted runner** — `scripts/linux/runner-setup.sh` downloads the runner, registers it, installs as systemd service; run as the homelab user with a token from repo Settings → Actions → Runners
+- **PostgreSQL backup** — `k8s/postgres-backup.yaml`: PVC (2Gi) + nightly CronJob at 2am; `pg_dump | gzip` → `/backup/spends-YYYYMMDD-HHMMSS.sql.gz`; auto-rotates, keeps 7 most recent
+- **Graceful shutdown** — `server.shutdown: graceful` + 20s drain timeout in `application.yml`; `terminationGracePeriodSeconds: 30` in backend deployment (pod waits for drain before SIGKILL)
+- **JVM container tuning** — `JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0` in ConfigMap so JVM reads cgroup limits instead of host totals
+- **Frontend caching** — nginx serves `/assets/*` with `Cache-Control: immutable, max-age=31536000` (Vite content-hashes filenames); `/index.html` gets `no-store` so new deploys always fetch fresh shell
+
+#### Restore from backup
+```bash
+# List available backups
+kubectl exec -n homelab -it $(kubectl get pod -n homelab -l app=spends-db-backup -o name | head -1) -- ls -lh /backup/
+
+# Restore (adjust filename)
+kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
+  --env="PGPASSWORD=$(kubectl get secret postgres-secret -n homelab -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d)" \
+  -- /bin/sh -c "gunzip -c /backup/spends-20250101-020000.sql.gz | psql -h postgres.homelab.svc.cluster.local -U homelab homelab"
+```

@@ -5,3 +5,7 @@ metadata:
   namespace: homelab
 data:
   SPRING_PROFILES_ACTIVE: "k8s"
+  # Tell the JVM it is running inside a container so it reads cgroup memory/CPU
+  # limits instead of the host totals. MaxRAMPercentage=75 leaves headroom for
+  # the OS and non-heap memory (Metaspace, off-heap buffers, etc.).
+  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"

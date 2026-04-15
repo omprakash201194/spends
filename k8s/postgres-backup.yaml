@@ -1,0 +1,74 @@
+---
+# PVC to store compressed pg_dump files (7 daily backups ≈ 50-200 MB typical)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spends-backup-pvc
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Nightly backup CronJob — runs pg_dump against the existing postgres StatefulSet
+# Credentials: reuses the postgres-secret already present in the namespace.
+# To restore: kubectl exec into a postgres pod and pipe the .sql.gz file through psql.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: spends-db-backup
+  namespace: homelab
+spec:
+  schedule: "0 2 * * *"          # 2 AM cluster-local time, every day
+  concurrencyPolicy: Forbid       # skip if previous run is still going
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  BACKUP_DIR=/backup
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  FILENAME="spends-${TIMESTAMP}.sql.gz"
+
+                  echo "[backup] starting: $FILENAME"
+                  pg_dump \
+                    -h postgres.homelab.svc.cluster.local \
+                    -p 5432 \
+                    -U homelab \
+                    homelab \
+                    | gzip > "$BACKUP_DIR/$FILENAME"
+
+                  SIZE=$(du -h "$BACKUP_DIR/$FILENAME" | cut -f1)
+                  echo "[backup] done — $SIZE"
+
+                  # Rotate: keep only the 7 most recent backups
+                  ls -t "$BACKUP_DIR"/spends-*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm -v
+
+                  echo "[backup] current backups:"
+                  ls -lh "$BACKUP_DIR"/spends-*.sql.gz 2>/dev/null || echo "  (none)"
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backup
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: spends-backup-pvc
