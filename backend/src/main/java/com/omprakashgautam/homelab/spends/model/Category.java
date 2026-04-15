@@ -19,7 +19,7 @@ public class Category {
     @Column(updatable = false, nullable = false)
     private UUID id;
 
-    @Column(unique = true, nullable = false, length = 100)
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(length = 50)
@@ -31,6 +31,10 @@ public class Category {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Category parent;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "household_id")
+    private Household household;
 
     @Column(name = "is_system", nullable = false)
     @Builder.Default

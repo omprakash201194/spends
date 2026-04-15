@@ -24,4 +24,12 @@ public interface CategoryRuleRepository extends JpaRepository<CategoryRule, UUID
         ORDER BY r.priority DESC
         """)
     List<CategoryRule> findAllApplicableRules(@Param("userId") UUID userId);
+
+    @Query("""
+        SELECT r FROM CategoryRule r
+        JOIN FETCH r.category
+        WHERE r.user.id = :userId
+        ORDER BY r.priority DESC, r.createdAt DESC
+        """)
+    List<CategoryRule> listRulesForUser(@Param("userId") UUID userId);
 }
