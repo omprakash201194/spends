@@ -155,6 +155,7 @@ spends/
 | GET | `/api/transactions` | JWT | Paginated list (search, categoryId, accountId, type, dateFrom, dateTo, sortBy, sortDir, page, size) |
 | PATCH | `/api/transactions/{id}/category` | JWT | Update category; optionally create CategoryRule |
 | PATCH | `/api/transactions/{id}/reviewed` | JWT | Toggle reviewed flag |
+| GET | `/api/dashboard/summary` | JWT | Monthly stats, category breakdown, 12-month trend, top merchants |
 
 ---
 
@@ -280,9 +281,11 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - Frontend: debounced search bar, type/category/account/date filters, sortable columns, inline category picker with colored badges, "create rule?" prompt after category change, reviewed checkbox, paginated footer
 - `useDebounce` hook (300ms) for search input
 
-### Phase 4 — Dashboard + Charts 🔲
-- `DashboardController` — monthly summary, category breakdown, 12-month trend, top merchants
-- Frontend: stat cards (spent/income/net/count), donut chart, bar chart, line chart (balance)
+### Phase 4 — Dashboard + Charts ✅ COMPLETE
+- `DashboardController` — GET /api/dashboard/summary (single call returns everything)
+- `DashboardService` — resolves anchor month to most recent month with data (not current calendar month, handles historical imports)
+- Aggregate JPQL queries: sumWithdrawals, sumDeposits, countInPeriod, categoryBreakdown, monthlyTrend (TO_CHAR), topMerchants (LIMIT 8), latestTransactionDate
+- Frontend: stat cards (spent/income/net/count with K/L abbreviation), Recharts bar chart (12-month debit+credit grouped), Recharts donut pie (category breakdown with category colors), top merchants with proportional progress bars, loading skeleton, empty state
 
 ### Phase 5 — Budget Tracking 🔲
 - `BudgetController` — CRUD for monthly budgets per category
