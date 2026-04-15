@@ -1,0 +1,77 @@
+import apiClient from './client'
+
+export interface TxCategory {
+  id: string
+  name: string
+  icon: string
+  color: string
+}
+
+export interface TxAccount {
+  id: string
+  bankName: string
+  accountNumberMasked: string | null
+}
+
+export interface Transaction {
+  id: string
+  account: TxAccount
+  valueDate: string
+  transactionDate: string
+  rawRemarks: string
+  merchantName: string | null
+  withdrawalAmount: number
+  depositAmount: number
+  balance: number | null
+  category: TxCategory | null
+  reviewed: boolean
+  createdAt: string
+}
+
+export interface PagedTransactions {
+  content: Transaction[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface TransactionFilters {
+  search?: string
+  categoryId?: string
+  accountId?: string
+  type?: 'ALL' | 'DEBIT' | 'CREDIT'
+  dateFrom?: string
+  dateTo?: string
+  page?: number
+  size?: number
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export async function getTransactions(filters: TransactionFilters = {}): Promise<PagedTransactions> {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL')
+  )
+  const { data } = await apiClient.get<PagedTransactions>('/transactions', { params })
+  return data
+}
+
+export async function updateCategory(
+  id: string,
+  categoryId: string,
+  createRule: boolean,
+  pattern?: string
+): Promise<Transaction> {
+  const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/category`, {
+    categoryId,
+    createRule,
+    pattern: pattern ?? null,
+  })
+  return data
+}
+
+export async function toggleReviewed(id: string): Promise<Transaction> {
+  const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/reviewed`)
+  return data
+}
