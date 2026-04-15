@@ -102,14 +102,13 @@ spends/
 │       ├── java/com/omprakashgautam/homelab/spends/
 │       │   ├── SpendsApplication.java
 │       │   ├── config/SecurityConfig.java
-│       │   ├── controller/AuthController.java
-│       │   ├── dto/auth/{LoginRequest,RegisterRequest,AuthResponse}.java
-│       │   ├── dto/UserDto.java
+│       │   ├── controller/{Auth,BankAccount,Import,Category,Transaction,Dashboard,Budget,Household,Alert,UserSettings,Insight}Controller.java
+│       │   ├── dto/{auth/*,BudgetDto,HouseholdDto,AlertDto,UserSettingsDto,InsightDto}.java
 │       │   ├── exception/GlobalExceptionHandler.java
 │       │   ├── model/{User,Household,BankAccount,Category,Transaction,CategoryRule,Budget,Role}.java
 │       │   ├── repository/*Repository.java
 │       │   ├── security/{JwtTokenProvider,JwtAuthenticationFilter,UserDetailsImpl,UserDetailsServiceImpl}.java
-│       │   └── service/AuthService.java
+│       │   └── service/{Auth,Budget,Household,Alert,Insight,Dashboard,Categorization,Import}Service.java
 │       └── resources/
 │           ├── application.yml
 │           ├── application-local.yml   ← localhost:5432 via port-forward
@@ -117,24 +116,27 @@ spends/
 │           └── db/changelog/
 │               ├── db.changelog-master.xml
 │               ├── 001-initial-schema.sql
-│               └── 002-seed-categories.sql
+│               ├── 002-seed-categories.sql
+│               ├── 003-category-rule-global.sql
+│               ├── 004-global-rules-seed.sql
+│               └── 005-user-claude-api-key.sql
 ├── frontend/
 │   ├── package.json                   ← React 18, Vite 5, Tailwind 3
 │   ├── Dockerfile
-│   ├── nginx.conf                     ← proxies /api/ to spends-backend:8080
+│   ├── nginx.conf                     ← /api/ proxy; /assets/ 1yr immutable cache; index.html no-store
 │   └── src/
 │       ├── App.tsx                    ← BrowserRouter + route definitions
-│       ├── api/{client.ts,auth.ts}    ← axios + JWT interceptor
+│       ├── api/{client,auth,budget,household,alerts,settings,insights,dashboard}.ts
 │       ├── store/authStore.ts         ← Zustand, persisted to localStorage
-│       ├── types/index.ts
-│       ├── components/{Layout.tsx,ProtectedRoute.tsx}
-│       └── pages/{LoginPage,RegisterPage,DashboardPage}.tsx
+│       ├── components/{Layout,InsightCard,ProtectedRoute}.tsx
+│       └── pages/{Login,Register,Dashboard,BankAccounts,Import,Transaction,Budget,Household,Settings}Page.tsx
 └── k8s/
-    ├── backend-deployment.yaml
+    ├── backend-deployment.yaml        ← terminationGracePeriodSeconds: 30
     ├── frontend-deployment.yaml
     ├── services.yaml                  ← both ClusterIP
     ├── ingress.yaml                   ← spends.homelab.local, TLS cert-manager
-    └── configmap.yaml
+    ├── configmap.yaml                 ← JAVA_TOOL_OPTIONS container-aware JVM
+    └── postgres-backup.yaml           ← nightly CronJob 2am, 7-day rotation, PVC 2Gi
 ```
 
 ---
@@ -161,6 +163,10 @@ spends/
 | DELETE | `/api/budgets/{id}` | JWT | Remove a budget limit |
 | GET | `/api/household` | JWT | Household summary: name, invite code, per-member stats for anchor month |
 | GET | `/api/alerts` | JWT | Unusual transaction alerts for anchor month |
+| GET | `/api/settings/api-key` | JWT | Returns `{ hasApiKey: boolean }` — never returns the actual key |
+| PUT | `/api/settings/api-key` | JWT | Save/update Anthropic API key for the current user |
+| DELETE | `/api/settings/api-key` | JWT | Remove stored API key |
+| POST | `/api/insights/{type}` | JWT | Generate AI insight (type: DASHBOARD, BUDGET, TRANSACTIONS); uses user's stored Anthropic key |
 
 ---
 
@@ -335,3 +341,12 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
   --env="PGPASSWORD=$(kubectl get secret postgres-secret -n homelab -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d)" \
   -- /bin/sh -c "gunzip -c /backup/spends-20250101-020000.sql.gz | psql -h postgres.homelab.svc.cluster.local -U homelab homelab"
 ```
+
+### Phase 9 — AI Insights ✅ COMPLETE
+- Per-user Anthropic API key: stored in `claude_api_key` column on `app_user` (migration 005); never returned in GET responses, only `hasApiKey: boolean`
+- `UserSettingsController` — GET/PUT/DELETE `/api/settings/api-key`
+- `InsightService` — builds context-rich prompts from dashboard/budget/transaction aggregate data; calls Anthropic Messages API via Spring `RestClient`; model: `claude-haiku-4-5-20251001`, 600 tokens; throws `BAD_REQUEST` if no key, `BAD_GATEWAY` if API fails
+- `InsightController` — POST `/api/insights/{type}` (DASHBOARD | BUDGET | TRANSACTIONS)
+- `InsightCard` component — four states: idle (prompt), loading (spinner), done (bullet list + Regenerate), error (message + Settings link)
+- Insight buttons on: Dashboard page, Budget page ("Get Budget Advice"), Transactions page ("Analyse My Spending")
+- `SettingsPage` — password-type API key input, Save/Remove buttons, link to console.anthropic.com
