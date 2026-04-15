@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   PiggyBank,
-  Settings,
   LogOut,
   TrendingUp,
   Building2,
