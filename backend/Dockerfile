@@ -1,20 +1,15 @@
-# --- Build stage ---
-FROM eclipse-temurin:21-jdk-alpine AS build
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
+# Expects a pre-built jar in backend/target/ (built by Maven before docker build).
+# CI builds the jar on a GitHub-hosted runner, then passes it here via --build-arg.
+# Local builds: run `mvn package -DskipTests` first, then `docker build`.
 
-RUN apk add --no-cache maven && \
-    mvn package -DskipTests -q
-
-# --- Runtime stage ---
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 RUN addgroup -S spends && adduser -S spends -G spends
 USER spends
 
-COPY --from=build /app/target/spends-*.jar app.jar
+ARG JAR_FILE=target/spends-*.jar
+COPY ${JAR_FILE} app.jar
 
 EXPOSE 8080
 
