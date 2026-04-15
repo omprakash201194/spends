@@ -156,6 +156,9 @@ spends/
 | PATCH | `/api/transactions/{id}/category` | JWT | Update category; optionally create CategoryRule |
 | PATCH | `/api/transactions/{id}/reviewed` | JWT | Toggle reviewed flag |
 | GET | `/api/dashboard/summary` | JWT | Monthly stats, category breakdown, 12-month trend, top merchants |
+| GET | `/api/budgets` | JWT | All categories with limit + spent for anchor month |
+| POST | `/api/budgets` | JWT | Set/update budget limit for a category+month |
+| DELETE | `/api/budgets/{id}` | JWT | Remove a budget limit |
 
 ---
 
@@ -287,9 +290,12 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - Aggregate JPQL queries: sumWithdrawals, sumDeposits, countInPeriod, categoryBreakdown, monthlyTrend (TO_CHAR), topMerchants (LIMIT 8), latestTransactionDate
 - Frontend: stat cards (spent/income/net/count with K/L abbreviation), Recharts bar chart (12-month debit+credit grouped), Recharts donut pie (category breakdown with category colors), top merchants with proportional progress bars, loading skeleton, empty state
 
-### Phase 5 — Budget Tracking 🔲
-- `BudgetController` — CRUD for monthly budgets per category
-- Frontend: budget management page, progress bars (green/yellow/red), overspend alerts
+### Phase 5 — Budget Tracking ✅ COMPLETE
+- `BudgetDto` — `SetRequest` (categoryId, year, month, limit) · `CategoryBudget` (budgetId, categoryId, name, color, limit, spent, percentage) · `MonthSummary` (month, categories[])
+- `BudgetService` — resolves anchor month via `latestTransactionDate`, merges category breakdown (spent) + existing budget limits, sorts active categories first, computes percentage with `HALF_UP` rounding
+- `BudgetController` — GET `/api/budgets` (MonthSummary), POST `/api/budgets` (upsert), DELETE `/api/budgets/{id}`
+- `frontend/src/api/budget.ts` — `getBudgets`, `setBudget`, `deleteBudget`
+- `frontend/src/pages/BudgetPage.tsx` — 3-column card grid; inline limit input (click "Set limit" or pencil); progress bar green <80% / amber 80-100% / red ≥100%; over-budget badge; delete removes limit only
 
 ### Phase 6 — Household View 🔲
 - Aggregate spending across all household members

@@ -5,6 +5,7 @@ import DashboardPage from './pages/DashboardPage'
 import BankAccountsPage from './pages/BankAccountsPage'
 import ImportPage from './pages/ImportPage'
 import TransactionPage from './pages/TransactionPage'
+import BudgetPage from './pages/BudgetPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="accounts" element={<BankAccountsPage />} />
           <Route path="import" element={<ImportPage />} />
           <Route path="transactions" element={<TransactionPage />} />
+          <Route path="budgets" element={<BudgetPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

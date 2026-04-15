@@ -35,7 +35,7 @@ export default function DashboardPage() {
   })
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
@@ -61,7 +61,7 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
   return (
     <>
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard label="Total Spent"   value={inr(data.totalSpent)}   sub={data.month} icon={TrendingDown} iconColor="text-red-500"    iconBg="bg-red-50"    />
         <StatCard label="Total Income"  value={inr(data.totalIncome)}  sub={data.month} icon={TrendingUp}   iconColor="text-green-500"  iconBg="bg-green-50"  />
         <StatCard label="Net Savings"   value={inr(Math.abs(data.netSavings))} sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'} icon={Wallet} iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'} iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'} />
@@ -73,8 +73,8 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
       ) : (
         <>
           {/* Charts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">12-Month Spending Trend</h2>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data.monthlyTrend} barSize={12}>
@@ -91,7 +91,7 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">Category Breakdown — {data.month}</h2>
               {data.categoryBreakdown.length === 0 ? (
                 <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No spending data</div>
@@ -127,7 +127,7 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
           </div>
 
           {/* Top merchants */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-700">Top Merchants — {data.month}</h2>
               <Link to="/transactions" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
@@ -182,14 +182,14 @@ function StatCard({
   icon: React.ElementType; iconColor: string; iconBg: string
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-500">{label}</span>
+        <span className="text-xs sm:text-sm font-medium text-gray-500">{label}</span>
         <span className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${iconColor}`} />
         </span>
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-xs text-gray-400 mt-1">{sub}</p>
     </div>
   )

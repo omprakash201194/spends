@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
@@ -9,58 +10,89 @@ import {
   TrendingUp,
   Building2,
   Upload,
+  Menu,
+  X,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const nav = [
-  { to: '/',            label: 'Dashboard',    icon: LayoutDashboard },
-  { to: '/accounts',    label: 'Accounts',     icon: Building2 },
-  { to: '/import',      label: 'Import',       icon: Upload },
-  { to: '/transactions',label: 'Transactions', icon: ArrowLeftRight },
-  { to: '/budgets',     label: 'Budgets',      icon: PiggyBank },
-  { to: '/household',   label: 'Household',    icon: TrendingUp },
-  { to: '/settings',    label: 'Settings',     icon: Settings },
+  { to: '/',             label: 'Dashboard',    icon: LayoutDashboard },
+  { to: '/accounts',     label: 'Accounts',     icon: Building2 },
+  { to: '/import',       label: 'Import',       icon: Upload },
+  { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { to: '/budgets',      label: 'Budgets',      icon: PiggyBank },
+  { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  const closeSidebar = () => setSidebarOpen(false)
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+
+      {/* ── Mobile backdrop ─────────────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* ── Sidebar ─────────────────────────────────────────────────── */}
+      <aside
+        className={clsx(
+          'fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col',
+          'transition-transform duration-200 ease-in-out',
+          'md:relative md:z-auto md:translate-x-0 md:flex',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-blue-400" />
-            <span className="text-lg font-bold tracking-tight">SpendStack</span>
+        <div className="px-6 py-5 border-b border-gray-700 flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-blue-400 flex-shrink-0" />
+              <span className="text-lg font-bold tracking-tight">SpendStack</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 font-mono">build {__APP_VERSION__}</p>
           </div>
-          <p className="text-xs text-gray-500 mt-1 font-mono">build {__APP_VERSION__}</p>
+          {/* Close button — mobile only */}
+          <button
+            className="md:hidden p-1 text-gray-400 hover:text-white rounded mt-0.5"
+            onClick={closeSidebar}
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
+              onClick={closeSidebar}
               className={({ isActive }) =>
                 clsx(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white',
                 )
               }
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-4 h-4 flex-shrink-0" />
               {label}
             </NavLink>
           ))}
@@ -69,7 +101,7 @@ export default function Layout() {
         {/* User + Logout */}
         <div className="border-t border-gray-700 px-4 py-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold flex-shrink-0">
               {user?.displayName?.[0]?.toUpperCase() ?? 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -87,10 +119,29 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
+      {/* ── Main area ───────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Mobile top bar */}
+        <header className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-500" />
+            <span className="font-bold text-gray-900">SpendStack</span>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
