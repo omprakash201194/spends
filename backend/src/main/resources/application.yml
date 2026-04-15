@@ -17,13 +17,6 @@ app:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000  # 24 hours
 
-server:
-  shutdown: graceful   # finish in-flight requests before the pod exits
-
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 20s   # max time to drain per phase
-
 management:
   endpoints:
     web:
