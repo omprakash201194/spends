@@ -52,16 +52,15 @@ export default function InsightCard({ type, label }: Props) {
               Regenerate
             </button>
           )}
-          {state === 'idle' || state === 'error' ? (
+          {(state === 'idle' || state === 'error') && (
             <button
               onClick={fetch}
-              disabled={state === 'loading'}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5" />
               {buttonLabel}
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
