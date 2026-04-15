@@ -151,6 +151,10 @@ spends/
 | PUT | `/api/bank-accounts/{id}` | JWT | Update a bank account |
 | DELETE | `/api/bank-accounts/{id}` | JWT | Delete a bank account |
 | POST | `/api/import/icici` | JWT | Import ICICI XLS/XLSX files (multipart, field: `files`) |
+| GET | `/api/categories` | JWT | List all categories |
+| GET | `/api/transactions` | JWT | Paginated list (search, categoryId, accountId, type, dateFrom, dateTo, sortBy, sortDir, page, size) |
+| PATCH | `/api/transactions/{id}/category` | JWT | Update category; optionally create CategoryRule |
+| PATCH | `/api/transactions/{id}/reviewed` | JWT | Toggle reviewed flag |
 
 ---
 
@@ -268,11 +272,13 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - Frontend: Bank Accounts CRUD page, drag-and-drop import page with per-file summary
 - Nav updated: Accounts + Import links in sidebar
 
-### Phase 3 — Transaction List 🔲
-- `TransactionController` — paginated list with filters (date, category, account, type, amount range, search)
-- Inline category edit → optional "create rule for future" prompt
-- Mark as reviewed
-- Frontend: filterable transaction table
+### Phase 3 — Transaction List ✅ COMPLETE
+- `CategoryController` — GET /api/categories
+- `TransactionRepository` — extended with `JpaSpecificationExecutor` for dynamic filtering
+- `TransactionService` — paginated list (search, category, account, type, date range), Specification-based filtering, column sort, category update with auto rule creation, reviewed toggle
+- `TransactionController` — GET /api/transactions (25/page), PATCH .../category, PATCH .../reviewed
+- Frontend: debounced search bar, type/category/account/date filters, sortable columns, inline category picker with colored badges, "create rule?" prompt after category change, reviewed checkbox, paginated footer
+- `useDebounce` hook (300ms) for search input
 
 ### Phase 4 — Dashboard + Charts 🔲
 - `DashboardController` — monthly summary, category breakdown, 12-month trend, top merchants
