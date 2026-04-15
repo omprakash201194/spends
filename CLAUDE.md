@@ -159,6 +159,7 @@ spends/
 | GET | `/api/budgets` | JWT | All categories with limit + spent for anchor month |
 | POST | `/api/budgets` | JWT | Set/update budget limit for a category+month |
 | DELETE | `/api/budgets/{id}` | JWT | Remove a budget limit |
+| GET | `/api/household` | JWT | Household summary: name, invite code, per-member stats for anchor month |
 
 ---
 
@@ -298,12 +299,15 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - `frontend/src/pages/BudgetPage.tsx` — 3-column card grid; inline limit input (click "Set limit" or pencil); progress bar green <80% / amber 80-100% / red ≥100%; over-budget badge; delete removes limit only
 - **Responsive layout** — `Layout.tsx` rewired: sidebar is a slide-in hamburger drawer on mobile (`md:` breakpoint collapses it), static on desktop; mobile top bar shows logo + hamburger; nav links close the drawer on tap; all pages use `p-4 sm:p-6/8` responsive padding; unrouted nav items (Household, Settings) removed to prevent catch-all redirects
 
-### Phase 6 — Household View 🔲 NEXT
-- Aggregate spending across all household members
-- Per-member breakdown charts
-- Invite code shown to ADMIN for member onboarding
+### Phase 6 — Household View ✅ COMPLETE
+- `TransactionRepository.latestTransactionDateForHousehold()` — MAX(valueDate) across all members
+- `HouseholdDto` — `MemberStat` (userId, displayName, role, spent, income, count, topCategory/color) · `Summary` (householdId, name, inviteCode, month, totalSpent, totalIncome, members[])
+- `HouseholdService` — resolves anchor month household-wide, loops members calling existing per-user aggregate queries, sorts ADMIN first
+- `HouseholdController` — GET `/api/household`
+- `frontend/src/api/household.ts` — `getHouseholdSummary`
+- `frontend/src/pages/HouseholdPage.tsx` — household header with copyable invite code chip; 3 aggregate stat cards (spent/income/net); per-member cards with avatar, role badge, top-category pill, share-of-household progress bar; solo-member empty state with prominent invite code
 
-### Phase 7 — Unusual Transaction Detection 🔲
+### Phase 7 — Unusual Transaction Detection 🔲 NEXT
 - Configurable large-amount threshold
 - New merchant detection
 - Category spike detection (>150% of 3-month average)

@@ -90,6 +90,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     LocalDate latestTransactionDate(@Param("userId") UUID userId);
 
+    // ── Household: most recent transaction date across all members ────────────
+
+    @Query("""
+        SELECT MAX(t.valueDate)
+        FROM Transaction t
+        WHERE t.bankAccount.user.household.id = :householdId
+        """)
+    LocalDate latestTransactionDateForHousehold(@Param("householdId") UUID householdId);
+
     // ── Dashboard: top merchants ──────────────────────────────────────────────
 
     @Query("""

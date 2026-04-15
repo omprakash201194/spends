@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Building2,
   Upload,
+  Users,
   Menu,
   X,
 } from 'lucide-react'
@@ -21,7 +22,7 @@ const nav = [
   { to: '/import',       label: 'Import',       icon: Upload },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/budgets',      label: 'Budgets',      icon: PiggyBank },
-  { to: '/settings',     label: 'Settings',     icon: Settings },
+  { to: '/household',    label: 'Household',    icon: Users },
 ]
 
 export default function Layout() {

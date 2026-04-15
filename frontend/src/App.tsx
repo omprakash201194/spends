@@ -6,6 +6,7 @@ import BankAccountsPage from './pages/BankAccountsPage'
 import ImportPage from './pages/ImportPage'
 import TransactionPage from './pages/TransactionPage'
 import BudgetPage from './pages/BudgetPage'
+import HouseholdPage from './pages/HouseholdPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="import" element={<ImportPage />} />
           <Route path="transactions" element={<TransactionPage />} />
           <Route path="budgets" element={<BudgetPage />} />
+          <Route path="household" element={<HouseholdPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
