@@ -20,7 +20,7 @@ public class CategoryRule {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(nullable = false)
@@ -33,6 +33,10 @@ public class CategoryRule {
     @Column(nullable = false)
     @Builder.Default
     private int priority = 0;
+
+    @Column(name = "is_global", nullable = false)
+    @Builder.Default
+    private boolean global = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

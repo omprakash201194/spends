@@ -7,15 +7,19 @@ import {
   Settings,
   LogOut,
   TrendingUp,
+  Building2,
+  Upload,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const nav = [
-  { to: '/',              label: 'Dashboard',    icon: LayoutDashboard },
-  { to: '/transactions',  label: 'Transactions', icon: ArrowLeftRight },
-  { to: '/budgets',       label: 'Budgets',      icon: PiggyBank },
-  { to: '/household',     label: 'Household',    icon: TrendingUp },
-  { to: '/settings',      label: 'Settings',     icon: Settings },
+  { to: '/',            label: 'Dashboard',    icon: LayoutDashboard },
+  { to: '/accounts',    label: 'Accounts',     icon: Building2 },
+  { to: '/import',      label: 'Import',       icon: Upload },
+  { to: '/transactions',label: 'Transactions', icon: ArrowLeftRight },
+  { to: '/budgets',     label: 'Budgets',      icon: PiggyBank },
+  { to: '/household',   label: 'Household',    icon: TrendingUp },
+  { to: '/settings',    label: 'Settings',     icon: Settings },
 ]
 
 export default function Layout() {

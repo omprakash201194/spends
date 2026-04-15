@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import BankAccountsPage from './pages/BankAccountsPage'
+import ImportPage from './pages/ImportPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -20,6 +22,8 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
+          <Route path="accounts" element={<BankAccountsPage />} />
+          <Route path="import" element={<ImportPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

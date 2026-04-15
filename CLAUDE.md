@@ -146,6 +146,11 @@ spends/
 | POST | `/api/auth/register` | public | Create account + household or join via invite code |
 | POST | `/api/auth/login` | public | Returns JWT |
 | GET | `/api/auth/me` | JWT | Returns current user profile |
+| GET | `/api/bank-accounts` | JWT | List user's bank accounts |
+| POST | `/api/bank-accounts` | JWT | Create a bank account |
+| PUT | `/api/bank-accounts/{id}` | JWT | Update a bank account |
+| DELETE | `/api/bank-accounts/{id}` | JWT | Delete a bank account |
+| POST | `/api/import/icici` | JWT | Import ICICI XLS/XLSX files (multipart, field: `files`) |
 
 ---
 
@@ -251,14 +256,17 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - GitHub Actions CI (build/test + self-hosted deploy)
 - k8s manifests: deployments, services, ingress (spends.homelab.local + TLS)
 
-### Phase 2 — XLS Import + Auto-categorization 🔲 NEXT
-- `BankAccountController` — CRUD for bank accounts
-- `ImportController` — multipart XLS upload endpoint
-- `IciciStatementParser` — parse ICICI XLS format (header rows 1–12, data from row 13)
-- Duplicate detection via SHA-256 import hash
-- `CategorizationService` — apply `CategoryRule` patterns to raw remarks; extract merchant name from UPI string
-- Default rule set seeded for common ICICI UPI handles (Swiggy, Zomato, Ola, etc.)
-- Frontend: bank account management page, file upload UI, import progress/summary
+### Phase 2 — XLS Import + Auto-categorization ✅ COMPLETE
+- `BankAccountController` — CRUD for bank accounts per user
+- `ImportController` — multipart XLS upload (multiple files at once), returns summary
+- `IciciStatementParser` — skip 12 header rows, auto-extract account number/holder name, parse data rows with Apache POI
+- `MerchantExtractor` — regex-based UPI handle extraction, title-case cleanup
+- `CategorizationService` — user + global rules matched by priority, falls back to Miscellaneous
+- Duplicate detection via SHA-256 hash of (bankAccountId + date + withdrawal + deposit + remarks)
+- Migration 003: `category_rule.user_id` made nullable, `is_global` column added
+- Migration 004: 50+ default global rules seeded (Swiggy, Zomato, Ola, Uber, Netflix, Amazon, CRED, Zerodha, etc.)
+- Frontend: Bank Accounts CRUD page, drag-and-drop import page with per-file summary
+- Nav updated: Accounts + Import links in sidebar
 
 ### Phase 3 — Transaction List 🔲
 - `TransactionController` — paginated list with filters (date, category, account, type, amount range, search)

@@ -7,5 +7,7 @@
 
     <include file="db/changelog/changes/001-initial-schema.sql"/>
     <include file="db/changelog/changes/002-seed-categories.sql"/>
+    <include file="db/changelog/changes/003-category-rules-global.sql"/>
+    <include file="db/changelog/changes/004-seed-category-rules.sql"/>
 
 </databaseChangeLog>
