@@ -31,7 +31,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
-                  key: password
+                  key: POSTGRES_PASSWORD
             - name: APP_JWT_SECRET
               valueFrom:
                 secretKeyRef:

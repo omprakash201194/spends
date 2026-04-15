@@ -20,9 +20,9 @@ function Write-Skip { param($m) Write-Host "    --  $m" -ForegroundColor Gray }
 function Write-Warn { param($m) Write-Host "    !!  $m" -ForegroundColor Yellow }
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════╗" -ForegroundColor Blue
-Write-Host "  ║   SpendStack — Windows Setup         ║" -ForegroundColor Blue
-Write-Host "  ╚══════════════════════════════════════╝" -ForegroundColor Blue
+Write-Host "  +--------------------------------------+" -ForegroundColor Blue
+Write-Host "  |   SpendStack -- Windows Setup        |" -ForegroundColor Blue
+Write-Host "  +--------------------------------------+" -ForegroundColor Blue
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 1 — Hosts file
@@ -33,7 +33,7 @@ $hostsContent = Get-Content $HOSTS_FILE -Raw
 $entry        = "$HOMELAB_IP  $HOSTNAME"
 
 if ($hostsContent -match [regex]::Escape($HOSTNAME)) {
-    Write-Skip "$HOSTNAME already present — skipping"
+    Write-Skip "$HOSTNAME already present -- skipping"
 } else {
     Add-Content -Path $HOSTS_FILE -Value "`n$entry"
     Write-OK "Added: $entry"
@@ -52,9 +52,9 @@ Write-OK "DNS cache flushed"
 Write-Step "Verifying $HOSTNAME resolves..."
 try {
     $resolved = [System.Net.Dns]::GetHostAddresses($HOSTNAME) | Select-Object -First 1
-    Write-OK "$HOSTNAME → $resolved"
+    Write-OK "$HOSTNAME --> $resolved"
 } catch {
-    Write-Warn "Could not resolve $HOSTNAME — make sure Tailscale is connected."
+    Write-Warn "Could not resolve $HOSTNAME -- make sure Tailscale is connected."
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ if (Test-Path $dockerConfigPath) {
         Write-Skip "$REGISTRY already in insecure-registries"
     } else {
         Write-Warn "Docker daemon.json already exists. Add the following manually in"
-        Write-Warn "Docker Desktop → Settings → Docker Engine:"
+        Write-Warn "Docker Desktop --> Settings --> Docker Engine:"
         Write-Host ""
         Write-Host "    `"insecure-registries`": [`"$REGISTRY`"]" -ForegroundColor White
         Write-Host ""
@@ -110,10 +110,10 @@ if (-not $dockerCmd) {
                 Write-Warn "Restart Docker Desktop after updating daemon.json"
             }
         } else {
-            Write-Warn "Docker is installed but not running — start Docker Desktop"
+            Write-Warn "Docker is installed but not running -- start Docker Desktop"
         }
     } catch {
-        Write-Warn "Could not query Docker — is Docker Desktop running?"
+        Write-Warn "Could not query Docker -- is Docker Desktop running?"
     }
 }
 
@@ -121,14 +121,14 @@ if (-not $dockerCmd) {
 # DONE
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  ╔════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║  Windows setup complete.                               ║" -ForegroundColor Green
-Write-Host "  ║                                                        ║" -ForegroundColor Green
-Write-Host "  ║  Next steps:                                           ║" -ForegroundColor Green
-Write-Host "  ║  1. Restart Docker Desktop (if daemon.json changed)    ║" -ForegroundColor Green
-Write-Host "  ║  2. Make sure Tailscale is connected                   ║" -ForegroundColor Green
-Write-Host "  ║  3. Run: .\dev-start.ps1  (local dev)                 ║" -ForegroundColor Green
-Write-Host "  ║     OR                                                 ║" -ForegroundColor Green
-Write-Host "  ║     Run: .\scripts\windows\first-deploy.ps1 (homelab) ║" -ForegroundColor Green
-Write-Host "  ╚════════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +--------------------------------------------------------+" -ForegroundColor Green
+Write-Host "  |  Windows setup complete.                               |" -ForegroundColor Green
+Write-Host "  |                                                        |" -ForegroundColor Green
+Write-Host "  |  Next steps:                                           |" -ForegroundColor Green
+Write-Host "  |  1. Restart Docker Desktop (if daemon.json changed)    |" -ForegroundColor Green
+Write-Host "  |  2. Make sure Tailscale is connected                   |" -ForegroundColor Green
+Write-Host "  |  3. Run: .\dev-start.ps1  (local dev)                 |" -ForegroundColor Green
+Write-Host "  |     OR                                                 |" -ForegroundColor Green
+Write-Host "  |     Run: .\scripts\windows\first-deploy.ps1 (homelab) |" -ForegroundColor Green
+Write-Host "  +--------------------------------------------------------+" -ForegroundColor Green
 Write-Host ""

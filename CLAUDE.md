@@ -165,6 +165,18 @@ None — API calls go to same-origin `/api/` and nginx proxies to backend.
 
 ## Running Locally (dev)
 
+One-command launcher (recommended):
+
+```powershell
+.\dev-start.ps1          # starts everything
+.\dev-start.ps1 -Stop    # kills all dev processes
+```
+
+The script: checks prereqs, retrieves DB password from k8s secret, generates/loads a JWT secret
+(stored in `.dev-secrets`, gitignored), port-forwards PostgreSQL, launches backend + frontend in
+separate windows, waits for health checks, and opens the browser.
+
+Manual (if needed):
 ```powershell
 # Terminal 1 — PostgreSQL tunnel
 kubectl port-forward -n homelab svc/postgres 5432:5432
@@ -178,6 +190,9 @@ mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.profiles=local
 cd frontend && npm install && npm run dev
 ```
 
+> **PowerShell script encoding note:** Use plain ASCII box chars (`+`, `-`, `|`) in PS1 files.
+> Unicode box-drawing characters (╔, ║, ╚) corrupt on Windows and break PowerShell parsing.
+
 ---
 
 ## Deploying to Homelab
@@ -188,9 +203,14 @@ cd frontend && npm install && npm run dev
 kubectl create secret generic spends-secret \
   --from-literal=jwt-secret=$(openssl rand -base64 64) \
   -n homelab
+```
 
-# Add to Windows hosts file
-# 100.76.108.123  spends.homelab.local
+```powershell
+# Windows host + Docker registry setup (run as Administrator, once)
+.\scripts\windows\setup-hosts.ps1
+# Adds 100.76.108.123 spends.homelab.local to hosts file
+# Creates ~/.docker/daemon.json with insecure registry 100.76.108.123:30500
+# Status: DONE (2026-04-14)
 ```
 
 ### Manual deploy (before self-hosted runner is set up)
@@ -265,7 +285,7 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - "Review" panel on dashboard
 
 ### Phase 8 — Productionize 🔲
-- Add `spends.homelab.local` to Windows hosts file docs
+- ~~Add `spends.homelab.local` to Windows hosts file~~ ✅ done via `scripts/windows/setup-hosts.ps1`
 - Self-hosted runner setup instructions
 - Health checks, resource tuning
 - Backup considerations for PostgreSQL data

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Start SpendStack locally for development.
@@ -76,9 +76,9 @@ if ($Stop) {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════╗" -ForegroundColor Blue
-Write-Host "  ║      SpendStack — Dev Launcher       ║" -ForegroundColor Blue
-Write-Host "  ╚══════════════════════════════════════╝" -ForegroundColor Blue
+Write-Host "  +--------------------------------------+" -ForegroundColor Blue
+Write-Host "  |      SpendStack -- Dev Launcher      |" -ForegroundColor Blue
+Write-Host "  +--------------------------------------+" -ForegroundColor Blue
 Write-Host ""
 
 $pidsToTrack = @()
@@ -105,7 +105,7 @@ foreach ($t in $tools) {
 }
 
 # Check Java is version 21
-$javaVer = & java -version 2>&1 | Select-String "version"
+$javaVer = cmd /c 'java -version 2>&1'
 if ($javaVer -notmatch '"21') {
     Write-Warn "Java version may not be 21. Found: $javaVer"
     Write-Warn "Spring Boot requires Java 21. Install: winget install EclipseAdoptium.Temurin.21.JDK"
@@ -129,15 +129,14 @@ try {
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step "Retrieving DB password from k8s secret (postgres-secret)..."
 try {
-    $encoded = kubectl get secret postgres-secret -n homelab `
-        -o jsonpath="{.data.password}" 2>&1
+    $encoded = & { $ErrorActionPreference = 'Continue'; kubectl get secret postgres-secret -n homelab -o "jsonpath={.data.POSTGRES_PASSWORD}" 2>$null }
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($encoded)) {
         throw "Secret not found"
     }
     $DB_PASSWORD = [System.Text.Encoding]::UTF8.GetString(
         [System.Convert]::FromBase64String($encoded.Trim())
     )
-    Write-OK "DB password retrieved (${DB_PASSWORD.Length} chars)"
+    Write-OK "DB password retrieved ($($DB_PASSWORD.Length) chars)"
 } catch {
     Write-Fail "Could not read 'postgres-secret' from the homelab namespace. Is the cluster reachable and the secret present?"
 }
@@ -153,7 +152,10 @@ if (Test-Path $SecretsFile) {
     Write-OK "Loaded existing JWT secret from .dev-secrets"
 } else {
     # Generate a 64-byte (512-bit) Base64-encoded secret — well above the 256-bit minimum
-    $bytes = [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(64)
+    $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+    $bytes = New-Object byte[] 64
+    $rng.GetBytes($bytes)
+    $rng.Dispose()
     $APP_JWT_SECRET = [System.Convert]::ToBase64String($bytes)
     $APP_JWT_SECRET | Set-Content $SecretsFile -NoNewline
     Write-OK "Generated new JWT secret and saved to .dev-secrets"
@@ -312,13 +314,13 @@ $pidsToTrack | Set-Content $PidFile
 # DONE
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║  SpendStack is running!                              ║" -ForegroundColor Green
-Write-Host "  ║                                                      ║" -ForegroundColor Green
-Write-Host "  ║  App      http://localhost:5173                      ║" -ForegroundColor Green
-Write-Host "  ║  API      http://localhost:8080/api                  ║" -ForegroundColor Green
-Write-Host "  ║  Health   http://localhost:8080/actuator/health      ║" -ForegroundColor Green
-Write-Host "  ║                                                      ║" -ForegroundColor Green
-Write-Host "  ║  To stop:  .\dev-start.ps1 -Stop                    ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +------------------------------------------------------+" -ForegroundColor Green
+Write-Host "  |  SpendStack is running!                              |" -ForegroundColor Green
+Write-Host "  |                                                      |" -ForegroundColor Green
+Write-Host "  |  App      http://localhost:5173                      |" -ForegroundColor Green
+Write-Host "  |  API      http://localhost:8080/api                  |" -ForegroundColor Green
+Write-Host "  |  Health   http://localhost:8080/actuator/health      |" -ForegroundColor Green
+Write-Host "  |                                                      |" -ForegroundColor Green
+Write-Host "  |  To stop:  .\dev-start.ps1 -Stop                    |" -ForegroundColor Green
+Write-Host "  +------------------------------------------------------+" -ForegroundColor Green
 Write-Host ""

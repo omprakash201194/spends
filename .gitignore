@@ -32,3 +32,10 @@ logs/
 
 # Docker
 .dockerignore
+
+# Claude Code local settings
+**/.claude/settings.local.json
+
+# Temp / scratch scripts
+test_*.ps1
+test_*.sh

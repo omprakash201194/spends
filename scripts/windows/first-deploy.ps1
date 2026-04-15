@@ -6,7 +6,7 @@
 .DESCRIPTION
     Run this from your Windows machine AFTER:
       - setup-hosts.ps1 has been run (hosts file + Docker registry config)
-      - setup-cluster.sh has been run on the homelab server (k8s secrets)
+      - spends-secret has been created on the cluster (JWT key)
       - Tailscale is connected
 
     This script:
@@ -49,13 +49,13 @@ function Write-Fail { param($m) Write-Host "    XX  $m" -ForegroundColor Red; ex
 function Write-Info { param($m) Write-Host "        $m" -ForegroundColor Gray }
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Blue
-Write-Host "  ║   SpendStack — First Deploy v$Version      " -ForegroundColor Blue
-Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Blue
+Write-Host "  +------------------------------------------+" -ForegroundColor Blue
+Write-Host "  |   SpendStack -- First Deploy v$Version" -ForegroundColor Blue
+Write-Host "  +------------------------------------------+" -ForegroundColor Blue
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Pre-flight checks
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Step "Pre-flight checks..."
 
 foreach ($cmd in @("docker", "kubectl", "mvn", "npm")) {
@@ -74,18 +74,18 @@ try {
     Write-Fail "Cannot reach k3s cluster. Is Tailscale connected? Check: kubectl get nodes"
 }
 
-# spends-secret must already exist (created by setup-cluster.sh)
+# spends-secret must already exist
 try {
     kubectl get secret spends-secret -n $NAMESPACE 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw }
     Write-OK "spends-secret exists in namespace $NAMESPACE"
 } catch {
-    Write-Fail "'spends-secret' not found in namespace $NAMESPACE.`n`n  Run on the homelab server first:`n    bash scripts/homelab/setup-cluster.sh"
+    Write-Fail "'spends-secret' not found in namespace $NAMESPACE. Create it first:`n    kubectl create secret generic spends-secret --from-literal=jwt-secret=<key> -n homelab"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 1 — Build backend jar
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 1 -- Build backend jar
+# -----------------------------------------------------------------------------
 Write-Step "Building backend jar (Maven)..."
 Push-Location $BackendDir
 try {
@@ -94,11 +94,11 @@ try {
 } finally {
     Pop-Location
 }
-Write-OK "Backend jar built → backend/target/"
+Write-OK "Backend jar built -> backend/target/"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 2 — Build and push backend image
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 2 -- Build and push backend image
+# -----------------------------------------------------------------------------
 Write-Step "Building backend Docker image ($BACKEND_IMG)..."
 docker build -t $BACKEND_IMG $BackendDir
 if ($LASTEXITCODE -ne 0) { Write-Fail "docker build failed for backend." }
@@ -113,9 +113,9 @@ Write-OK "Backend image pushed"
 docker tag $BACKEND_IMG "$REGISTRY/homelab/spends-backend:latest"
 docker push "$REGISTRY/homelab/spends-backend:latest" | Out-Null
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 3 — Build frontend
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 3 -- Build frontend
+# -----------------------------------------------------------------------------
 Write-Step "Installing frontend dependencies..."
 Push-Location $FrontendDir
 try {
@@ -128,14 +128,14 @@ try {
     Write-Step "Building frontend (Vite)..."
     npm run build
     if ($LASTEXITCODE -ne 0) { Write-Fail "npm run build failed." }
-    Write-OK "Frontend built → frontend/dist/"
+    Write-OK "Frontend built -> frontend/dist/"
 } finally {
     Pop-Location
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 4 — Build and push frontend image
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 4 -- Build and push frontend image
+# -----------------------------------------------------------------------------
 Write-Step "Building frontend Docker image ($FRONTEND_IMG)..."
 docker build -t $FRONTEND_IMG $FrontendDir
 if ($LASTEXITCODE -ne 0) { Write-Fail "docker build failed for frontend." }
@@ -149,9 +149,9 @@ Write-OK "Frontend image pushed"
 docker tag $FRONTEND_IMG "$REGISTRY/homelab/spends-frontend:latest"
 docker push "$REGISTRY/homelab/spends-frontend:latest" | Out-Null
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 5 — Apply Kubernetes manifests
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 5 -- Apply Kubernetes manifests
+# -----------------------------------------------------------------------------
 Write-Step "Applying Kubernetes manifests..."
 kubectl apply -f $K8sDir -n $NAMESPACE
 if ($LASTEXITCODE -ne 0) { Write-Fail "kubectl apply failed." }
@@ -161,17 +161,17 @@ Write-OK "Manifests applied"
 kubectl set image deployment/spends-backend  spends-backend="localhost:30500/homelab/spends-backend:$Version"  -n $NAMESPACE
 kubectl set image deployment/spends-frontend spends-frontend="localhost:30500/homelab/spends-frontend:$Version" -n $NAMESPACE
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 6 — Wait for rollout
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 6 -- Wait for rollout
+# -----------------------------------------------------------------------------
 Write-Step "Waiting for rollout..."
 kubectl rollout status deployment/spends-backend  -n $NAMESPACE --timeout=120s
 kubectl rollout status deployment/spends-frontend -n $NAMESPACE --timeout=60s
 Write-OK "Rollout complete"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 7 — Verify
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 7 -- Verify
+# -----------------------------------------------------------------------------
 Write-Step "Verifying pods..."
 kubectl get pods -n $NAMESPACE -l "app in (spends-backend,spends-frontend)" --no-headers |
     ForEach-Object { Write-Info $_ }
@@ -186,22 +186,22 @@ try {
     $health = Invoke-RestMethod "http://localhost:18080/actuator/health" -TimeoutSec 10
     Write-OK "Backend health: $($health.status)"
 } catch {
-    Write-Info "Health check inconclusive — check logs:"
+    Write-Info "Health check inconclusive -- check logs:"
     Write-Info "  kubectl logs -n $NAMESPACE -l app=spends-backend --tail=50"
 } finally {
     Stop-Process -Id $pfProc.Id -Force -ErrorAction SilentlyContinue
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # DONE
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║  Deploy complete — v$Version                          " -ForegroundColor Green
-Write-Host "  ║                                                      ║" -ForegroundColor Green
-Write-Host "  ║  Open: https://spends.homelab.local                  ║" -ForegroundColor Green
-Write-Host "  ║                                                      ║" -ForegroundColor Green
-Write-Host "  ║  Logs:                                               ║" -ForegroundColor Green
-Write-Host "  ║    kubectl logs -n homelab -l app=spends-backend -f  ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +------------------------------------------------------+" -ForegroundColor Green
+Write-Host "  |  Deploy complete -- v$Version" -ForegroundColor Green
+Write-Host "  |                                                      |" -ForegroundColor Green
+Write-Host "  |  Open: https://spends.homelab.local                  |" -ForegroundColor Green
+Write-Host "  |                                                      |" -ForegroundColor Green
+Write-Host "  |  Logs:                                               |" -ForegroundColor Green
+Write-Host "  |    kubectl logs -n homelab -l app=spends-backend -f  |" -ForegroundColor Green
+Write-Host "  +------------------------------------------------------+" -ForegroundColor Green
 Write-Host ""
