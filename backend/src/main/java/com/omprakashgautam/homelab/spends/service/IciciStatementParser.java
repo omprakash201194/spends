@@ -17,25 +17,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Parses ICICI bank statement XLS/XLSX files.
+ * Parses ICICI bank statement XLS files exported from internet banking.
  *
- * Column order (0-indexed):
- *   0 – S.No.
- *   1 – Value Date
- *   2 – Transaction Date
- *   3 – Cheque Number
- *   4 – Transaction Remarks
- *   5 – Withdrawal Amount (INR)
- *   6 – Deposit Amount (INR)
- *   7 – Balance (INR)
+ * Actual column layout (0-indexed) — column 0 is always blank:
+ *   0 – blank
+ *   1 – S No.
+ *   2 – Value Date        (dd/MM/yyyy)
+ *   3 – Transaction Date  (dd/MM/yyyy)
+ *   4 – Cheque Number
+ *   5 – Transaction Remarks
+ *   6 – Withdrawal Amount (INR)
+ *   7 – Deposit Amount (INR)
+ *   8 – Balance (INR)
  *
- * The parser auto-detects where data rows begin (typically rows 13–14 in
- * different ICICI statement versions) by scanning for the first row that
- * has a parseable date in column 1.
+ * Header rows (1-based):
+ *   Row  1 : blank
+ *   Row  2 : "DETAILED STATEMENT"
+ *   Row  4 : "Account Number" | blank | "187501504556 ( INR ) - OMPRAKASH HARISH"
+ *   Row 12 : "Transactions List - <NAME>"
+ *   Row 13 : column headers
+ *   Row 14+: transaction data
  */
 @Slf4j
 @Component
 public class IciciStatementParser {
+
+    // Column indices
+    private static final int COL_VALUE_DATE = 2;
+    private static final int COL_TX_DATE    = 3;
+    private static final int COL_CHEQUE     = 4;
+    private static final int COL_REMARKS    = 5;
+    private static final int COL_WITHDRAWAL = 6;
+    private static final int COL_DEPOSIT    = 7;
+    private static final int COL_BALANCE    = 8;
 
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
@@ -45,9 +59,6 @@ public class IciciStatementParser {
             DateTimeFormatter.ofPattern("dd-MM-yyyy"),
             DateTimeFormatter.ofPattern("yyyy-MM-dd")
     );
-
-    private static final String ACCOUNT_NO_MARKER   = "Account No";
-    private static final String ACCOUNT_NAME_MARKER = "Account Name";
 
     public record ParsedStatement(
             String bankName,
@@ -84,27 +95,30 @@ public class IciciStatementParser {
         String accountNumber = null;
         String accountHolderName = null;
 
-        // Scan up to the first 15 rows for account metadata
-        int metaLimit = Math.min(15, sheet.getLastRowNum());
-        for (int i = 0; i <= metaLimit; i++) {
+        // Scan first 15 rows for account metadata.
+        // Account number row: col1="Account Number", col3="187501504556 ( INR ) - OMPRAKASH HARISH"
+        for (int i = 0; i <= Math.min(15, sheet.getLastRowNum()); i++) {
             Row row = sheet.getRow(i);
             if (row == null) continue;
 
-            String c0 = cellText(row, 0);
             String c1 = cellText(row, 1);
+            String c3 = cellText(row, 3);
 
-            if (c0.contains(ACCOUNT_NO_MARKER)) {
-                accountNumber = maskAccountNumber(extractAfterColon(c1.isBlank() ? c0 : c1));
-            } else if (c0.contains(ACCOUNT_NAME_MARKER)) {
-                String raw = extractAfterColon(c1.isBlank() ? c0 : c1);
-                if (raw != null) accountHolderName = raw.trim();
+            if (c1.contains("Account Number") && !c3.isBlank()) {
+                // c3 looks like: "187501504556 ( INR )  - OMPRAKASH HARISH"
+                String[] parts = c3.split("-", 2);
+                String rawAccNo = parts[0].replaceAll("[^0-9]", "").trim();
+                accountNumber = maskAccountNumber(rawAccNo);
+                if (parts.length > 1) {
+                    accountHolderName = parts[1].trim();
+                }
             }
         }
 
-        // Auto-detect the first row that has a parseable date in column 1 (Value Date).
-        // Skip the header and column-title rows without hardcoding a row number.
+        // Detect data start row: first row where col2 (Value Date) has a parseable date
         int dataStartRow = detectDataStartRow(sheet);
-        log.debug("Detected data start row (0-based): {}", dataStartRow);
+        log.info("ICICI parser: data starts at row {} (0-based), account={}, holder={}",
+                dataStartRow, accountNumber, accountHolderName);
 
         List<ParsedTransaction> transactions = new ArrayList<>();
 
@@ -112,27 +126,26 @@ public class IciciStatementParser {
             Row row = sheet.getRow(i);
             if (row == null) continue;
 
-            // Stop at first completely blank row after data has started
             if (isRowBlank(row)) {
                 if (!transactions.isEmpty()) break;
                 continue;
             }
 
             try {
-                LocalDate valueDate       = parseDate(row, 1);
-                LocalDate transactionDate = parseDate(row, 2);
+                LocalDate valueDate       = parseDate(row, COL_VALUE_DATE);
+                LocalDate transactionDate = parseDate(row, COL_TX_DATE);
 
                 if (valueDate == null || transactionDate == null) {
-                    log.debug("Skipping row {} — could not parse dates (valueDate='{}', txDate='{}')",
-                            i + 1, cellText(row, 1), cellText(row, 2));
+                    log.debug("Skipping row {} — unparseable dates: valueDate='{}' txDate='{}'",
+                            i + 1, cellText(row, COL_VALUE_DATE), cellText(row, COL_TX_DATE));
                     continue;
                 }
 
-                String chequeNumber  = cellText(row, 3);
-                String rawRemarks    = cellText(row, 4);
-                BigDecimal withdrawal = parseMoney(row, 5);
-                BigDecimal deposit    = parseMoney(row, 6);
-                BigDecimal balance    = parseMoney(row, 7);
+                String chequeNumber = cellText(row, COL_CHEQUE);
+                String rawRemarks   = cellText(row, COL_REMARKS);
+                BigDecimal withdrawal = parseMoney(row, COL_WITHDRAWAL);
+                BigDecimal deposit    = parseMoney(row, COL_DEPOSIT);
+                BigDecimal balance    = parseMoney(row, COL_BALANCE);
 
                 transactions.add(new ParsedTransaction(
                         valueDate, transactionDate,
@@ -141,11 +154,11 @@ public class IciciStatementParser {
                         withdrawal, deposit, balance
                 ));
             } catch (Exception e) {
-                log.warn("Skipping row {} due to parse error: {}", i + 1, e.getMessage());
+                log.warn("Skipping row {} — parse error: {}", i + 1, e.getMessage());
             }
         }
 
-        log.info("Parsed {} transactions from sheet (data start row {})", transactions.size(), dataStartRow);
+        log.info("ICICI parser: parsed {} transactions", transactions.size());
         return new ParsedStatement(
                 "ICICI Bank",
                 accountNumber,
@@ -156,31 +169,24 @@ public class IciciStatementParser {
     }
 
     /**
-     * Finds the first row index (0-based) where column 1 contains a parseable date.
-     * This handles different ICICI statement versions without hardcoding row numbers.
+     * Finds the first row where COL_VALUE_DATE contains a parseable date.
+     * Scans from row 10 onwards to skip obvious header rows.
      */
     private int detectDataStartRow(Sheet sheet) {
-        for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+        for (int i = 10; i <= Math.min(sheet.getLastRowNum(), 30); i++) {
             Row row = sheet.getRow(i);
             if (row == null) continue;
-            // Skip if column 0 is blank (S.No. is missing) — header rows often have labels
-            // but if it's a numeric S.No. and column 1 has a date, this is a data row
-            LocalDate date = parseDate(row, 1);
-            if (date != null) {
-                // Extra sanity: the date should be reasonable (2000–2030)
-                int year = date.getYear();
-                if (year >= 2000 && year <= 2030) {
-                    return i;
-                }
+            LocalDate date = parseDate(row, COL_VALUE_DATE);
+            if (date != null && date.getYear() >= 2000 && date.getYear() <= 2035) {
+                return i;
             }
         }
-        // Fallback: start at row 13 (0-based) as originally assumed
-        log.warn("Could not auto-detect data start row, falling back to row index 13");
+        log.warn("Could not auto-detect data start row — falling back to index 13");
         return 13;
     }
 
     private boolean isRowBlank(Row row) {
-        for (int c = 0; c <= 7; c++) {
+        for (int c = 0; c <= COL_BALANCE; c++) {
             if (!cellText(row, c).isBlank()) return false;
         }
         return true;
@@ -193,8 +199,7 @@ public class IciciStatementParser {
             case STRING  -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    LocalDate d = cell.getLocalDateTimeCellValue().toLocalDate();
-                    yield d.format(DATE_FORMATS.get(0)); // dd/MM/yyyy
+                    yield cell.getLocalDateTimeCellValue().toLocalDate().format(DATE_FORMATS.get(0));
                 }
                 double val = cell.getNumericCellValue();
                 yield val == Math.floor(val) && !Double.isInfinite(val)
@@ -213,7 +218,6 @@ public class IciciStatementParser {
         Cell cell = row.getCell(col, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
         if (cell == null) return null;
 
-        // Native Excel date — most reliable
         if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
             return cell.getLocalDateTimeCellValue().toLocalDate();
         }
@@ -222,12 +226,10 @@ public class IciciStatementParser {
         if (text.isBlank()) return null;
 
         for (DateTimeFormatter fmt : DATE_FORMATS) {
-            try {
-                return LocalDate.parse(text, fmt);
-            } catch (DateTimeParseException ignored) {}
+            try { return LocalDate.parse(text, fmt); }
+            catch (DateTimeParseException ignored) {}
         }
 
-        log.debug("Could not parse date string '{}' with any known format", text);
         return null;
     }
 
@@ -245,15 +247,8 @@ public class IciciStatementParser {
         }
     }
 
-    private String extractAfterColon(String text) {
-        if (text == null) return null;
-        int idx = text.indexOf(':');
-        return idx < 0 ? text.trim() : text.substring(idx + 1).trim();
-    }
-
     private String maskAccountNumber(String raw) {
         if (raw == null || raw.isBlank()) return raw;
-        raw = raw.trim();
         if (raw.length() <= 4) return raw;
         return "X".repeat(raw.length() - 4) + raw.substring(raw.length() - 4);
     }

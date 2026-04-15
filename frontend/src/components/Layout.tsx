@@ -36,9 +36,12 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className="w-64 bg-gray-900 text-white flex flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-700">
-          <TrendingUp className="w-6 h-6 text-blue-400" />
-          <span className="text-lg font-bold tracking-tight">SpendStack</span>
+        <div className="px-6 py-5 border-b border-gray-700">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 text-blue-400" />
+            <span className="text-lg font-bold tracking-tight">SpendStack</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 font-mono">build {__APP_VERSION__}</p>
         </div>
 
         {/* Nav */}
