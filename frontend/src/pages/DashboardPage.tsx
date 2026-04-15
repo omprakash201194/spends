@@ -13,6 +13,7 @@ import {
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
 import { getAlerts, type AlertSummary, type Alert, type AlertType } from '../api/alerts'
 import { Link } from 'react-router-dom'
+import InsightCard from '../components/InsightCard'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -180,6 +181,11 @@ function DashboardContent({ data, alertData }: { data: DashboardSummary; alertDa
                 })}
               </div>
             )}
+          </div>
+
+          {/* AI Insights */}
+          <div className="mt-6">
+            <InsightCard type="DASHBOARD" />
           </div>
         </>
       )}

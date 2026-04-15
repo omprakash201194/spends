@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import InsightCard from '../components/InsightCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useQuery as useQueryCategories } from '@tanstack/react-query'
 import {
@@ -247,6 +248,11 @@ export default function TransactionPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* AI Insights */}
+      <div className="mt-4">
+        <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
       </div>
     </div>
   )

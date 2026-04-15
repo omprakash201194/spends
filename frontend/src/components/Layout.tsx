@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   PiggyBank,
+  Settings,
   LogOut,
   TrendingUp,
   Building2,
@@ -22,6 +23,7 @@ const nav = [
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/budgets',      label: 'Budgets',      icon: PiggyBank },
   { to: '/household',    label: 'Household',    icon: Users },
+  { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
 export default function Layout() {

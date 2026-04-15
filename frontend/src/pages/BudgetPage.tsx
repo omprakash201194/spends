@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PiggyBank, Pencil, Trash2, Check, X } from 'lucide-react'
 import { getBudgets, setBudget, deleteBudget, type CategoryBudget, type MonthSummary } from '../api/budget'
+import InsightCard from '../components/InsightCard'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,14 @@ export default function BudgetPage() {
 
       {isLoading && <LoadingSkeleton />}
       {isError   && <ErrorState />}
-      {data      && <BudgetGrid summary={data} />}
+      {data      && (
+        <>
+          <BudgetGrid summary={data} />
+          <div className="mt-6">
+            <InsightCard type="BUDGET" label="Get Budget Advice" />
+          </div>
+        </>
+      )}
     </div>
   )
 }
