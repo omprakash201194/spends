@@ -81,6 +81,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> monthlyTrend(@Param("userId") UUID userId,
                                 @Param("from") LocalDate from);
 
+    // ── Dashboard: most recent transaction date ───────────────────────────────
+
+    @Query("""
+        SELECT MAX(t.valueDate)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+        """)
+    LocalDate latestTransactionDate(@Param("userId") UUID userId);
+
     // ── Dashboard: top merchants ──────────────────────────────────────────────
 
     @Query("""

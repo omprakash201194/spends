@@ -24,18 +24,18 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardDto.Summary getSummary(UUID userId) {
-        LocalDate today    = LocalDate.now();
-        LocalDate from     = today.withDayOfMonth(1);
-        LocalDate to       = today.withDayOfMonth(today.lengthOfMonth());
-        LocalDate trend12  = today.minusMonths(11).withDayOfMonth(1);
+        // Use the most recent month that has data.
+        // Handles the common case where statements are historical and today's month is empty.
+        LocalDate anchor  = resolveAnchorMonth(userId);
+        LocalDate from    = anchor.withDayOfMonth(1);
+        LocalDate to      = anchor.withDayOfMonth(anchor.lengthOfMonth());
+        LocalDate trend12 = anchor.minusMonths(11).withDayOfMonth(1);
 
-        // Monthly totals
         BigDecimal spent  = transactionRepository.sumWithdrawals(userId, from, to);
         BigDecimal income = transactionRepository.sumDeposits(userId, from, to);
         long count        = transactionRepository.countInPeriod(userId, from, to);
         BigDecimal net    = income.subtract(spent);
 
-        // Category breakdown
         List<DashboardDto.CategoryStat> categories = transactionRepository
                 .categoryBreakdown(userId, from, to)
                 .stream()
@@ -46,13 +46,11 @@ public class DashboardService {
                 ))
                 .toList();
 
-        // 12-month trend
         List<DashboardDto.MonthlyTrend> trend = buildTrend(
                 transactionRepository.monthlyTrend(userId, trend12),
-                trend12, today
+                trend12, anchor
         );
 
-        // Top merchants
         List<DashboardDto.MerchantStat> merchants = transactionRepository
                 .topMerchants(userId, from, to)
                 .stream()
@@ -64,19 +62,27 @@ public class DashboardService {
                 .toList();
 
         return new DashboardDto.Summary(
-                today.format(MONTH_HEADER),
+                anchor.format(MONTH_HEADER),
                 spent, income, net, count,
                 categories, trend, merchants
         );
     }
 
     /**
+     * Returns the most recent month with data for this user.
+     * Falls back to the current calendar month if no data exists yet.
+     */
+    private LocalDate resolveAnchorMonth(UUID userId) {
+        LocalDate latest = transactionRepository.latestTransactionDate(userId);
+        return latest != null ? latest : LocalDate.now();
+    }
+
+    /**
      * Builds a full 12-month list, filling zeroes for months with no transactions.
      */
     private List<DashboardDto.MonthlyTrend> buildTrend(
-            List<Object[]> rows, LocalDate start, LocalDate today) {
+            List<Object[]> rows, LocalDate start, LocalDate end) {
 
-        // Index the DB results by "YYYY-MM"
         var byYearMonth = new java.util.HashMap<String, Object[]>();
         for (Object[] row : rows) {
             byYearMonth.put((String) row[0], row);
@@ -85,7 +91,7 @@ public class DashboardService {
         List<DashboardDto.MonthlyTrend> result = new ArrayList<>();
         LocalDate cursor = start;
 
-        while (!cursor.isAfter(today)) {
+        while (!cursor.isAfter(end)) {
             String key   = cursor.format(DateTimeFormatter.ofPattern("yyyy-MM"));
             String label = cursor.format(MONTH_LABEL);
 
