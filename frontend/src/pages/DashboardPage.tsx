@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import {
   TrendingDown, TrendingUp, Wallet, BarChart3, ShoppingBag, ArrowRight,
+  AlertTriangle, Sparkles, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -9,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip,
 } from 'recharts'
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
+import { getAlerts, type AlertSummary, type Alert, type AlertType } from '../api/alerts'
 import { Link } from 'react-router-dom'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -34,6 +37,12 @@ export default function DashboardPage() {
     staleTime: 60_000,
   })
 
+  const { data: alertData } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: getAlerts,
+    staleTime: 60_000,
+  })
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -48,14 +57,14 @@ export default function DashboardPage() {
 
       {isLoading && <LoadingSkeleton />}
       {isError  && <ErrorState />}
-      {data     && <DashboardContent data={data} />}
+      {data     && <DashboardContent data={data} alertData={alertData} />}
     </div>
   )
 }
 
 // ── Content (loaded) ──────────────────────────────────────────────────────────
 
-function DashboardContent({ data }: { data: DashboardSummary }) {
+function DashboardContent({ data, alertData }: { data: DashboardSummary; alertData?: AlertSummary }) {
   const hasData = data.transactionCount > 0
 
   return (
@@ -67,6 +76,11 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
         <StatCard label="Net Savings"   value={inr(Math.abs(data.netSavings))} sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'} icon={Wallet} iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'} iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'} />
         <StatCard label="Transactions"  value={data.transactionCount.toString()} sub={data.month} icon={BarChart3} iconColor="text-purple-500" iconBg="bg-purple-50" />
       </div>
+
+      {/* Alerts panel — only shown when there are alerts */}
+      {alertData && alertData.alerts.length > 0 && (
+        <AlertsPanel data={alertData} />
+      )}
 
       {!hasData ? (
         <EmptyState />
@@ -170,6 +184,74 @@ function DashboardContent({ data }: { data: DashboardSummary }) {
         </>
       )}
     </>
+  )
+}
+
+// ── Alerts panel ──────────────────────────────────────────────────────────────
+
+const ALERT_META: Record<AlertType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
+  LARGE_TRANSACTION: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50',  label: 'Large transaction' },
+  NEW_MERCHANT:      { icon: Sparkles,      color: 'text-blue-600',  bg: 'bg-blue-50',   label: 'New merchant'      },
+  CATEGORY_SPIKE:    { icon: TrendingUp,    color: 'text-red-600',   bg: 'bg-red-50',    label: 'Spending spike'    },
+}
+
+function inrFull2(n: number) {
+  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
+
+function AlertsPanel({ data }: { data: AlertSummary }) {
+  const [expanded, setExpanded] = useState(true)
+  const count = data.alerts.length
+
+  return (
+    <div className="bg-white rounded-xl border border-amber-200 mb-6 overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-amber-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <span className="text-sm font-semibold text-gray-800">Alerts</span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+            {count}
+          </span>
+        </div>
+        {expanded
+          ? <ChevronUp className="w-4 h-4 text-gray-400" />
+          : <ChevronDown className="w-4 h-4 text-gray-400" />
+        }
+      </button>
+
+      {/* Alert rows */}
+      {expanded && (
+        <div className="divide-y divide-gray-100">
+          {data.alerts.map((alert, i) => (
+            <AlertRow key={i} alert={alert} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AlertRow({ alert }: { alert: Alert }) {
+  const meta = ALERT_META[alert.type]
+  const Icon = meta.icon
+
+  return (
+    <div className="flex items-center gap-3 px-4 sm:px-5 py-3">
+      <div className={`w-8 h-8 rounded-lg ${meta.bg} flex items-center justify-center flex-shrink-0`}>
+        <Icon className={`w-4 h-4 ${meta.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{alert.title}</p>
+        <p className="text-xs text-gray-400 truncate">{meta.label} · {alert.message}</p>
+      </div>
+      <span className="text-sm font-semibold text-gray-700 flex-shrink-0 ml-2">
+        {inrFull2(alert.amount)}
+      </span>
+    </div>
   )
 }
 

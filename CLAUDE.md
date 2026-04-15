@@ -160,6 +160,7 @@ spends/
 | POST | `/api/budgets` | JWT | Set/update budget limit for a category+month |
 | DELETE | `/api/budgets/{id}` | JWT | Remove a budget limit |
 | GET | `/api/household` | JWT | Household summary: name, invite code, per-member stats for anchor month |
+| GET | `/api/alerts` | JWT | Unusual transaction alerts for anchor month |
 
 ---
 
@@ -307,13 +308,16 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - `frontend/src/api/household.ts` — `getHouseholdSummary`
 - `frontend/src/pages/HouseholdPage.tsx` — household header with copyable invite code chip; 3 aggregate stat cards (spent/income/net); per-member cards with avatar, role badge, top-category pill, share-of-household progress bar; solo-member empty state with prominent invite code
 
-### Phase 7 — Unusual Transaction Detection 🔲 NEXT
-- Configurable large-amount threshold
-- New merchant detection
-- Category spike detection (>150% of 3-month average)
-- "Review" panel on dashboard
+### Phase 7 — Unusual Transaction Detection ✅ COMPLETE
+- Three alert types: `LARGE_TRANSACTION` (single debit > ₹10k), `NEW_MERCHANT` (merchant with no history in prior 6 months), `CATEGORY_SPIKE` (>1.5× 3-month rolling average, min avg ₹500)
+- Three new `TransactionRepository` queries: `findLargeTransactions`, `findNewMerchantsWithSpend`, `categorySpendByMonth`
+- `AlertDto` — `Alert` (type, title, message, amount) · `AlertSummary` (month, alerts[])
+- `AlertService` — runs all three checks against anchor month, sorts by amount desc
+- `AlertController` — GET `/api/alerts`
+- `frontend/src/api/alerts.ts` — `getAlerts`
+- `DashboardPage` — collapsible amber alerts panel between stat cards and charts; hidden when no alerts; each row shows type icon, title, detail message, and amount
 
-### Phase 8 — Productionize 🔲
+### Phase 8 — Productionize 🔲 NEXT
 - ~~Add `spends.homelab.local` to Windows hosts file~~ ✅ done via `scripts/windows/setup-hosts.ps1`
 - Self-hosted runner setup instructions
 - Health checks, resource tuning

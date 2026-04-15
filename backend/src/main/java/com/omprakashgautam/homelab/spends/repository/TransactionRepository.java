@@ -90,6 +90,66 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     LocalDate latestTransactionDate(@Param("userId") UUID userId);
 
+    // ── Alerts: large single withdrawals ─────────────────────────────────────
+
+    @Query("""
+        SELECT t.merchantName, t.withdrawalAmount, t.valueDate, t.rawRemarks
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > :threshold
+        ORDER BY t.withdrawalAmount DESC
+        LIMIT 5
+        """)
+    List<Object[]> findLargeTransactions(@Param("userId") UUID userId,
+                                          @Param("from") LocalDate from,
+                                          @Param("to") LocalDate to,
+                                          @Param("threshold") java.math.BigDecimal threshold);
+
+    // ── Alerts: new merchants (no history in prior window) ────────────────────
+
+    @Query("""
+        SELECT t.merchantName, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.merchantName IS NOT NULL
+          AND t.merchantName NOT IN (
+              SELECT DISTINCT t2.merchantName
+              FROM Transaction t2
+              WHERE t2.bankAccount.user.id = :userId
+                AND t2.valueDate >= :historyFrom AND t2.valueDate < :from
+                AND t2.merchantName IS NOT NULL
+          )
+        GROUP BY t.merchantName
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        LIMIT 5
+        """)
+    List<Object[]> findNewMerchantsWithSpend(@Param("userId") UUID userId,
+                                              @Param("from") LocalDate from,
+                                              @Param("to") LocalDate to,
+                                              @Param("historyFrom") LocalDate historyFrom);
+
+    // ── Alerts: category spend broken down by month (rolling average) ─────────
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               t.category.name,
+               t.category.color,
+               COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category IS NOT NULL
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+                 t.category.id, t.category.name, t.category.color
+        """)
+    List<Object[]> categorySpendByMonth(@Param("userId") UUID userId,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
+
     // ── Household: most recent transaction date across all members ────────────
 
     @Query("""
