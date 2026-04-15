@@ -85,7 +85,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: self-hosted
     env:
-      REGISTRY: 100.76.108.123:30500
+      REGISTRY: localhost:30500
       IMAGE_TAG: ${{ github.sha }}
 
     steps:
