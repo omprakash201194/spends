@@ -291,15 +291,17 @@ To register the self-hosted runner: GitHub → repo Settings → Actions → Run
 - Frontend: stat cards (spent/income/net/count with K/L abbreviation), Recharts bar chart (12-month debit+credit grouped), Recharts donut pie (category breakdown with category colors), top merchants with proportional progress bars, loading skeleton, empty state
 
 ### Phase 5 — Budget Tracking ✅ COMPLETE
-- `BudgetDto` — `SetRequest` (categoryId, year, month, limit) · `CategoryBudget` (budgetId, categoryId, name, color, limit, spent, percentage) · `MonthSummary` (month, categories[])
+- `BudgetDto` — `SetRequest` (categoryId, year, month, limit) · `CategoryBudget` (budgetId, categoryId, name, color, limit, spent, percentage) · `MonthSummary` (month, **year**, **monthNumber**, categories[]) — year+monthNumber included so frontend never parses the display string
 - `BudgetService` — resolves anchor month via `latestTransactionDate`, merges category breakdown (spent) + existing budget limits, sorts active categories first, computes percentage with `HALF_UP` rounding
 - `BudgetController` — GET `/api/budgets` (MonthSummary), POST `/api/budgets` (upsert), DELETE `/api/budgets/{id}`
 - `frontend/src/api/budget.ts` — `getBudgets`, `setBudget`, `deleteBudget`
 - `frontend/src/pages/BudgetPage.tsx` — 3-column card grid; inline limit input (click "Set limit" or pencil); progress bar green <80% / amber 80-100% / red ≥100%; over-budget badge; delete removes limit only
+- **Responsive layout** — `Layout.tsx` rewired: sidebar is a slide-in hamburger drawer on mobile (`md:` breakpoint collapses it), static on desktop; mobile top bar shows logo + hamburger; nav links close the drawer on tap; all pages use `p-4 sm:p-6/8` responsive padding; unrouted nav items (Household, Settings) removed to prevent catch-all redirects
 
-### Phase 6 — Household View 🔲
+### Phase 6 — Household View 🔲 NEXT
 - Aggregate spending across all household members
 - Per-member breakdown charts
+- Invite code shown to ADMIN for member onboarding
 
 ### Phase 7 — Unusual Transaction Detection 🔲
 - Configurable large-amount threshold
