@@ -70,13 +70,17 @@ data:
             target_label: pod
           - source_labels: [__meta_kubernetes_pod_container_name]
             target_label: container
-          # Build the log file path from pod UID and container name
+          # Build the log file path: combined value is "<uid>/<container>".
+          # regex splits on "/" so $1=uid $2=container; glob matches k3s path structure:
+          # /var/log/pods/<namespace>_<pod-name>_<uid>/<container>/<rotation>.log
           - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
             separator: /
-            replacement: /var/log/pods/*$1/*.log
+            regex: "(.+)/(.+)"
+            replacement: /var/log/pods/*$1/$2/*.log
             target_label: __path__
-          # Drop pods with no app label (system pods)
-          - source_labels: [app]
+          # Drop pods with no app label (system pods) — filter on the raw meta label
+          # before it is relabeled to avoid ordering ambiguity
+          - source_labels: [__meta_kubernetes_pod_label_app]
             regex: .+
             action: keep
 
@@ -143,6 +147,9 @@ spec:
         - name: varlog
           hostPath:
             path: /var/log
+        # Note: /var/lib/docker/containers is a no-op on k3s (containerd) nodes
+        # since logs are stored under /var/log/pods. Kept for compatibility
+        # with any Docker-based nodes that may be added to the cluster.
         - name: varlibdockercontainers
           hostPath:
             path: /var/lib/docker/containers
