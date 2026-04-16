@@ -409,6 +409,13 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `Layout.tsx` — `print:hidden` on sidebar `<aside>` and mobile `<header>` for clean print layout
 - 24 unit tests total (10 ExportServiceTest, 7 ReportServiceTest, 7 RecurringServiceTest)
 
+### Phase 15 — Dashboard Trend Comparison ✅ COMPLETE
+- `DashboardDto.Comparison` record (`spent`, `income`, `transactionCount`) added; `DashboardDto.Summary` extended with `prevMonth` and `prevYear` fields
+- `DashboardService.getSummary` fetches 6 extra aggregates (3 per comparison period) using existing `sumWithdrawals`/`sumDeposits`/`countInPeriod` repo methods with `anchor.minusMonths(1)` and `anchor.minusYears(1)` date ranges — no new queries
+- `DashboardServiceTest` — 2 unit tests (Mockito): full-assertion test verifying all 6 comparison fields, zero-data edge case
+- `frontend/src/api/dashboard.ts` — `Comparison` interface + `prevMonth: Comparison | null` / `prevYear: Comparison | null` on `DashboardSummary`
+- `DashboardPage` — `pctDelta(current, prev)` helper (null when prev=0); `DeltaBadge` component (neutral gray `—` badge when |delta|<0.05%, colored ↑/↓ otherwise); `StatCard` extended with optional `delta`/`positiveIsGood`/`deltaLabel` props; compare-mode toggle pill ("vs last month" / "vs last year") above stat cards; Spent (positiveIsGood=false) and Income (positiveIsGood=true) wired up; Net Savings and Transactions intentionally omit delta; toggle only shown when `hasData` is true
+
 ### Phase 14 — Import History + Delete ✅ COMPLETE
 - Migration 008: `import_batch` table (id, bank_account_id FK, original_filename, imported_at, transaction_count, duplicate_count); `import_batch_id` FK column added to `financial_transaction` with `ON DELETE CASCADE`
 - `ImportBatch` JPA entity; `Transaction.importBatch` ManyToOne (LAZY); both with `@ToString.Exclude`
