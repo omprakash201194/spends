@@ -547,7 +547,7 @@ function DangerZoneTab() {
       title: 'Delete all transactions',
       description: 'Permanently deletes every transaction and import record across all your bank accounts. This cannot be undone.',
       mutationFn: apiDeleteTransactions,
-      invalidateKeys: [['transactions'], ['dashboard'], ['budgets'], ['recurring'], ['import-history'], ['data-health']],
+      invalidateKeys: [['transactions'], ['dashboard'], ['budgets'], ['recurring'], ['import-history'], ['data-health'], ['views']],
     },
     {
       key: 'rules',

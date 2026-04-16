@@ -30,8 +30,10 @@ public interface ImportBatchRepository extends JpaRepository<ImportBatch, UUID> 
     boolean existsByIdAndUserId(@Param("batchId") UUID batchId, @Param("userId") UUID userId);
 
     /**
-     * Bulk-deletes all import_batch rows for the user.
-     * DB cascade (migration 008) automatically removes associated financial_transaction rows.
+     * Bulk-deletes all import batches for the user.
+     * Note: call {@code transactionRepository.deleteAllByUserId} first to remove
+     * transactions without an import batch; transactions linked to these batches
+     * will be removed by the DB cascade (migration 008).
      */
     @Modifying
     @Transactional
