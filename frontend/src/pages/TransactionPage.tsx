@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react'
+import { Download } from 'lucide-react'
+import { downloadTransactionsCsv } from '../api/export'
 import InsightCard from '../components/InsightCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useQuery as useQueryCategories } from '@tanstack/react-query'
@@ -103,6 +105,24 @@ export default function TransactionPage() {
 
   const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo
 
+  const [exporting, setExporting] = useState(false)
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      await downloadTransactionsCsv({
+        search: debouncedSearch || undefined,
+        categoryId: categoryId || undefined,
+        accountId: accountId || undefined,
+        type,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6">
       {/* Header */}
@@ -115,11 +135,21 @@ export default function TransactionPage() {
             </p>
           )}
         </div>
-        {hasFilters && (
-          <button onClick={resetFilters} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1">
-            <X className="w-3.5 h-3.5" /> Clear filters
+        <div className="flex items-center gap-2">
+          {hasFilters && (
+            <button onClick={resetFilters} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> Clear filters
+            </button>
+          )}
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {exporting ? 'Exporting…' : 'Export CSV'}
           </button>
-        )}
+        </div>
       </div>
 
       {/* Filter bar */}
