@@ -34,8 +34,8 @@ export interface DashboardSummary {
   categoryBreakdown: CategoryStat[]
   monthlyTrend: MonthlyTrend[]
   topMerchants: MerchantStat[]
-  prevMonth: Comparison
-  prevYear: Comparison
+  prevMonth: Comparison | null
+  prevYear: Comparison | null
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {

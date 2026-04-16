@@ -81,82 +81,11 @@ export default function DashboardPage() {
 function DashboardContent({ data, alertData, recurringData }: { data: DashboardSummary; alertData?: AlertSummary; recurringData?: RecurringSummary }) {
   const hasData = data.transactionCount > 0
   const [compareMode, setCompareMode] = useState<'month' | 'year'>('month')
-  const comp      = compareMode === 'month' ? data.prevMonth : data.prevYear
+  const comp      = (compareMode === 'month' ? data.prevMonth : data.prevYear) ?? null
   const compLabel = compareMode === 'month' ? 'last month' : 'last year'
 
   return (
     <>
-      {/* Compare mode toggle */}
-      <div className="flex justify-end mb-2">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-xs">
-          <button
-            onClick={() => setCompareMode('month')}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              compareMode === 'month'
-                ? 'bg-gray-900 text-white font-medium'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            vs last month
-          </button>
-          <button
-            onClick={() => setCompareMode('year')}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              compareMode === 'year'
-                ? 'bg-gray-900 text-white font-medium'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            vs last year
-          </button>
-        </div>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <StatCard
-          label="Total Spent"
-          value={inr(data.totalSpent)}
-          sub={data.month}
-          icon={TrendingDown}
-          iconColor="text-red-500"
-          iconBg="bg-red-50"
-          delta={pctDelta(data.totalSpent, comp.spent)}
-          positiveIsGood={false}
-          deltaLabel={compLabel}
-        />
-        <StatCard
-          label="Total Income"
-          value={inr(data.totalIncome)}
-          sub={data.month}
-          icon={TrendingUp}
-          iconColor="text-green-500"
-          iconBg="bg-green-50"
-          delta={pctDelta(data.totalIncome, comp.income)}
-          positiveIsGood={true}
-          deltaLabel={compLabel}
-        />
-        <StatCard
-          label="Net Savings"
-          value={inr(Math.abs(data.netSavings))}
-          sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'}
-          icon={Wallet}
-          iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'}
-          iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'}
-        />
-        <StatCard
-          label="Transactions"
-          value={data.transactionCount.toString()}
-          sub={data.month}
-          icon={BarChart3}
-          iconColor="text-purple-500"
-          iconBg="bg-purple-50"
-          delta={pctDelta(data.transactionCount, comp.transactionCount)}
-          positiveIsGood={false}
-          deltaLabel={compLabel}
-        />
-      </div>
-
       {/* Alerts panel — only shown when there are alerts */}
       {alertData && alertData.alerts.length > 0 && (
         <AlertsPanel data={alertData} />
@@ -183,7 +112,76 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
       {!hasData ? (
         <EmptyState />
       ) : (
-        <div className="xl:grid xl:grid-cols-[1fr_320px] xl:gap-6 xl:items-start">
+        <>
+          {/* Compare mode toggle */}
+          <div className="flex justify-end mb-2">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-xs">
+              <button
+                onClick={() => setCompareMode('month')}
+                className={`px-3 py-1 rounded-md transition-colors ${
+                  compareMode === 'month'
+                    ? 'bg-gray-900 text-white font-medium'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                vs last month
+              </button>
+              <button
+                onClick={() => setCompareMode('year')}
+                className={`px-3 py-1 rounded-md transition-colors ${
+                  compareMode === 'year'
+                    ? 'bg-gray-900 text-white font-medium'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                vs last year
+              </button>
+            </div>
+          </div>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <StatCard
+              label="Total Spent"
+              value={inr(data.totalSpent)}
+              sub={data.month}
+              icon={TrendingDown}
+              iconColor="text-red-500"
+              iconBg="bg-red-50"
+              delta={comp ? pctDelta(data.totalSpent, comp.spent) : null}
+              positiveIsGood={false}
+              deltaLabel={compLabel}
+            />
+            <StatCard
+              label="Total Income"
+              value={inr(data.totalIncome)}
+              sub={data.month}
+              icon={TrendingUp}
+              iconColor="text-green-500"
+              iconBg="bg-green-50"
+              delta={comp ? pctDelta(data.totalIncome, comp.income) : null}
+              positiveIsGood={true}
+              deltaLabel={compLabel}
+            />
+            <StatCard
+              label="Net Savings"
+              value={inr(Math.abs(data.netSavings))}
+              sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'}
+              icon={Wallet}
+              iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'}
+              iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'}
+            />
+            <StatCard
+              label="Transactions"
+              value={data.transactionCount.toString()}
+              sub={data.month}
+              icon={BarChart3}
+              iconColor="text-purple-500"
+              iconBg="bg-purple-50"
+            />
+          </div>
+
+          <div className="xl:grid xl:grid-cols-[1fr_320px] xl:gap-6 xl:items-start">
           {/* Main column */}
           <div className="space-y-6">
             {/* Charts row */}
@@ -288,6 +286,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
             <InsightCard type="DASHBOARD" />
           </div>
         </div>
+        </>
       )}
     </>
   )
@@ -363,17 +362,20 @@ function AlertRow({ alert }: { alert: Alert }) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function DeltaBadge({
-  delta,
-  positiveIsGood,
-  label,
-}: {
+function DeltaBadge({ delta, positiveIsGood, label }: {
   delta: number | null
   positiveIsGood: boolean
   label: string
 }) {
   if (delta === null) return null
-  const isPositive = delta >= 0
+  if (Math.abs(delta) < 0.05) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded text-gray-500 bg-gray-100">
+        — {label}
+      </span>
+    )
+  }
+  const isPositive = delta > 0
   const isGood     = positiveIsGood ? isPositive : !isPositive
   const colorClass = isGood ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
   const arrow      = isPositive ? '↑' : '↓'
