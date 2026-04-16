@@ -46,8 +46,8 @@ export default function BankAccountsPage() {
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bank Accounts</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your linked bank accounts</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bank Accounts</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your linked bank accounts</p>
         </div>
         <button
           onClick={() => { setShowForm(true); setEditing(null) }}
@@ -67,7 +67,7 @@ export default function BankAccountsPage() {
       )}
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-400">Loading...</div>
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">Loading...</div>
       ) : accounts.length === 0 ? (
         <EmptyState onAdd={() => setShowForm(true)} />
       ) : (
@@ -106,13 +106,13 @@ function AccountCard({
   onDelete: () => void
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
         <Building2 className="w-5 h-5 text-blue-600" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900">{account.bankName}</p>
-        <p className="text-sm text-gray-500">
+        <p className="font-semibold text-gray-900 dark:text-white">{account.bankName}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {account.accountNumberMasked ?? 'No account number'}
           {account.accountType ? ` · ${account.accountType}` : ''}
           {' · '}
@@ -122,7 +122,7 @@ function AccountCard({
       <div className="flex items-center gap-2">
         <button
           onClick={onEdit}
-          className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Edit"
         >
           <Pencil className="w-4 h-4" />
@@ -167,34 +167,34 @@ function AccountForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-xl border border-blue-200 p-5 space-y-4"
+      className="bg-white dark:bg-gray-800 rounded-xl border border-blue-200 p-5 space-y-4"
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name *</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Bank Name *</label>
           <input
             value={bankName}
             onChange={(e) => setBankName(e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder="e.g. ICICI Bank"
             required
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Account Number (masked)</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Account Number (masked)</label>
           <input
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder="e.g. XXXXXXXX1234"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Account Type</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Account Type</label>
           <select
             value={accountType}
             onChange={(e) => setAccountType(e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           >
             <option>Savings</option>
             <option>Current</option>
@@ -207,7 +207,7 @@ function AccountForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           <X className="w-3.5 h-3.5" />
           Cancel
@@ -227,10 +227,10 @@ function AccountForm({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-      <Building2 className="mx-auto w-10 h-10 text-gray-300 mb-3" />
-      <p className="text-gray-500 font-medium mb-1">No bank accounts yet</p>
-      <p className="text-sm text-gray-400 mb-4">
+    <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
+      <Building2 className="mx-auto w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+      <p className="text-gray-500 dark:text-gray-400 font-medium mb-1">No bank accounts yet</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
         Add an account to start importing statements
       </p>
       <button

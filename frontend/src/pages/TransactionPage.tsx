@@ -129,16 +129,16 @@ export default function TransactionPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
           {data && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {data.totalElements.toLocaleString()} transactions
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {hasFilters && (
-            <button onClick={resetFilters} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1">
+            <button onClick={resetFilters} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1">
               <X className="w-3.5 h-3.5" /> Clear filters
             </button>
           )}
@@ -162,7 +162,7 @@ export default function TransactionPage() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="Search remarks or merchant…"
-            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           />
         </div>
 
@@ -170,7 +170,7 @@ export default function TransactionPage() {
         <select
           value={type}
           onChange={(e) => { setType(e.target.value as typeof type); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         >
           <option value="ALL">All types</option>
           <option value="DEBIT">Debit only</option>
@@ -181,7 +181,7 @@ export default function TransactionPage() {
         <select
           value={categoryId}
           onChange={(e) => { setCategoryId(e.target.value); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         >
           <option value="">All categories</option>
           {categories.map((c) => (
@@ -194,7 +194,7 @@ export default function TransactionPage() {
           <select
             value={accountId}
             onChange={(e) => { setAccountId(e.target.value); setPage(0) }}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           >
             <option value="">All accounts</option>
             {accounts.map((a) => (
@@ -208,44 +208,44 @@ export default function TransactionPage() {
           type="date"
           value={dateFrom}
           onChange={(e) => { setDateFrom(e.target.value); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           title="From date"
         />
         <input
           type="date"
           value={dateTo}
           onChange={(e) => { setDateTo(e.target.value); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           title="To date"
         />
       </div>
 
       {/* Table + InsightCard sidebar */}
       <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 lg:items-start">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
               <tr>
                 <Th col="valueDate"   label="Date"       current={sortBy} dir={sortDir} onSort={handleSort} />
                 <Th col="merchant"    label="Merchant"   current={sortBy} dir={sortDir} onSort={handleSort} />
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Category
                 </th>
                 <Th col="withdrawal"  label="Debit"      current={sortBy} dir={sortDir} onSort={handleSort} className="text-right" />
                 <Th col="deposit"     label="Credit"     current={sortBy} dir={sortDir} onSort={handleSort} className="text-right" />
                 <Th col="balance"     label="Balance"    current={sortBy} dir={sortDir} onSort={handleSort} className="text-right" />
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wide w-16">
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">
                   Done
                 </th>
                 <th className="px-2 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-16 text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={8} className="text-center py-16 text-gray-400 dark:text-gray-500">Loading…</td></tr>
               ) : !data || data.content.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-16 text-gray-400">No transactions found</td></tr>
+                <tr><td colSpan={8} className="text-center py-16 text-gray-400 dark:text-gray-500">No transactions found</td></tr>
               ) : data.content.map((tx) => (
                 <TxRow
                   key={tx.id}
@@ -261,22 +261,22 @@ export default function TransactionPage() {
 
         {/* Pagination */}
         {data && data.totalPages > 1 && (
-          <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-white">
-            <p className="text-xs text-gray-500">
+          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-800">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Page {data.page + 1} of {data.totalPages} · {data.totalElements.toLocaleString()} total
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={data.page === 0}
-                className="p-1.5 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
                 disabled={data.page >= data.totalPages - 1}
-                className="p-1.5 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -304,7 +304,7 @@ function Th({ col, label, current, dir, onSort, className }: {
     <th
       onClick={() => onSort(col)}
       className={clsx(
-        'px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-800',
+        'px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none hover:text-gray-800 dark:hover:text-gray-200',
         className
       )}
     >
@@ -344,20 +344,20 @@ function AddToViewPicker({
   })
 
   return (
-    <div className="absolute z-40 right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-1">
-      <p className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Add to view</p>
+    <div className="absolute z-40 right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+      <p className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Add to view</p>
       {views.length === 0 && (
-        <p className="px-3 py-2 text-sm text-gray-400">No views yet</p>
+        <p className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">No views yet</p>
       )}
       {views.map(v => (
         <button
           key={v.id}
           onClick={() => addMut.mutate(v.id)}
           disabled={addMut.isPending}
-          className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+          className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
         >
           {v.color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: v.color }} />}
-          <span className="truncate">{v.name}</span>
+          <span className="truncate dark:text-gray-200">{v.name}</span>
         </button>
       ))}
     </div>
@@ -398,19 +398,19 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
 
   return (
     <>
-      <tr className={clsx('hover:bg-gray-50 transition-colors', tx.reviewed && 'opacity-60')}>
+      <tr className={clsx('hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', tx.reviewed && 'opacity-60')}>
         {/* Date */}
-        <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
+        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
           {formatDate(tx.valueDate)}
         </td>
 
         {/* Merchant + remarks */}
         <td className="px-4 py-3 max-w-xs">
-          <p className="font-medium text-gray-900 truncate">
+          <p className="font-medium text-gray-900 dark:text-white truncate">
             {tx.merchantName ?? tx.rawRemarks?.substring(0, 40)}
           </p>
           {tx.merchantName && (
-            <p className="text-xs text-gray-400 truncate">{tx.rawRemarks?.substring(0, 60)}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{tx.rawRemarks?.substring(0, 60)}</p>
           )}
         </td>
 
@@ -430,12 +430,12 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
           </button>
 
           {pickerOpen && (
-            <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-1 max-h-72 overflow-y-auto">
+            <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-72 overflow-y-auto">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => handleSelectCategory(cat)}
-                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200"
                 >
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color ?? undefined }} />
                   {cat.name}
@@ -448,12 +448,12 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
 
         {/* Amounts */}
         <td className="px-4 py-3 text-right font-mono text-sm">
-          {debit ? <span className="text-red-600">{formatAmount(tx.withdrawalAmount)}</span> : <span className="text-gray-300">—</span>}
+          {debit ? <span className="text-red-600">{formatAmount(tx.withdrawalAmount)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
         </td>
         <td className="px-4 py-3 text-right font-mono text-sm">
-          {credit ? <span className="text-green-600">{formatAmount(tx.depositAmount)}</span> : <span className="text-gray-300">—</span>}
+          {credit ? <span className="text-green-600">{formatAmount(tx.depositAmount)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
         </td>
-        <td className="px-4 py-3 text-right font-mono text-sm text-gray-500">
+        <td className="px-4 py-3 text-right font-mono text-sm text-gray-500 dark:text-gray-400">
           {tx.balance != null ? formatAmount(tx.balance) : '—'}
         </td>
 
@@ -465,7 +465,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
               'w-5 h-5 rounded border-2 flex items-center justify-center mx-auto transition-colors',
               tx.reviewed
                 ? 'bg-green-500 border-green-500 text-white'
-                : 'border-gray-300 hover:border-green-400'
+                : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
             )}
           >
             {tx.reviewed && <Check className="w-3 h-3" />}
@@ -476,7 +476,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
         <td className="px-2 py-3 text-center relative">
           <button
             onClick={() => setViewPickerOpen(v => !v)}
-            className="p-1 text-gray-300 hover:text-blue-500 rounded transition-colors"
+            className="p-1 text-gray-300 dark:text-gray-600 hover:text-blue-500 rounded transition-colors"
             title="Add to view"
           >
             <Bookmark className="w-4 h-4" />

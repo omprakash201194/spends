@@ -29,9 +29,9 @@ export default function BudgetPage() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Budgets</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Budgets</h1>
         {data && (
-          <p className="text-sm text-gray-500 mt-1">{data.month}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{data.month}</p>
         )}
       </div>
 
@@ -111,7 +111,7 @@ function BudgetCard({
   const overBudget = hasLimit && pct >= 100
 
   return (
-    <div className={`bg-white rounded-xl border p-4 sm:p-5 ${overBudget ? 'border-red-300' : 'border-gray-200'}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl border p-4 sm:p-5 ${overBudget ? 'border-red-300' : 'border-gray-200 dark:border-gray-700'}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -119,7 +119,7 @@ function BudgetCard({
             className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: cat.categoryColor ?? '#94a3b8' }}
           />
-          <span className="text-sm font-semibold text-gray-800 truncate">{cat.categoryName}</span>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{cat.categoryName}</span>
         </div>
 
         <div className="flex items-center gap-1 ml-2 flex-shrink-0">
@@ -127,7 +127,7 @@ function BudgetCard({
             <>
               <button
                 onClick={startEdit}
-                className="p-1 text-gray-400 hover:text-gray-700 rounded"
+                className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
                 title="Edit limit"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -153,7 +153,7 @@ function BudgetCard({
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="p-1 text-gray-400 hover:text-gray-700 rounded"
+                className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -164,12 +164,12 @@ function BudgetCard({
 
       {/* Spent + limit */}
       <div className="flex items-baseline justify-between mb-2 gap-2">
-        <span className="text-lg font-bold text-gray-900">{inrFull(cat.spent)}</span>
+        <span className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(cat.spent)}</span>
         {hasLimit && !editing ? (
-          <span className="text-sm text-gray-400 flex-shrink-0">of {inrFull(cat.limit!)}</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500 flex-shrink-0">of {inrFull(cat.limit!)}</span>
         ) : editing ? (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <span className="text-sm text-gray-400">₹</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">₹</span>
             <input
               autoFocus
               type="number"
@@ -180,7 +180,7 @@ function BudgetCard({
                 if (e.key === 'Enter') confirmEdit()
                 if (e.key === 'Escape') setEditing(false)
               }}
-              className="w-24 text-sm border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-24 text-sm border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
               placeholder="limit"
             />
           </div>
@@ -195,7 +195,7 @@ function BudgetCard({
       </div>
 
       {/* Progress bar */}
-      <div className="w-full bg-gray-100 rounded-full h-2">
+      <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
         <div
           className={`h-2 rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: barWidth }}
@@ -204,7 +204,7 @@ function BudgetCard({
 
       {/* Percentage label */}
       {hasLimit && (
-        <p className={`text-xs mt-1.5 ${overBudget ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+        <p className={`text-xs mt-1.5 ${overBudget ? 'text-red-500 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
           {pct}% used{overBudget && ' — over budget'}
         </p>
       )}
@@ -218,7 +218,7 @@ function LoadingSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-pulse">
       {[...Array(9)].map((_, i) => (
-        <div key={i} className="bg-gray-100 rounded-xl h-32" />
+        <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-xl h-32" />
       ))}
     </div>
   )

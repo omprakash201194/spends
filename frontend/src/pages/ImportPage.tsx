@@ -138,8 +138,8 @@ export default function ImportPage() {
   return (
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Import Statements</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Statements</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Upload ICICI bank statement XLS/XLSX files. Duplicates are automatically skipped.
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function ImportPage() {
           'relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors',
           dragOver
             ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50'
+            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700'
         )}
       >
         <input
@@ -165,10 +165,10 @@ export default function ImportPage() {
           className="hidden"
           onChange={onFileInput}
         />
-        <Upload className="mx-auto w-10 h-10 text-gray-400 mb-3" />
-        <p className="text-gray-700 font-medium">Drop XLS / XLSX files here</p>
-        <p className="text-sm text-gray-400 mt-1">or click to browse</p>
-        <p className="text-xs text-gray-400 mt-3">
+        <Upload className="mx-auto w-10 h-10 text-gray-400 dark:text-gray-500 mb-3" />
+        <p className="text-gray-700 dark:text-gray-200 font-medium">Drop XLS / XLSX files here</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
           Supports ICICI Bank statement exports · Multiple files at once
         </p>
       </div>
@@ -179,11 +179,11 @@ export default function ImportPage() {
           {files.map((file) => (
             <div
               key={file.name}
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-3"
+              className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3"
             >
               <FileSpreadsheet className="w-4 h-4 text-green-600 flex-shrink-0" />
-              <span className="flex-1 text-sm text-gray-700 truncate">{file.name}</span>
-              <span className="text-xs text-gray-400">
+              <span className="flex-1 text-sm text-gray-700 dark:text-gray-200 truncate">{file.name}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {(file.size / 1024).toFixed(0)} KB
               </span>
               <button
@@ -224,10 +224,10 @@ export default function ImportPage() {
       <div className="mt-10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-gray-500" />
-            <h2 className="text-base font-semibold text-gray-900">Import History</h2>
+            <History className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Import History</h2>
             {history.length > 0 && (
-              <span className="text-xs text-gray-400">({history.length})</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">({history.length})</span>
             )}
           </div>
 
@@ -246,7 +246,7 @@ export default function ImportPage() {
                   </button>
                   <button
                     onClick={() => setConfirmDeleteAll(false)}
-                    className="text-xs px-2.5 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors"
+                    className="text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
@@ -272,9 +272,9 @@ export default function ImportPage() {
         )}
 
         {history.length === 0 ? (
-          <div className="text-center py-10 border border-dashed border-gray-200 rounded-xl">
-            <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">No imports yet</p>
+          <div className="text-center py-10 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+            <Clock className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+            <p className="text-sm text-gray-400 dark:text-gray-500">No imports yet</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -314,12 +314,12 @@ function BatchRow({
   onDeleteCancel: () => void
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
       <div className="flex items-start gap-3">
         <FileSpreadsheet className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate">{batch.filename}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{batch.filename}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {batch.bankName}
             {batch.accountNumberMasked ? ` · ${batch.accountNumberMasked}` : ''}
             {' · '}
@@ -352,7 +352,7 @@ function BatchRow({
               </button>
               <button
                 onClick={onDeleteCancel}
-                className="text-xs px-2 py-1 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md transition-colors"
+                className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
               >
                 Cancel
               </button>
@@ -369,10 +369,10 @@ function BatchRow({
 function ImportSummary({ result }: { result: ImportResult }) {
   return (
     <div className="mt-6 space-y-4">
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle className="w-5 h-5 text-green-500" />
-          <h2 className="font-semibold text-gray-900">Import Complete</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">Import Complete</h2>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <StatCard label="Imported"          value={result.totalImported}   color="text-green-600" bg="bg-green-50" />
@@ -386,12 +386,12 @@ function ImportSummary({ result }: { result: ImportResult }) {
           {result.files.map((f) => (
             <div
               key={f.fileName}
-              className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 flex items-center gap-3"
             >
-              <Copy className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Copy className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{f.fileName}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{f.fileName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {f.bankName}
                   {f.accountNumberMasked ? ` · ${f.accountNumberMasked}` : ''}
                 </p>
