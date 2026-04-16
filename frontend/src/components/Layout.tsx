@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
+import BottomNav from './BottomNav'
 
 const nav = [
   { to: '/',             label: 'Dashboard',    icon: LayoutDashboard },
@@ -42,6 +43,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggle } = useThemeStore()
+  const touchStartX = useRef(0)
 
   const handleLogout = () => {
     logout()
@@ -58,6 +60,10 @@ export default function Layout() {
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={closeSidebar}
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+          onTouchEnd={(e) => {
+            if (e.changedTouches[0].clientX - touchStartX.current < -50) closeSidebar()
+          }}
         />
       )}
 
@@ -160,9 +166,11 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
           <Outlet />
         </main>
+
+        <BottomNav onMoreClick={() => setSidebarOpen(true)} />
       </div>
     </div>
   )
