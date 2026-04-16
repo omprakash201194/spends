@@ -11,9 +11,12 @@ function fmtFull(n: number) {
 
 /** "2025-04" → "Apr 2025" */
 function fmtYearMonth(ym: string): string {
-  const [year, month] = ym.split('-')
-  const date = new Date(Number(year), Number(month) - 1, 1)
-  return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+  const parts = ym.split('-')
+  if (parts.length !== 2) return ym
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const monthIdx = Number(parts[1]) - 1
+  if (monthIdx < 0 || monthIdx > 11) return ym
+  return `${months[monthIdx]} ${parts[0]}`
 }
 
 // ── Pattern Card ──────────────────────────────────────────────────────────────
@@ -141,7 +144,7 @@ export default function RecurringPage() {
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {data.patterns.map(p => (
-              <PatternCard key={p.merchantName} p={p} />
+              <PatternCard key={`${p.merchantName}-${p.categoryName ?? 'none'}`} p={p} />
             ))}
           </div>
         </>
