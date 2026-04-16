@@ -65,6 +65,7 @@ export default function Layout() {
           onTouchEnd={(e) => {
             if (e.changedTouches[0].clientX - touchStartX.current < -50) closeSidebar()
           }}
+          onTouchCancel={() => { touchStartX.current = 0 }}
         />
       )}
 
@@ -81,6 +82,7 @@ export default function Layout() {
         onTouchEnd={(e) => {
           if (e.changedTouches[0].clientX - touchStartX.current < -50) closeSidebar()
         }}
+        onTouchCancel={() => { touchStartX.current = 0 }}
       >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-gray-700 flex items-start justify-between gap-2">
