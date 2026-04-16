@@ -168,6 +168,9 @@ spends/
 | DELETE | `/api/settings/api-key` | JWT | Remove stored API key |
 | POST | `/api/insights/{type}` | JWT | Generate AI insight (type: DASHBOARD, BUDGET, TRANSACTIONS, RECURRING); uses user's stored Anthropic key |
 | GET | `/api/recurring` | JWT | Recurring pattern summary; optional `?months=` (6/12/24, 0=all data, default 12) |
+| GET | `/api/export/transactions` | JWT | RFC 4180 CSV download; optional params: search, categoryId, accountId, type, dateFrom, dateTo |
+| GET | `/api/reports/available-years` | JWT | List of years with transaction data (DESC) |
+| GET | `/api/reports/monthly-summary` | JWT | 12-month summary for `?year=`; returns grandTotals + per-month spent/income/net/categories |
 | GET | `/api/categories` | JWT | List all categories (system + household custom) |
 | POST | `/api/categories` | JWT | Create custom household category |
 | PUT | `/api/categories/{id}` | JWT | Update custom category |
@@ -185,6 +188,9 @@ spends/
 | GET | `/api/views/{id}/summary` | JWT | Total spent, category breakdown, member breakdown |
 | POST | `/api/views/{id}/transactions` | JWT | Add transaction(s) to view; returns 204 |
 | DELETE | `/api/views/{id}/transactions/{txId}` | JWT | Remove transaction from view; returns 204 |
+| GET | `/api/import/history` | JWT | List all import batches for user (with bank account info, counts) |
+| DELETE | `/api/import/batches/{batchId}` | JWT | Delete a specific import batch and its transactions (cascade); returns 204 |
+| DELETE | `/api/import/all` | JWT | Delete all transactions and import batches for user; returns 204 |
 
 ---
 
@@ -390,6 +396,30 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `ViewDetailPage` — back nav, stats row, List/Board/Summary tabs; Board groups 500 txs client-side by category; Summary has over-budget badges + member breakdown (only if >1 member)
 - Bookmark "Add to view" button on each transaction row in `TransactionPage` — opens picker overlay
 - Views nav link (LayoutGrid icon) in sidebar
+
+### Phase 13 — Monthly/Yearly Report Export ✅ COMPLETE
+- `ExportService` + `ExportController` — `GET /api/export/transactions` returns RFC 4180 CSV of all matching transactions (no pagination limit); same filter params as the transactions list endpoint; `Content-Disposition: attachment`
+- `TransactionService.listAll()` — non-paginated variant of the filtered query using `JpaSpecificationExecutor.findAll(Specification, Sort)`
+- `ReportDto` — nested records: `CategoryRow`, `MonthRow`, `YearSummary`
+- `ReportService` + `ReportController` — `GET /api/reports/available-years` (uses `YEAR()` JPQL function); `GET /api/reports/monthly-summary?year=` returns 12-month table always (zero-filled months), grand totals, category breakdown per month; `@Validated` + `@Min(1900)/@Max(2200)` on year param
+- `frontend/src/api/export.ts` — raw `fetch` (not Axios) with manual JWT header + explicit 401 redirect + error surfacing
+- `frontend/src/api/reports.ts` — Axios-based client for both report endpoints
+- `frontend/src/pages/ReportsPage.tsx` — year selector, 4 stat cards, 12-month table, client-side CSV export with RFC 4180 `escapeCsvField`, Print button; `isLoading` for initial spinner, `isFetching` opacity for year-change transitions
+- `TransactionPage` — "Export CSV" button passes current debounced filters to `downloadTransactionsCsv`
+- `Layout.tsx` — `print:hidden` on sidebar `<aside>` and mobile `<header>` for clean print layout
+- 24 unit tests total (10 ExportServiceTest, 7 ReportServiceTest, 7 RecurringServiceTest)
+
+### Phase 14 — Import History + Delete ✅ COMPLETE
+- Migration 008: `import_batch` table (id, bank_account_id FK, original_filename, imported_at, transaction_count, duplicate_count); `import_batch_id` FK column added to `financial_transaction` with `ON DELETE CASCADE`
+- `ImportBatch` JPA entity; `Transaction.importBatch` ManyToOne (LAZY); both with `@ToString.Exclude`
+- `ImportBatchRepository` — `findByUserIdWithAccount` (JOIN FETCH, ORDER BY importedAt DESC), `existsByIdAndUserId` (CASE WHEN COUNT), `deleteAllByUserId` (`@Modifying @Transactional`)
+- `TransactionRepository.deleteAllByUserId` — `@Modifying @Transactional` bulk delete by user
+- `ImportBatchDto` — `BatchEntry` record (id, filename, bankName, accountNumberMasked, bankAccountId, importedAt, transactionCount, duplicateCount) · `HistoryResponse` wrapper
+- `ImportService` — creates an `ImportBatch` per file on import, links each transaction via `importBatch(batch)`, updates counts; adds `getHistory`, `deleteBatch` (404 guard), `deleteAll`
+- `ImportController` — 3 new endpoints: `GET /api/import/history`, `DELETE /api/import/batches/{batchId}` (204), `DELETE /api/import/all` (204)
+- `frontend/src/api/importStatements.ts` — `BatchEntry` interface, `getImportHistory`, `deleteImportBatch`, `deleteAllTransactions`
+- `ImportPage` — Import History section with per-row confirm-before-delete, "Delete All" with confirmation step, error banner on failure; `onSuccess` invalidates `['import-history']`, `['transactions']`, `['dashboard']`, `['budgets']`, `['recurring']`
+- 5 unit tests in `ImportServiceTest` (Mockito, InOrder ordering verification)
 
 ### Phase 12 — Recurring Transaction Detection ✅ COMPLETE
 - `RecurringDto` — `RecurringPattern` (merchantName, categoryName/color, frequency, averageAmount, occurrences, lastMonth, nextExpected, activeThisMonth) · `RecurringSummary` (month, patterns[])
