@@ -72,9 +72,9 @@ class SavingsGoalServiceTest {
                 .targetDate(null)
                 .build();
         when(goalRepository.findAllByUserIdOrderByCreatedAtAsc(USER_ID)).thenReturn(List.of(goal));
-        when(transactionRepository.sumDeposits(any(), any(), any()))
+        when(transactionRepository.sumDeposits(eq(USER_ID), eq(LocalDate.of(2025, 1, 1)), any()))
                 .thenReturn(new BigDecimal("25000"));
-        when(transactionRepository.sumWithdrawals(any(), any(), any()))
+        when(transactionRepository.sumWithdrawals(eq(USER_ID), eq(LocalDate.of(2025, 1, 1)), any()))
                 .thenReturn(new BigDecimal("5000")); // net = 20000 > 10000
 
         List<SavingsGoalDto.GoalResponse> result = service.listGoals(USER_ID);
@@ -94,9 +94,9 @@ class SavingsGoalServiceTest {
                 .targetDate(null)
                 .build();
         when(goalRepository.findAllByUserIdOrderByCreatedAtAsc(USER_ID)).thenReturn(List.of(goal));
-        when(transactionRepository.sumDeposits(any(), any(), any()))
+        when(transactionRepository.sumDeposits(eq(USER_ID), eq(LocalDate.of(2025, 1, 1)), any()))
                 .thenReturn(new BigDecimal("10000"));
-        when(transactionRepository.sumWithdrawals(any(), any(), any()))
+        when(transactionRepository.sumWithdrawals(eq(USER_ID), eq(LocalDate.of(2025, 1, 1)), any()))
                 .thenReturn(new BigDecimal("15000")); // net = -5000
 
         List<SavingsGoalDto.GoalResponse> result = service.listGoals(USER_ID);
@@ -148,5 +148,16 @@ class SavingsGoalServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void deleteGoal_throwsNotFoundWhenGoalMissing() {
+        UUID goalId = UUID.randomUUID();
+        when(goalRepository.findById(goalId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.deleteGoal(USER_ID, goalId))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
     }
 }
