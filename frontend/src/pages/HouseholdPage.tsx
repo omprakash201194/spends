@@ -42,8 +42,8 @@ export default function HouseholdPage() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Household</h1>
-        {data && <p className="text-sm text-gray-500 mt-1">{data.month}</p>}
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Household</h1>
+        {data && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{data.month}</p>}
       </div>
 
       {isLoading && <LoadingSkeleton />}
@@ -61,14 +61,14 @@ function HouseholdContent({ data }: { data: HouseholdSummary }) {
   return (
     <>
       {/* Household header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
             <Users className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-gray-900 text-lg truncate">{data.householdName}</p>
-            <p className="text-sm text-gray-400">{data.members.length} member{data.members.length !== 1 ? 's' : ''}</p>
+            <p className="font-bold text-gray-900 dark:text-white text-lg truncate">{data.householdName}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">{data.members.length} member{data.members.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <InviteCodeChip code={data.inviteCode} />
@@ -76,23 +76,23 @@ function HouseholdContent({ data }: { data: HouseholdSummary }) {
 
       {/* Aggregate stat cards */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-gray-500">Total Spent</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Total Spent</span>
           </div>
-          <p className="text-lg sm:text-xl font-bold text-gray-900">{inr(data.totalSpent)}</p>
+          <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{inr(data.totalSpent)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-gray-500">Total Income</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Total Income</span>
           </div>
-          <p className="text-lg sm:text-xl font-bold text-gray-900">{inr(data.totalIncome)}</p>
+          <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{inr(data.totalIncome)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs text-gray-500">Net</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Net</span>
           </div>
           <p className={`text-lg sm:text-xl font-bold ${totalNet >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
             {totalNet >= 0 ? '+' : ''}{inr(totalNet)}
@@ -128,16 +128,16 @@ function InviteCodeChip({ code }: { code: string }) {
   return (
     <button
       onClick={copy}
-      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-colors group"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors group"
       title="Copy invite code"
     >
       <div className="text-left">
-        <p className="text-xs text-gray-400 leading-none mb-0.5">Invite code</p>
-        <p className="font-mono font-bold text-gray-800 tracking-widest text-sm">{code}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 leading-none mb-0.5">Invite code</p>
+        <p className="font-mono font-bold text-gray-800 dark:text-gray-100 tracking-widest text-sm">{code}</p>
       </div>
       {copied
         ? <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-        : <Copy className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+        : <Copy className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-500 flex-shrink-0" />
       }
     </button>
   )
@@ -150,7 +150,7 @@ function MemberCard({ member, householdTotal }: { member: MemberStat; householdT
   const shareOfTotal = householdTotal > 0 ? (member.totalSpent / householdTotal) * 100 : 0
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-10 h-10 rounded-full ${avatarColor(member.displayName)} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
@@ -158,7 +158,7 @@ function MemberCard({ member, householdTotal }: { member: MemberStat; householdT
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-900 truncate">{member.displayName}</span>
+            <span className="font-semibold text-gray-900 dark:text-white truncate">{member.displayName}</span>
             {member.role === 'ADMIN' && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                 <Crown className="w-3 h-3" /> Admin
@@ -181,32 +181,32 @@ function MemberCard({ member, householdTotal }: { member: MemberStat; householdT
           {/* Stats row */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Spent</p>
-              <p className="font-bold text-gray-900">{inrFull(member.totalSpent)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Spent</p>
+              <p className="font-bold text-gray-900 dark:text-white">{inrFull(member.totalSpent)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Income</p>
-              <p className="font-bold text-gray-900">{inrFull(member.totalIncome)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Income</p>
+              <p className="font-bold text-gray-900 dark:text-white">{inrFull(member.totalIncome)}</p>
             </div>
           </div>
 
           {/* Share of household spending */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-400">Share of household spend</span>
-              <span className="text-xs font-medium text-gray-600">{shareOfTotal.toFixed(0)}%</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Share of household spend</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{shareOfTotal.toFixed(0)}%</span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
+            <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
               <div
                 className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(shareOfTotal, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">{member.transactionCount} transaction{member.transactionCount !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{member.transactionCount} transaction{member.transactionCount !== 1 ? 's' : ''}</p>
           </div>
         </>
       ) : (
-        <p className="text-sm text-gray-400 text-center py-2">No transactions this month</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No transactions this month</p>
       )}
     </div>
   )
@@ -224,12 +224,12 @@ function SoloState({ inviteCode }: { inviteCode: string }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
-      <Users className="mx-auto w-10 h-10 text-gray-300 mb-3" />
-      <p className="font-semibold text-gray-700 mb-1">You're the only member</p>
-      <p className="text-sm text-gray-400 mb-5">Share the invite code with your household members so they can join.</p>
-      <div className="inline-flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3 mb-4">
-        <span className="font-mono font-bold text-xl tracking-widest text-gray-800">{inviteCode}</span>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-10 text-center">
+      <Users className="mx-auto w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+      <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">You're the only member</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mb-5">Share the invite code with your household members so they can join.</p>
+      <div className="inline-flex items-center gap-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-5 py-3 mb-4">
+        <span className="font-mono font-bold text-xl tracking-widest text-gray-800 dark:text-gray-100">{inviteCode}</span>
       </div>
       <div>
         <button
@@ -249,12 +249,12 @@ function SoloState({ inviteCode }: { inviteCode: string }) {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="bg-gray-100 rounded-xl h-20" />
+      <div className="bg-gray-100 dark:bg-gray-700 rounded-xl h-20" />
       <div className="grid grid-cols-3 gap-4">
-        {[...Array(3)].map((_, i) => <div key={i} className="bg-gray-100 rounded-xl h-20" />)}
+        {[...Array(3)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-xl h-20" />)}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[...Array(2)].map((_, i) => <div key={i} className="bg-gray-100 rounded-xl h-40" />)}
+        {[...Array(2)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-gray-700 rounded-xl h-40" />)}
       </div>
     </div>
   )

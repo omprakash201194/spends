@@ -39,7 +39,7 @@ function PatternCard({ p }: { p: RecurringPattern }) {
                    p.categoryName?.toLowerCase().includes('salary')
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-sm transition-shadow">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
           {/* Direction icon */}
@@ -53,21 +53,21 @@ function PatternCard({ p }: { p: RecurringPattern }) {
           </div>
 
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{p.merchantName}</p>
+            <p className="font-semibold text-gray-900 dark:text-white truncate">{p.merchantName}</p>
             {p.categoryName && (
               <div className="flex items-center gap-1.5 mt-0.5">
                 {p.categoryColor && (
                   <span className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: p.categoryColor }} />
                 )}
-                <span className="text-xs text-gray-500">{p.categoryName}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{p.categoryName}</span>
               </div>
             )}
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <p className="text-lg font-bold text-gray-900">{fmtFull(p.averageAmount)}</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{fmtFull(p.averageAmount)}</p>
           <div className="flex items-center gap-1.5">
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
               Monthly
@@ -81,7 +81,7 @@ function PatternCard({ p }: { p: RecurringPattern }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-gray-400 pt-3 border-t border-gray-100">
+      <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
           <span>{p.occurrences} months detected</span>
@@ -129,15 +129,15 @@ export default function RecurringPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Repeat className="w-5 h-5 text-blue-600" />
-            <h1 className="text-xl font-bold text-gray-900">Recurring Transactions</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Recurring Transactions</h1>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {data.month} · Patterns from {lookbackDesc}
           </p>
         </div>
 
         {/* Lookback selector */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 self-start">
           {LOOKBACK_OPTIONS.map(opt => (
             <button
               key={opt.months}
@@ -145,8 +145,8 @@ export default function RecurringPage() {
               className={clsx(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                 lookback === opt.months
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
               {opt.label}
@@ -168,9 +168,9 @@ export default function RecurringPage() {
           {/* Empty state */}
           {data.patterns.length === 0 && (
             <div className="text-center py-16">
-              <Repeat className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="font-medium text-gray-500">No recurring patterns detected</p>
-              <p className="text-sm text-gray-400 mt-1">
+              <Repeat className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="font-medium text-gray-500 dark:text-gray-400">No recurring patterns detected</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                 {lookback > 0 && lookback < 12
                   ? `Try extending the window to 12M or more.`
                   : 'Import at least 3 months of statements to see patterns.'}
@@ -181,7 +181,7 @@ export default function RecurringPage() {
           {/* Pattern cards */}
           {data.patterns.length > 0 && (
             <>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 {data.patterns.length} pattern{data.patterns.length !== 1 ? 's' : ''} detected
               </p>
               <div className="grid gap-3 sm:grid-cols-2">

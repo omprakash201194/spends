@@ -43,7 +43,7 @@ function ViewCard({ view, onDelete }: { view: ViewResponse; onDelete: () => void
   return (
     <div
       onClick={() => navigate(`/views/${view.id}`)}
-      className="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
+      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -54,7 +54,7 @@ function ViewCard({ view, onDelete }: { view: ViewResponse; onDelete: () => void
               style={{ backgroundColor: view.color }}
             />
           )}
-          <h3 className="font-semibold text-gray-900 truncate">{view.name}</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white truncate">{view.name}</h3>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', TYPE_COLOR[view.type])}>
@@ -70,25 +70,25 @@ function ViewCard({ view, onDelete }: { view: ViewResponse; onDelete: () => void
       </div>
 
       {/* Date range */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-3">
         <Calendar className="w-3.5 h-3.5" />
         {fmtDate(view.startDate)} — {fmtDate(view.endDate)}
       </div>
 
       {/* Stats */}
       <div className="flex items-center justify-between text-sm mb-3">
-        <span className="text-gray-500">{view.transactionCount} transactions</span>
-        <span className="font-semibold text-gray-900">{fmt(view.totalSpent)}</span>
+        <span className="text-gray-500 dark:text-gray-400">{view.transactionCount} transactions</span>
+        <span className="font-semibold text-gray-900 dark:text-white">{fmt(view.totalSpent)}</span>
       </div>
 
       {/* Budget progress */}
       {view.totalBudget && (
         <div>
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span>Budget</span>
             <span>{pct}% of {fmt(view.totalBudget)}</span>
           </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className={clsx('h-full rounded-full', pct! >= 100 ? 'bg-red-500' : pct! >= 80 ? 'bg-amber-400' : 'bg-blue-500')}
               style={{ width: `${pct}%` }}
@@ -162,13 +162,13 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Create View</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="font-semibold text-gray-900 dark:text-white">Create View</h2>
           <div className="flex gap-1">
             {STEPS.map((s, i) => (
-              <div key={s} className={clsx('w-2 h-2 rounded-full', s === step ? 'bg-blue-600' : i < STEPS.indexOf(step) ? 'bg-blue-200' : 'bg-gray-200')} />
+              <div key={s} className={clsx('w-2 h-2 rounded-full', s === step ? 'bg-blue-600' : i < STEPS.indexOf(step) ? 'bg-blue-200' : 'bg-gray-200 dark:bg-gray-600')} />
             ))}
           </div>
         </div>
@@ -179,9 +179,9 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
           {step === 'Details' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                   placeholder="e.g. Goa Trip, Shaadi 2025"
                   value={name}
                   onChange={e => setName(e.target.value)}
@@ -189,29 +189,29 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Start date</label>
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     value={startDate} onChange={e => setStartDate(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">End date</label>
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     value={endDate} onChange={e => setEndDate(e.target.value)} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description (optional)</label>
                 <input
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                   placeholder="Short note"
                   value={description}
                   onChange={e => setDesc(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">Color</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Color</label>
                 <input type="color" className="w-8 h-8 rounded cursor-pointer border-0" value={color} onChange={e => setColor(e.target.value)} />
-                <span className="text-xs text-gray-400 font-mono">{color}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">{color}</span>
               </div>
             </>
           )}
@@ -219,7 +219,7 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
           {/* Step 2: Type + template */}
           {step === 'Type' && (
             <>
-              <p className="text-sm text-gray-500">Pick a type. Trip and Event pre-fill suggested category budgets.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Pick a type. Trip and Event pre-fill suggested category budgets.</p>
               <div className="space-y-2">
                 {(['TRIP', 'EVENT', 'CUSTOM'] as ViewType[]).map(t => (
                   <button
@@ -227,11 +227,11 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
                     onClick={() => applyTemplate(t)}
                     className={clsx(
                       'w-full text-left px-4 py-3 rounded-xl border-2 transition-colors',
-                      type === t ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                      type === t ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     )}
                   >
-                    <p className="font-medium text-sm">{TYPE_LABEL[t]}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="font-medium text-sm dark:text-gray-100">{TYPE_LABEL[t]}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {t === 'TRIP' ? 'Transport, Food, Entertainment, Shopping' :
                        t === 'EVENT' ? 'Shopping, Food, Entertainment, Miscellaneous' :
                        'No preset — set budgets manually'}
@@ -246,12 +246,12 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
           {step === 'Budget' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Total budget (optional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Total budget (optional)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 text-gray-400 text-sm">₹</span>
                   <input
                     type="number" min="0"
-                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     placeholder="e.g. 50000"
                     value={totalBudget}
                     onChange={e => setBudget(e.target.value)}
@@ -260,19 +260,19 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
               </div>
               {catBudgets.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Category budgets (from template)</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Category budgets (from template)</p>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {catBudgets.map((cb, i) => {
                       const cat = categories.find(c => c.id === cb.categoryId)
                       return (
                         <div key={cb.categoryId} className="flex items-center gap-2">
                           {cat?.color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color ?? undefined }} />}
-                          <span className="text-sm text-gray-600 flex-1">{cat?.name}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{cat?.name}</span>
                           <div className="relative w-28">
                             <span className="absolute left-2 top-1.5 text-gray-400 text-xs">₹</span>
                             <input
                               type="number" min="0"
-                              className="w-full pl-5 pr-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              className="w-full pl-5 pr-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100"
                               value={cb.expectedAmount}
                               onChange={e => {
                                 const updated = [...catBudgets]
@@ -292,10 +292,10 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between px-6 py-4 border-t border-gray-100">
+        <div className="flex justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700">
           <button
             onClick={step === 'Details' ? onClose : () => setStep(STEPS[STEPS.indexOf(step) - 1])}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             {step === 'Details' ? 'Cancel' : 'Back'}
           </button>
@@ -352,8 +352,8 @@ export default function ViewsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Views</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track spend for trips and events</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Views</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track spend for trips and events</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -366,7 +366,7 @@ export default function ViewsPage() {
 
       {/* Card grid */}
       {views.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <LayoutGrid className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No views yet</p>
           <p className="text-sm mt-1">Create a view to track spending for a trip or event</p>

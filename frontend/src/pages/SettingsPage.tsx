@@ -29,12 +29,12 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your account preferences</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your account preferences</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit">
         {([
           { id: 'apikey',     label: 'API Key',    icon: Key     },
           { id: 'categories', label: 'Categories', icon: Tag     },
@@ -45,8 +45,8 @@ export default function SettingsPage() {
             onClick={() => setTab(id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               tab === id
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -87,12 +87,12 @@ function ApiKeyTab() {
   const hasKey = data?.hasApiKey ?? false
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
       <div className="flex items-center gap-2 mb-1">
         <Key className="w-4 h-4 text-purple-500" />
-        <h2 className="text-sm font-semibold text-gray-800">Anthropic API Key</h2>
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Anthropic API Key</h2>
       </div>
-      <p className="text-xs text-gray-400 mb-4">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
         Used to generate AI insights on your spending.{' '}
         <a
           href="https://console.anthropic.com/settings/keys"
@@ -106,7 +106,7 @@ function ApiKeyTab() {
 
       {hasKey ? (
         <div className="flex items-center gap-3">
-          <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 font-mono">
+          <div className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 font-mono">
             sk-ant-••••••••••••••••••••••
           </div>
           <button
@@ -125,7 +125,7 @@ function ApiKeyTab() {
             value={keyInput}
             onChange={e => setKeyInput(e.target.value)}
             placeholder="sk-ant-api03-..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
             onKeyDown={e => {
               if (e.key === 'Enter' && keyInput.trim()) saveMutation.mutate(keyInput.trim())
             }}
@@ -145,7 +145,7 @@ function ApiKeyTab() {
           <Check className="w-3.5 h-3.5" /> API key saved successfully
         </p>
       )}
-      <p className="text-xs text-gray-400 mt-3">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
         Your key is stored securely and only used to generate insights on demand. It is never shared.
       </p>
     </div>
@@ -200,17 +200,17 @@ function CategoriesTab() {
     setEditColor(c.color ?? COLOUR_SWATCHES[5])
   }
 
-  if (isLoading) return <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>
+  if (isLoading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
 
   return (
     <div className="space-y-6">
 
       {/* Custom categories */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">Custom Categories</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Shared across your household</p>
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Custom Categories</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Shared across your household</p>
           </div>
           <button
             onClick={() => setShowForm(v => !v)}
@@ -223,7 +223,7 @@ function CategoriesTab() {
 
         {/* Create form */}
         {showForm && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
             <div className="flex gap-3 mb-3">
               <input
                 autoFocus
@@ -231,7 +231,7 @@ function CategoriesTab() {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 placeholder="Category name…"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                 onKeyDown={e => {
                   if (e.key === 'Enter' && newName.trim()) createMutation.mutate()
                   if (e.key === 'Escape') setShowForm(false)
@@ -253,7 +253,7 @@ function CategoriesTab() {
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 rounded-lg"
+                className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
               >
                 Cancel
               </button>
@@ -262,7 +262,7 @@ function CategoriesTab() {
         )}
 
         {customCats.length === 0 && !showForm ? (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
             No custom categories yet. Create one above.
           </p>
         ) : (
@@ -270,14 +270,14 @@ function CategoriesTab() {
             {customCats.map(cat => (
               <div key={cat.id}>
                 {editId === cat.id ? (
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
                     <div className="flex gap-3 mb-3">
                       <input
                         autoFocus
                         type="text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                         onKeyDown={e => {
                           if (e.key === 'Enter') updateMutation.mutate(cat.id)
                           if (e.key === 'Escape') setEditId(null)
@@ -299,23 +299,23 @@ function CategoriesTab() {
                       </button>
                       <button
                         onClick={() => setEditId(null)}
-                        className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 rounded-lg"
+                        className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 group">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 group">
                     <span
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: cat.color ?? '#94a3b8' }}
                     />
-                    <span className="flex-1 text-sm text-gray-800">{cat.name}</span>
+                    <span className="flex-1 text-sm text-gray-800 dark:text-gray-100">{cat.name}</span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => startEdit(cat)}
-                        className="p-1 text-gray-400 hover:text-gray-700 rounded"
+                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
                         title="Edit"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -338,17 +338,17 @@ function CategoriesTab() {
       </div>
 
       {/* System categories — read-only reference */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-800 mb-1">System Categories</h2>
-        <p className="text-xs text-gray-400 mb-4">Built-in categories — cannot be modified</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">System Categories</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Built-in categories — cannot be modified</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {systemCats.map(cat => (
-            <div key={cat.id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+            <div key={cat.id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <span
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                 style={{ backgroundColor: cat.color ?? '#94a3b8' }}
               />
-              <span className="text-xs text-gray-600 truncate">{cat.name}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{cat.name}</span>
             </div>
           ))}
         </div>
@@ -415,14 +415,14 @@ function RulesTab() {
     setEditPriority(r.priority)
   }
 
-  if (isLoading) return <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>
+  if (isLoading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-800">Categorization Rules</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Categorization Rules</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             Keywords matched against transaction remarks — higher priority wins
           </p>
         </div>
@@ -437,7 +437,7 @@ function RulesTab() {
 
       {/* Create form */}
       {showForm && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
           <RuleForm
             pattern={newPattern} setPattern={setNewPattern}
             catId={newCatId}    setCatId={setNewCatId}
@@ -452,14 +452,14 @@ function RulesTab() {
       )}
 
       {rules.length === 0 && !showForm ? (
-        <p className="text-sm text-gray-400 text-center py-6">
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
           No rules yet. Rules are created automatically when you re-categorize a transaction,
           or you can add them manually above.
         </p>
       ) : (
         <div className="space-y-1">
           {/* Header */}
-          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">
+          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-3 pb-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
             <span>Pattern</span>
             <span>Category</span>
             <span>Priority</span>
@@ -469,7 +469,7 @@ function RulesTab() {
           {rules.map(rule => (
             <div key={rule.id}>
               {editId === rule.id ? (
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 mb-1">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 mb-1">
                   <RuleForm
                     pattern={editPattern} setPattern={setEditPattern}
                     catId={editCatId}    setCatId={setEditCatId}
@@ -482,20 +482,20 @@ function RulesTab() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 items-center px-3 py-2.5 rounded-lg hover:bg-gray-50 group">
-                  <span className="text-sm font-mono text-gray-700 truncate">{rule.pattern}</span>
+                <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 items-center px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 group">
+                  <span className="text-sm font-mono text-gray-700 dark:text-gray-200 truncate">{rule.pattern}</span>
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: rule.categoryColor ?? '#94a3b8' }}
                     />
-                    <span className="text-sm text-gray-700 truncate">{rule.categoryName}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{rule.categoryName}</span>
                   </div>
-                  <span className="text-sm text-gray-400 text-right tabular-nums">{rule.priority}</span>
+                  <span className="text-sm text-gray-400 dark:text-gray-500 text-right tabular-nums">{rule.priority}</span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => startEdit(rule)}
-                      className="p-1 text-gray-400 hover:text-gray-700 rounded"
+                      className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
                       title="Edit"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -566,7 +566,7 @@ function RuleForm({
           value={pattern}
           onChange={e => setPattern(e.target.value)}
           placeholder="keyword or phrase…"
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           onKeyDown={e => {
             if (e.key === 'Enter' && pattern.trim() && catId) onSubmit()
             if (e.key === 'Escape') onCancel()
@@ -575,7 +575,7 @@ function RuleForm({
         <select
           value={catId}
           onChange={e => setCatId(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         >
           <option value="">— Select category —</option>
           {cats.map(c => (
@@ -587,7 +587,7 @@ function RuleForm({
           value={priority}
           onChange={e => setPriority(Number(e.target.value))}
           placeholder="Priority (higher = first)"
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         />
       </div>
       <div className="flex gap-2">
@@ -600,7 +600,7 @@ function RuleForm({
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 rounded-lg"
+          className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
         >
           Cancel
         </button>

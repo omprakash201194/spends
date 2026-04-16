@@ -55,12 +55,12 @@ function MonthRowComponent({ m }: { m: MonthRow }) {
   const topCat = [...m.categories].sort((a, b) => b.amount - a.amount)[0]
 
   return (
-    <tr className={clsx('border-b border-gray-100 hover:bg-gray-50', !hasData && 'opacity-40')}>
-      <td className="px-4 py-3 font-medium text-gray-800 text-sm">{m.monthLabel}</td>
-      <td className="px-4 py-3 text-right text-sm text-gray-900">
+    <tr className={clsx('border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700', !hasData && 'opacity-40')}>
+      <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100 text-sm">{m.monthLabel}</td>
+      <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
         {hasData ? inrFull(m.totalSpent) : '—'}
       </td>
-      <td className="px-4 py-3 text-right text-sm text-gray-900">
+      <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
         {hasData ? inrFull(m.totalIncome) : '—'}
       </td>
       <td className="px-4 py-3 text-right text-sm font-medium">
@@ -75,7 +75,7 @@ function MonthRowComponent({ m }: { m: MonthRow }) {
       </td>
       <td className="px-4 py-3 hidden sm:table-cell">
         {topCat && (
-          <span className="flex items-center gap-1.5 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
             {topCat.color && (
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: topCat.color }} />
             )}
@@ -120,20 +120,20 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 print:hidden">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-600" />
-          <h1 className="text-xl font-bold text-gray-900">Reports</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Reports</h1>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Year selector */}
           {years.length > 0 && (
-            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               {years.map(y => (
                 <button
                   key={y}
                   onClick={() => setSelectedYear(y)}
                   className={clsx(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                    year === y ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    year === y ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                   )}
                 >
                   {y}
@@ -153,7 +153,7 @@ export default function ReportsPage() {
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
           >
             <Printer className="w-4 h-4" />
             Print
@@ -177,38 +177,38 @@ export default function ReportsPage() {
         <div className={clsx(isFetching && !isLoading && 'opacity-50 pointer-events-none')}>
           {/* Annual stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 mb-1">Annual Spent</p>
-              <p className="text-lg font-bold text-gray-900">{inrFull(summary.grandTotalSpent)}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Spent</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(summary.grandTotalSpent)}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 mb-1">Annual Income</p>
-              <p className="text-lg font-bold text-gray-900">{inrFull(summary.grandTotalIncome)}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Income</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(summary.grandTotalIncome)}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 mb-1">Net {net >= 0 ? 'Savings' : 'Deficit'}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net {net >= 0 ? 'Savings' : 'Deficit'}</p>
               <p className={clsx('text-lg font-bold', net >= 0 ? 'text-green-600' : 'text-red-600')}>
                 {inrFull(Math.abs(net))}
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 mb-1">Avg Monthly Spend</p>
-              <p className="text-lg font-bold text-gray-900">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Monthly Spend</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
                 {inrFull(summary.grandTotalSpent / 12)}
               </p>
             </div>
           </div>
 
           {/* Monthly table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Month</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Spent</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Income</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Net</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Top Category</th>
+                <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Month</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Income</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:table-cell">Top Category</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,12 +217,12 @@ export default function ReportsPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-300">
-                  <td className="px-4 py-3 text-sm font-bold text-gray-700">Total {year}</td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                <tr className="bg-gray-50 dark:bg-gray-700 border-t-2 border-gray-300 dark:border-gray-600">
+                  <td className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200">Total {year}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">
                     {inrFull(summary.grandTotalSpent)}
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                  <td className="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">
                     {inrFull(summary.grandTotalIncome)}
                   </td>
                   <td className={clsx('px-4 py-3 text-right text-sm font-bold', net >= 0 ? 'text-green-600' : 'text-red-600')}>

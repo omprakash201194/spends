@@ -52,14 +52,14 @@ function ListTab({ viewId }: { viewId: string }) {
   })
 
   if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-  if (!data || data.content.length === 0) return <p className="text-center text-gray-400 py-12">No transactions in this view.</p>
+  if (!data || data.content.length === 0) return <p className="text-center text-gray-400 dark:text-gray-500 py-12">No transactions in this view.</p>
 
   return (
     <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-left text-xs text-gray-500 font-medium">
+            <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">
               <th className="pb-2 pr-4 pl-1">Date</th>
               <th className="pb-2 pr-4">Merchant</th>
               <th className="pb-2 pr-4">Category</th>
@@ -68,21 +68,21 @@ function ListTab({ viewId }: { viewId: string }) {
               <th className="pb-2 text-right"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {data.content.map((tx: ViewTransactionItem) => (
-              <tr key={tx.id} className="hover:bg-gray-50">
-                <td className="py-2 pr-4 pl-1 text-gray-500 whitespace-nowrap">{fmtDate(tx.valueDate)}</td>
+              <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td className="py-2 pr-4 pl-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.valueDate)}</td>
                 <td className="py-2 pr-4 max-w-[180px]">
-                  <p className="truncate font-medium text-gray-800">{tx.merchantName ?? '—'}</p>
-                  <p className="truncate text-xs text-gray-400">{tx.rawRemarks}</p>
+                  <p className="truncate font-medium text-gray-800 dark:text-gray-100">{tx.merchantName ?? '—'}</p>
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{tx.rawRemarks}</p>
                 </td>
                 <td className="py-2 pr-4">
                   <div className="flex items-center gap-1.5">
                     {tx.categoryColor && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tx.categoryColor }} />}
-                    <span className="text-gray-600">{tx.categoryName ?? '—'}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{tx.categoryName ?? '—'}</span>
                   </div>
                 </td>
-                <td className="py-2 pr-4 text-gray-500">{tx.memberName}</td>
+                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{tx.memberName}</td>
                 <td className="py-2 pr-4 text-right font-mono">
                   {tx.withdrawalAmount > 0
                     ? <span className="text-red-600">{fmtFull(tx.withdrawalAmount)}</span>
@@ -92,7 +92,7 @@ function ListTab({ viewId }: { viewId: string }) {
                   <button
                     onClick={() => removeMut.mutate(tx.id)}
                     disabled={removingId === tx.id}
-                    className="p-1 text-gray-300 hover:text-red-500 rounded"
+                    className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 rounded"
                     aria-label={`Remove ${tx.merchantName ?? tx.rawRemarks} from view`}
                     title="Remove from view"
                   >
@@ -107,16 +107,16 @@ function ListTab({ viewId }: { viewId: string }) {
 
       {/* Pagination */}
       {data.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-gray-400">
           <span>{data.totalElements} transactions</span>
           <div className="flex gap-2">
             <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">
+              className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
               Prev
             </button>
             <span className="px-3 py-1.5">{page + 1} / {data.totalPages}</span>
             <button disabled={page >= data.totalPages - 1} onClick={() => setPage(p => p + 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">
+              className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
               Next
             </button>
           </div>
@@ -135,7 +135,7 @@ function BoardTab({ viewId }: { viewId: string }) {
   })
 
   if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-  if (!data || data.content.length === 0) return <p className="text-center text-gray-400 py-12">No transactions in this view.</p>
+  if (!data || data.content.length === 0) return <p className="text-center text-gray-400 dark:text-gray-500 py-12">No transactions in this view.</p>
 
   // Group by category
   const groups = data.content.reduce<Record<string, ViewTransactionItem[]>>((acc, tx) => {
@@ -160,18 +160,18 @@ function BoardTab({ viewId }: { viewId: string }) {
             <div key={cat} className="w-52 flex-shrink-0">
               <div className="flex items-center gap-1.5 mb-2">
                 {color && <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />}
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">{cat}</span>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide truncate">{cat}</span>
               </div>
-              <p className="text-xs text-gray-400 mb-2">{fmt(total)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{fmt(total)}</p>
               <div className="space-y-2">
                 {txs.map(tx => (
-                  <div key={tx.id} className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-                    <p className="text-sm font-medium text-gray-800 truncate">{tx.merchantName ?? tx.rawRemarks.slice(0, 30)}</p>
+                  <div key={tx.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.merchantName ?? tx.rawRemarks.slice(0, 30)}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-gray-400">{fmtDate(tx.valueDate)}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{fmtDate(tx.valueDate)}</span>
                       <span className="text-xs font-mono font-semibold text-red-600">{fmt(tx.withdrawalAmount)}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{tx.memberName}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{tx.memberName}</p>
                   </div>
                 ))}
               </div>
@@ -201,16 +201,16 @@ function SummaryTab({ viewId }: { viewId: string }) {
   return (
     <div className="space-y-6">
       {/* Total gauge */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-sm text-gray-500 mb-1">Total Spent</p>
-        <p className="text-3xl font-bold text-gray-900 mb-3">{fmtFull(summary.totalSpent)}</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Spent</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">{fmtFull(summary.totalSpent)}</p>
         {budgetPct !== null && summary.totalBudget != null && (
           <>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
               <span>Budget: {fmtFull(summary.totalBudget)}</span>
               <span>{budgetPct}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className={clsx('h-full rounded-full', budgetPct >= 100 ? 'bg-red-500' : budgetPct >= 80 ? 'bg-amber-400' : 'bg-blue-500')}
                 style={{ width: `${budgetPct}%` }}
@@ -222,8 +222,8 @@ function SummaryTab({ viewId }: { viewId: string }) {
 
       {/* Category breakdown */}
       {summary.categories.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">By Category</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">By Category</h3>
           <div className="space-y-3">
             {summary.categories.map((cat: CategoryBudgetItem) => {
               const pct = summary.totalSpent > 0 ? Math.round((cat.actualAmount / summary.totalSpent) * 100) : 0
@@ -233,17 +233,17 @@ function SummaryTab({ viewId }: { viewId: string }) {
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="flex items-center gap-1.5">
                       {cat.categoryColor && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.categoryColor }} />}
-                      <span className="text-gray-700">{cat.categoryName}</span>
+                      <span className="text-gray-700 dark:text-gray-200">{cat.categoryName}</span>
                       {budgetOver && <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">Over</span>}
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-medium">{fmt(cat.actualAmount)}</span>
+                      <span className="font-mono font-medium dark:text-gray-100">{fmt(cat.actualAmount)}</span>
                       {cat.expectedAmount != null && (
-                        <span className="text-xs text-gray-400 ml-1">/ {fmt(cat.expectedAmount)}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">/ {fmt(cat.expectedAmount)}</span>
                       )}
                     </div>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
                       className={clsx('h-full rounded-full', budgetOver ? 'bg-red-400' : 'bg-blue-500')}
                       style={{
@@ -261,8 +261,8 @@ function SummaryTab({ viewId }: { viewId: string }) {
 
       {/* Member breakdown */}
       {summary.members.length > 1 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">By Member</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">By Member</h3>
           <div className="space-y-3">
             {summary.members.map(m => {
               const pct = summary.totalSpent > 0 ? Math.round((m.amount / summary.totalSpent) * 100) : 0
@@ -273,12 +273,12 @@ function SummaryTab({ viewId }: { viewId: string }) {
                       <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold text-white">
                         {(m.displayName[0] ?? '?').toUpperCase()}
                       </div>
-                      <span className="text-gray-700">{m.displayName}</span>
-                      <span className="text-gray-400 text-xs">({m.count} txns)</span>
+                      <span className="text-gray-700 dark:text-gray-200">{m.displayName}</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-xs">({m.count} txns)</span>
                     </div>
-                    <span className="font-mono font-medium">{fmt(m.amount)}</span>
+                    <span className="font-mono font-medium dark:text-gray-100">{fmt(m.amount)}</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-400 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -322,29 +322,29 @@ export default function ViewDetailPage() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Back + header */}
-      <button onClick={() => navigate('/views')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4">
+      <button onClick={() => navigate('/views')} className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-4">
         <ArrowLeft className="w-4 h-4" /> Views
       </button>
 
       <div className="flex items-start gap-3 mb-2">
         {view.color && <span className="w-4 h-4 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: view.color }} />}
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{view.name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{fmtDate(view.startDate)} — {fmtDate(view.endDate)}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{view.name}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{fmtDate(view.startDate)} — {fmtDate(view.endDate)}</p>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="flex items-center gap-4 text-sm mb-5">
-        <span className="font-semibold text-gray-900">{fmt(view.totalSpent)} spent</span>
+        <span className="font-semibold text-gray-900 dark:text-white">{fmt(view.totalSpent)} spent</span>
         {pct !== null && view.totalBudget != null && (
-          <span className="text-gray-400">of {fmt(view.totalBudget)} budget ({pct}%)</span>
+          <span className="text-gray-400 dark:text-gray-500">of {fmt(view.totalBudget)} budget ({pct}%)</span>
         )}
-        <span className="text-gray-400">{view.transactionCount} transactions</span>
+        <span className="text-gray-400 dark:text-gray-500">{view.transactionCount} transactions</span>
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-gray-200 mb-5">
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-5">
         {TABS.map(({ id: tid, label, Icon }) => (
           <button
             key={tid}
@@ -353,7 +353,7 @@ export default function ViewDetailPage() {
               'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
               tab === tid
                 ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             )}
           >
             <Icon className="w-4 h-4" />
