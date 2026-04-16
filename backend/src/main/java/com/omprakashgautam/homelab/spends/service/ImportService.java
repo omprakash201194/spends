@@ -1,18 +1,24 @@
 package com.omprakashgautam.homelab.spends.service;
 
+import com.omprakashgautam.homelab.spends.dto.ImportBatchDto;
 import com.omprakashgautam.homelab.spends.dto.ImportResultDto;
 import com.omprakashgautam.homelab.spends.model.BankAccount;
 import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.ImportBatch;
 import com.omprakashgautam.homelab.spends.model.Transaction;
+import com.omprakashgautam.homelab.spends.repository.ImportBatchRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -28,6 +34,7 @@ public class ImportService {
     private final CategorizationService categorizationService;
     private final MerchantExtractor merchantExtractor;
     private final TransactionRepository transactionRepository;
+    private final ImportBatchRepository importBatchRepository;
 
     @Transactional
     public ImportResultDto.Response importFiles(UUID userId, List<MultipartFile> files) {
@@ -39,9 +46,9 @@ public class ImportService {
         for (MultipartFile file : files) {
             ImportResultDto.FileSummary summary = importSingleFile(userId, file);
             summaries.add(summary);
-            totalImported  += summary.imported();
+            totalImported   += summary.imported();
             totalDuplicates += summary.duplicates();
-            totalErrors    += summary.errors();
+            totalErrors     += summary.errors();
         }
 
         return new ImportResultDto.Response(totalImported, totalDuplicates, totalErrors, summaries);
@@ -53,6 +60,7 @@ public class ImportService {
         int duplicates = 0;
         int errors = 0;
         BankAccount bankAccount = null;
+        ImportBatch batch = null;
 
         try {
             IciciStatementParser.ParsedStatement statement = parser.parse(file);
@@ -63,6 +71,14 @@ public class ImportService {
                     statement.accountNumberMasked(),
                     statement.accountType()
             );
+
+            // Create the batch record so every imported transaction is linked to it
+            batch = importBatchRepository.save(ImportBatch.builder()
+                    .bankAccount(bankAccount)
+                    .originalFilename(fileName)
+                    .transactionCount(0)
+                    .duplicateCount(0)
+                    .build());
 
             for (IciciStatementParser.ParsedTransaction tx : statement.transactions()) {
                 try {
@@ -84,6 +100,7 @@ public class ImportService {
 
                     Transaction transaction = Transaction.builder()
                             .bankAccount(bankAccount)
+                            .importBatch(batch)
                             .valueDate(tx.valueDate())
                             .transactionDate(tx.transactionDate())
                             .chequeNumber(tx.chequeNumber())
@@ -103,6 +120,12 @@ public class ImportService {
                     errors++;
                 }
             }
+
+            // Persist final counts on the batch record
+            batch.setTransactionCount(imported);
+            batch.setDuplicateCount(duplicates);
+            importBatchRepository.save(batch);
+
         } catch (Exception e) {
             log.error("Failed to parse file {}: {}", fileName, e.getMessage(), e);
             errors++;
@@ -118,6 +141,45 @@ public class ImportService {
                 errors
         );
     }
+
+    // ── History & delete ──────────────────────────────────────────────────────
+
+    public ImportBatchDto.HistoryResponse getHistory(UUID userId) {
+        List<ImportBatch> batches = importBatchRepository.findByUserIdWithAccount(userId);
+        List<ImportBatchDto.BatchEntry> entries = batches.stream()
+                .map(b -> new ImportBatchDto.BatchEntry(
+                        b.getId(),
+                        b.getOriginalFilename(),
+                        b.getBankAccount().getBankName(),
+                        b.getBankAccount().getAccountNumberMasked(),
+                        b.getBankAccount().getId(),
+                        b.getImportedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                        b.getTransactionCount(),
+                        b.getDuplicateCount()
+                ))
+                .toList();
+        return new ImportBatchDto.HistoryResponse(entries);
+    }
+
+    @Transactional
+    public void deleteBatch(UUID userId, UUID batchId) {
+        if (!importBatchRepository.existsByIdAndUserId(batchId, userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Import batch not found");
+        }
+        // Deleting the batch cascades to financial_transaction (ON DELETE CASCADE in migration 008),
+        // which in turn cascades to view_transaction (ON DELETE CASCADE in migration 007).
+        importBatchRepository.deleteById(batchId);
+    }
+
+    @Transactional
+    public void deleteAll(UUID userId) {
+        // Delete transactions first — DB cascade removes view_transaction links (migration 007)
+        transactionRepository.deleteAllByUserId(userId);
+        // Delete batch records — their transactions are already gone
+        importBatchRepository.deleteAllByUserId(userId);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String computeImportHash(UUID bankAccountId, String date,
                                      String withdrawal, String deposit, String remarks) {

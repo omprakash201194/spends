@@ -3,8 +3,10 @@ package com.omprakashgautam.homelab.spends.repository;
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,6 +19,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     boolean existsByImportHash(String importHash);
     Optional<Transaction> findByImportHash(String importHash);
+
+    /**
+     * Bulk-deletes all transactions for the user across all their bank accounts.
+     * DB cascade (migration 007) automatically removes associated view_transaction rows.
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Transaction t WHERE t.bankAccount.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") UUID userId);
 
     // ── Dashboard: monthly summary ────────────────────────────────────────────
 

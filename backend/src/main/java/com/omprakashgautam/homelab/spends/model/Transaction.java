@@ -55,6 +55,11 @@ public class Transaction {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "import_batch_id")
+    @ToString.Exclude
+    private ImportBatch importBatch;
+
     @Column(name = "is_reviewed", nullable = false)
     @Builder.Default
     private boolean reviewed = false;
