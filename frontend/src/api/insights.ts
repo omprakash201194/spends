@@ -1,6 +1,6 @@
 import apiClient from './client'
 
-export type InsightType = 'DASHBOARD' | 'BUDGET' | 'TRANSACTIONS'
+export type InsightType = 'DASHBOARD' | 'BUDGET' | 'TRANSACTIONS' | 'RECURRING'
 
 export interface InsightResponse {
   insight: string

@@ -29,10 +29,25 @@ public class RecurringService {
     private static final DateTimeFormatter MONTH_HEADER = DateTimeFormatter.ofPattern("MMMM yyyy");
     private static final DateTimeFormatter YEAR_MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
 
-    @Transactional(readOnly = true)
+    /** Convenience overload — uses default 12-month lookback. */
     public RecurringDto.RecurringSummary getPatterns(UUID userId) {
+        return getPatterns(userId, null);
+    }
+
+    /**
+     * @param months how many calendar months to look back. {@code null} = default (12).
+     *               {@code 0} = all available data (no lower bound).
+     */
+    @Transactional(readOnly = true)
+    public RecurringDto.RecurringSummary getPatterns(UUID userId, Integer months) {
         LocalDate anchor = resolveAnchorMonth(userId);
-        LocalDate from = anchor.minusMonths(LOOKBACK_MONTHS).withDayOfMonth(1);
+        LocalDate from;
+        if (months != null && months == 0) {
+            from = LocalDate.of(2000, 1, 1); // effectively all data
+        } else {
+            int lookback = (months == null || months < 0) ? LOOKBACK_MONTHS : months;
+            from = anchor.minusMonths(lookback).withDayOfMonth(1);
+        }
         String anchorYM = anchor.format(YEAR_MONTH_FMT);
 
         List<Object[]> rows = transactionRepository.merchantMonthlyActivity(userId, from);
@@ -78,21 +93,21 @@ public class RecurringService {
             String categoryColor = (String) monthRows.get(0)[2];
 
             // Months sorted chronologically
-            List<String> months = monthRows.stream()
+            List<String> sortedMonths = monthRows.stream()
                     .map(r -> (String) r[3])
                     .sorted()
                     .collect(Collectors.toList());
 
-            String lastMonth    = months.get(months.size() - 1);
+            String lastMonth    = sortedMonths.get(sortedMonths.size() - 1);
             String nextExpected = YearMonth.parse(lastMonth, YEAR_MONTH_FMT)
                     .plusMonths(1)
                     .format(YEAR_MONTH_FMT);
-            boolean activeThisMonth = months.contains(anchorYM);
+            boolean activeThisMonth = sortedMonths.contains(anchorYM);
 
             patterns.add(new RecurringDto.RecurringPattern(
                     merchant, categoryName, categoryColor,
                     RecurringDto.Frequency.MONTHLY,
-                    avgAmt, months.size(),
+                    avgAmt, sortedMonths.size(),
                     lastMonth, nextExpected, activeThisMonth
             ));
         }

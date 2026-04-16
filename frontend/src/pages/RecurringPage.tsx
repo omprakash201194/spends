@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Repeat, Loader2, Calendar, TrendingDown, TrendingUp } from 'lucide-react'
 import { clsx } from 'clsx'
 import { getRecurring, type RecurringPattern } from '../api/recurring'
+import InsightCard from '../components/InsightCard'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +20,17 @@ function fmtYearMonth(ym: string): string {
   if (monthIdx < 0 || monthIdx > 11) return ym
   return `${months[monthIdx]} ${parts[0]}`
 }
+
+// ── Lookback options ──────────────────────────────────────────────────────────
+
+const LOOKBACK_OPTIONS = [
+  { label: '6M',      months: 6,   desc: 'last 6 months' },
+  { label: '12M',     months: 12,  desc: 'last 12 months' },
+  { label: '24M',     months: 24,  desc: 'last 24 months' },
+  { label: 'All',     months: 0,   desc: 'all available data' },
+] as const
+
+type LookbackMonths = typeof LOOKBACK_OPTIONS[number]['months']
 
 // ── Pattern Card ──────────────────────────────────────────────────────────────
 
@@ -83,11 +96,15 @@ function PatternCard({ p }: { p: RecurringPattern }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecurringPage() {
+  const [lookback, setLookback] = useState<LookbackMonths>(12)
+
   const { data, isPending, isError } = useQuery({
-    queryKey: ['recurring'],
-    queryFn: getRecurring,
+    queryKey: ['recurring', lookback],
+    queryFn: () => getRecurring(lookback),
     staleTime: 5 * 60_000,
   })
+
+  const lookbackDesc = LOOKBACK_OPTIONS.find(o => o.months === lookback)?.desc ?? ''
 
   if (isPending) {
     return (
@@ -108,14 +125,34 @@ export default function RecurringPage() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Repeat className="w-5 h-5 text-blue-600" />
-          <h1 className="text-xl font-bold text-gray-900">Recurring Transactions</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Repeat className="w-5 h-5 text-blue-600" />
+            <h1 className="text-xl font-bold text-gray-900">Recurring Transactions</h1>
+          </div>
+          <p className="text-sm text-gray-500">
+            {data.month} · Patterns from {lookbackDesc}
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
-          {data.month} · Patterns from the last 13 months
-        </p>
+
+        {/* Lookback selector */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 self-start">
+          {LOOKBACK_OPTIONS.map(opt => (
+            <button
+              key={opt.months}
+              onClick={() => setLookback(opt.months)}
+              className={clsx(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                lookback === opt.months
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Info notice */}
@@ -131,7 +168,9 @@ export default function RecurringPage() {
           <Repeat className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="font-medium text-gray-500">No recurring patterns detected</p>
           <p className="text-sm text-gray-400 mt-1">
-            Import at least 3 months of statements to see patterns.
+            {lookback > 0 && lookback < 12
+              ? `Try extending the window to 12M or more.`
+              : 'Import at least 3 months of statements to see patterns.'}
           </p>
         </div>
       )}
@@ -142,13 +181,16 @@ export default function RecurringPage() {
           <p className="text-sm text-gray-500 mb-3">
             {data.patterns.length} pattern{data.patterns.length !== 1 ? 's' : ''} detected
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 mb-6">
             {data.patterns.map(p => (
               <PatternCard key={`${p.merchantName}-${p.categoryName ?? 'none'}`} p={p} />
             ))}
           </div>
         </>
       )}
+
+      {/* AI Insights */}
+      <InsightCard type="RECURRING" label="Analyse Recurring Patterns" />
     </div>
   )
 }

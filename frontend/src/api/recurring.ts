@@ -19,7 +19,8 @@ export interface RecurringSummary {
   patterns: RecurringPattern[]
 }
 
-export async function getRecurring(): Promise<RecurringSummary> {
-  const res = await client.get<RecurringSummary>('/recurring')
+export async function getRecurring(months?: number): Promise<RecurringSummary> {
+  const params = months !== undefined ? { months } : {}
+  const res = await client.get<RecurringSummary>('/recurring', { params })
   return res.data
 }

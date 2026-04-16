@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
   const { data: recurringData } = useQuery<RecurringSummary>({
     queryKey: ['recurring'],
-    queryFn: getRecurring,
+    queryFn: () => getRecurring(),
     staleTime: 5 * 60_000,
   })
 

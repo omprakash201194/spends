@@ -2,6 +2,7 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.omprakashgautam.homelab.spends.dto.InsightDto;
+import com.omprakashgautam.homelab.spends.dto.RecurringDto;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.BudgetRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
@@ -30,6 +31,7 @@ public class InsightService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
+    private final RecurringService recurringService;
 
     private static final String CLAUDE_MODEL     = "claude-haiku-4-5-20251001";
     private static final int    MAX_TOKENS       = 600;
@@ -58,6 +60,7 @@ public class InsightService {
             case DASHBOARD    -> buildDashboardPrompt(userId, from, to, month);
             case BUDGET       -> buildBudgetPrompt(userId, from, to, month);
             case TRANSACTIONS -> buildTransactionsPrompt(userId, from, to, month);
+            case RECURRING    -> buildRecurringPrompt(userId);
         };
 
         String insight = callClaude(apiKey, prompt);
@@ -176,6 +179,49 @@ public class InsightService {
         return systemPrompt("spending pattern analyst") + "\n\nUser data:\n" + sb +
                "\n\nProvide 4 concise bullet-point insights (use • as bullet). " +
                "Identify spending habits, frequent merchants, and specific optimisation tips.";
+    }
+
+    private String buildRecurringPrompt(UUID userId) {
+        RecurringDto.RecurringSummary summary = recurringService.getPatterns(userId);
+
+        var sb = new StringBuilder();
+        sb.append("Recurring transaction patterns detected over the last 12 months:\n\n");
+
+        if (summary.patterns().isEmpty()) {
+            sb.append("No recurring patterns detected yet.\n");
+        } else {
+            BigDecimal totalExpenses = BigDecimal.ZERO;
+            BigDecimal totalIncome   = BigDecimal.ZERO;
+            int expenseCount = 0;
+            int incomeCount  = 0;
+
+            for (RecurringDto.RecurringPattern p : summary.patterns()) {
+                boolean isIncome = p.categoryName() != null &&
+                        (p.categoryName().toLowerCase().contains("income") ||
+                         p.categoryName().toLowerCase().contains("salary"));
+
+                sb.append("  ").append(p.merchantName())
+                  .append(": ₹").append(fmt(p.averageAmount())).append("/month")
+                  .append(isIncome ? " [income]" : " [expense]");
+                if (p.categoryName() != null) sb.append(", ").append(p.categoryName());
+                sb.append(", seen ").append(p.occurrences()).append(" months");
+                if (!p.activeThisMonth()) sb.append(" [missed this month]");
+                sb.append("\n");
+
+                if (isIncome) { totalIncome   = totalIncome.add(p.averageAmount());   incomeCount++; }
+                else          { totalExpenses = totalExpenses.add(p.averageAmount()); expenseCount++; }
+            }
+
+            sb.append("\nTotal estimated monthly recurring expenses: ₹").append(fmt(totalExpenses))
+              .append(" across ").append(expenseCount).append(" patterns\n");
+            sb.append("Total estimated monthly recurring income: ₹").append(fmt(totalIncome))
+              .append(" across ").append(incomeCount).append(" patterns\n");
+        }
+
+        return systemPrompt("subscription and recurring payment analyst") + "\n\nUser data:\n" + sb +
+               "\n\nProvide 4 concise bullet-point insights (use • as bullet). " +
+               "Identify potential forgotten subscriptions, cost-saving opportunities, " +
+               "any patterns that were missed this month, and one observation about income stability.";
     }
 
     private static String systemPrompt(String role) {
