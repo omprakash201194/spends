@@ -16,8 +16,11 @@ import {
   LayoutGrid,
   Repeat,
   FileText,
+  Moon,
+  Sun,
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useThemeStore } from '../store/themeStore'
 
 const nav = [
   { to: '/',             label: 'Dashboard',    icon: LayoutDashboard },
@@ -36,6 +39,7 @@ export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { theme, toggle } = useThemeStore()
 
   const handleLogout = () => {
     logout()
@@ -45,7 +49,7 @@ export default function Layout() {
   const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
 
       {/* ── Mobile backdrop ─────────────────────────────────────────── */}
       {sidebarOpen && (
@@ -119,6 +123,13 @@ export default function Layout() {
             </div>
           </div>
           <button
+            onClick={toggle}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors mb-1"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+          <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
@@ -132,17 +143,17 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Mobile top bar */}
-        <header className="md:hidden print:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <header className="md:hidden print:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-blue-500" />
-            <span className="font-bold text-gray-900">SpendStack</span>
+            <span className="font-bold text-gray-900 dark:text-white">SpendStack</span>
           </div>
         </header>
 
