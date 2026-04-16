@@ -70,6 +70,19 @@ public class TransactionService {
         );
     }
 
+    /**
+     * Returns all transactions matching the given filters without pagination.
+     * Used by ExportService to generate CSV downloads.
+     * Sort: most recent first (valueDate DESC).
+     */
+    @Transactional(readOnly = true)
+    public List<Transaction> listAll(UUID userId, String search, UUID categoryId,
+                                     UUID accountId, String type,
+                                     LocalDate dateFrom, LocalDate dateTo) {
+        Specification<Transaction> spec = buildSpec(userId, search, categoryId, accountId, type, dateFrom, dateTo);
+        return transactionRepository.findAll(spec, Sort.by("valueDate").descending());
+    }
+
     private Specification<Transaction> buildSpec(
             UUID userId,
             String search,
