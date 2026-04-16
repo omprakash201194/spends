@@ -20,7 +20,8 @@ public class RecurringService {
 
     private final TransactionRepository transactionRepository;
 
-    static final int LOOKBACK_MONTHS = 13;
+    /** 12 complete prior months + the anchor month = 13 calendar months total. */
+    static final int LOOKBACK_MONTHS = 12;
     static final int MIN_OCCURRENCES = 3;
     /** Max allowed (max-min)/min ratio across monthly amounts. */
     static final BigDecimal VARIANCE_THRESHOLD = new BigDecimal("0.20");
