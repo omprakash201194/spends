@@ -12,5 +12,6 @@
     <include file="db/changelog/changes/005-user-claude-api-key.sql"/>
     <include file="db/changelog/changes/006-custom-categories.sql"/>
     <include file="db/changelog/changes/007-views-schema.sql"/>
+    <include file="db/changelog/changes/008-import-batch.sql"/>
 
 </databaseChangeLog>
