@@ -50,6 +50,16 @@ class ExportServiceTest {
         assertThat(ExportService.escape("She said \"hi\"")).isEqualTo("\"She said \"\"hi\"\"\"");
     }
 
+    @Test
+    void escape_newlineWrapsInQuotes() {
+        assertThat(ExportService.escape("line1\nline2")).isEqualTo("\"line1\nline2\"");
+    }
+
+    @Test
+    void escape_crWrapsInQuotes() {
+        assertThat(ExportService.escape("line1\rline2")).isEqualTo("\"line1\rline2\"");
+    }
+
     // ── CSV generation tests ──────────────────────────────────────────────────
 
     @Test

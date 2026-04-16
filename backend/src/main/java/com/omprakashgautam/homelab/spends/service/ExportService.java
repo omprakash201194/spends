@@ -3,7 +3,6 @@ package com.omprakashgautam.homelab.spends.service;
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,7 +19,6 @@ public class ExportService {
      * Columns: Date, Transaction Date, Merchant, Category, Withdrawal (INR), Deposit (INR),
      *          Balance (INR), Remarks, Account
      */
-    @Transactional(readOnly = true)
     public String exportTransactionsCsv(UUID userId, String search, UUID categoryId,
                                         UUID accountId, String type,
                                         LocalDate dateFrom, LocalDate dateTo) {
