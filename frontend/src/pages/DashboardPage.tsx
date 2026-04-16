@@ -61,10 +61,10 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Welcome back, {user?.displayName}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {user?.householdName} · {data?.month ?? new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
         </p>
       </div>
@@ -115,13 +115,13 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
         <>
           {/* Compare mode toggle */}
           <div className="flex justify-end mb-2">
-            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-xs">
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5 text-xs">
               <button
                 onClick={() => setCompareMode('month')}
                 className={`px-3 py-1 rounded-md transition-colors ${
                   compareMode === 'month'
                     ? 'bg-gray-900 text-white font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 vs last month
@@ -131,7 +131,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
                 className={`px-3 py-1 rounded-md transition-colors ${
                   compareMode === 'year'
                     ? 'bg-gray-900 text-white font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 vs last year
@@ -186,8 +186,8 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
           <div className="space-y-6">
             {/* Charts row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-                <h2 className="text-sm font-semibold text-gray-700 mb-4">12-Month Spending Trend</h2>
+              <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">12-Month Spending Trend</h2>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={data.monthlyTrend} barSize={12}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -203,10 +203,10 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
                 </ResponsiveContainer>
               </div>
 
-              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-                <h2 className="text-sm font-semibold text-gray-700 mb-4">Category Breakdown — {data.month}</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Category Breakdown — {data.month}</h2>
                 {data.categoryBreakdown.length === 0 ? (
-                  <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No spending data</div>
+                  <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No spending data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
@@ -239,15 +239,15 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
             </div>
 
             {/* Top merchants */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-700">Top Merchants — {data.month}</h2>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Top Merchants — {data.month}</h2>
                 <Link to="/transactions" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                   View all <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
               {data.topMerchants.length === 0 ? (
-                <p className="text-sm text-gray-400">No merchant data this month</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">No merchant data this month</p>
               ) : (
                 <div className="space-y-3">
                   {data.topMerchants.map((m, i) => {
@@ -255,22 +255,22 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
                     const pct = max > 0 ? (m.amount / max) * 100 : 0
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
+                        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-800 truncate">{m.merchant}</span>
-                            <span className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">{inrFull(m.amount)}</span>
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{m.merchant}</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2 flex-shrink-0">{inrFull(m.amount)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
                               <div
                                 className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-400 flex-shrink-0">{m.count}×</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{m.count}×</span>
                           </div>
                         </div>
                       </div>
@@ -309,28 +309,28 @@ function AlertsPanel({ data }: { data: AlertSummary }) {
   const count = data.alerts.length
 
   return (
-    <div className="bg-white rounded-xl border border-amber-200 mb-6 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 mb-6 overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-amber-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <span className="text-sm font-semibold text-gray-800">Alerts</span>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Alerts</span>
           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
             {count}
           </span>
         </div>
         {expanded
-          ? <ChevronUp className="w-4 h-4 text-gray-400" />
-          : <ChevronDown className="w-4 h-4 text-gray-400" />
+          ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         }
       </button>
 
       {/* Alert rows */}
       {expanded && (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
           {data.alerts.map((alert, i) => (
             <AlertRow key={i} alert={alert} />
           ))}
@@ -350,10 +350,10 @@ function AlertRow({ alert }: { alert: Alert }) {
         <Icon className={`w-4 h-4 ${meta.color}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 truncate">{alert.title}</p>
-        <p className="text-xs text-gray-400 truncate">{meta.label} · {alert.message}</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{alert.title}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{meta.label} · {alert.message}</p>
       </div>
-      <span className="text-sm font-semibold text-gray-700 flex-shrink-0 ml-2">
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 ml-2">
         {inrFull2(alert.amount)}
       </span>
     </div>
@@ -370,7 +370,7 @@ function DeltaBadge({ delta, positiveIsGood, label }: {
   if (delta === null) return null
   if (Math.abs(delta) < 0.05) {
     return (
-      <span className="inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded text-gray-500 bg-gray-100">
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700">
         — {label}
       </span>
     )
@@ -396,16 +396,16 @@ function StatCard({
   delta?: number | null; positiveIsGood?: boolean; deltaLabel?: string
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs sm:text-sm font-medium text-gray-500">{label}</span>
+        <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>
         <span className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${iconColor}`} />
         </span>
       </div>
-      <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
       <div className="flex items-center gap-2 mt-1 flex-wrap">
-        <p className="text-xs text-gray-400">{sub}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">{sub}</p>
         {delta !== undefined && delta !== null && positiveIsGood !== undefined && deltaLabel !== undefined && (
           <DeltaBadge delta={delta} positiveIsGood={positiveIsGood} label={deltaLabel} />
         )}
@@ -416,10 +416,10 @@ function StatCard({
 
 function EmptyState() {
   return (
-    <div className="bg-white rounded-xl border border-dashed border-gray-300 p-16 text-center">
-      <BarChart3 className="mx-auto w-10 h-10 text-gray-300 mb-3" />
-      <p className="text-gray-500 font-medium">No transactions this month</p>
-      <p className="text-sm text-gray-400 mt-1">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-16 text-center">
+      <BarChart3 className="mx-auto w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
+      <p className="text-gray-500 dark:text-gray-400 font-medium">No transactions this month</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
         <Link to="/import" className="text-blue-600 hover:underline">Import a statement</Link> to see your spending dashboard.
       </p>
     </div>
@@ -431,14 +431,14 @@ function LoadingSkeleton() {
     <div className="animate-pulse space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gray-100 rounded-xl h-28" />
+          <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-xl h-28" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-gray-100 rounded-xl h-72" />
-        <div className="bg-gray-100 rounded-xl h-72" />
+        <div className="lg:col-span-2 bg-gray-100 dark:bg-gray-800 rounded-xl h-72" />
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-xl h-72" />
       </div>
-      <div className="bg-gray-100 rounded-xl h-48" />
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-xl h-48" />
     </div>
   )
 }

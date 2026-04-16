@@ -77,16 +77,16 @@ export default function InsightCard({ type, label }: Props) {
   const buttonLabel = label ?? 'Get AI Insights'
 
   return (
-    <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-purple-200 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 bg-purple-50 border-b border-purple-100">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 bg-purple-50 dark:bg-gray-700 border-b border-purple-100 dark:border-gray-600">
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles className="w-4 h-4 text-purple-500 flex-shrink-0" />
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-purple-900">AI Insights</span>
+            <span className="text-sm font-semibold text-purple-900 dark:text-purple-300">AI Insights</span>
             {state === 'done' && month && (
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-xs text-purple-400">{month}</span>
+                <span className="text-xs text-purple-400 dark:text-purple-400">{month}</span>
                 {generatedAt && (
                   <>
                     <span className="text-xs text-purple-300">·</span>
@@ -127,7 +127,7 @@ export default function InsightCard({ type, label }: Props) {
 
       {/* Body */}
       {state === 'idle' && (
-        <div className="px-5 py-6 text-center text-sm text-gray-400">
+        <div className="px-5 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
           Click <span className="font-medium text-purple-600">{buttonLabel}</span> to get
           personalised insights powered by Claude AI.
         </div>
@@ -175,7 +175,7 @@ function InsightText({ text }: { text: string }) {
       {lines.map((line, i) => {
         const clean = line.replace(/^[•\-*]\s*/, '').trim()
         return (
-          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
+          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
             <span className="text-purple-400 mt-0.5 flex-shrink-0">•</span>
             <span>{renderInline(clean)}</span>
           </li>
@@ -191,7 +191,7 @@ function renderInline(text: string): React.ReactNode {
     <>
       {parts.map((part, i) =>
         part.startsWith('**') && part.endsWith('**')
-          ? <strong key={i} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+          ? <strong key={i} className="font-semibold text-gray-900 dark:text-white">{part.slice(2, -2)}</strong>
           : part
       )}
     </>
