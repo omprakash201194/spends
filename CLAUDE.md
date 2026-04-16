@@ -439,6 +439,14 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `frontend/src/pages/DataHealthPage.tsx` — stat cards (total/accounts/date range), categorization health bar (green ≥80% / amber ≥60% / red <60%), rule coverage panel with link to /rules, near-duplicate candidates table with top-10 footnote; full dark mode coverage
 - Route `/data-health` added to App.tsx; "Data Health" nav entry with `ShieldCheck` icon added to Layout.tsx (between Reports and Settings)
 
+### Phase 19 — Settings Danger Zone ✅ COMPLETE
+- **5 bulk-delete endpoints** — `DELETE /api/danger-zone/{transactions,rules,budgets,views,custom-categories}` all JWT-protected, returning 204; scoped to current user (rules/budgets/transactions) or household (views/custom-categories)
+- **`DangerZoneService`** — 5 `@Transactional` methods orchestrating bulk deletes; transactions deleted before batches (safety net for pre-history data), batches then removed; DB cascade cleans up the rest
+- **4 repository bulk-delete methods** — `CategoryRuleRepository.deleteAllByUserId`, `BudgetRepository.deleteAllByUserId`, `ViewRepository.deleteAllByHouseholdId`, `CategoryRepository.deleteAllByHouseholdIdAndSystemFalse`
+- **Migration 009** — drops and re-adds `financial_transaction.category_id` FK with `ON DELETE SET NULL` so bulk-deleting custom categories nullifies transaction categories instead of throwing a FK violation
+- **5 unit tests** in `DangerZoneServiceTest` — verify each operation only touches its expected repository (using `verifyNoMoreInteractions` on all others)
+- **Frontend** — `frontend/src/api/dangerZone.ts` (5 typed API functions); "Danger Zone" tab added to `SettingsPage.tsx` with `DangerZoneTab` + `DangerActionCard` components; each action requires typing `DELETE` before confirming; success shows Done checkmark for 4s; cache invalidation covers all affected queries including `['views']` on transaction wipe
+
 ### Phase 16 — Dark Mode + PWA ✅ COMPLETE
 - **Dark mode infrastructure** — `tailwind.config.js`: `darkMode: 'class'`; `frontend/src/store/themeStore.ts`: Zustand `persist` store (`spends-theme` localStorage key), `theme: 'light' | 'dark'`, `setTheme`, `toggle`; `ThemeApplier` component in `App.tsx` uses `useEffect([theme])` to add/remove `dark` class on `document.documentElement`
 - **Layout chrome** — `Layout.tsx`: outer div `dark:bg-gray-950`; sidebar/mobile header `dark:bg-gray-800 dark:border-gray-700`; moon/sun toggle button (lucide-react `Moon`/`Sun`) in sidebar, shows "Dark mode" / "Light mode" label; all text and icon classes have dark variants
