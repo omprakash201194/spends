@@ -447,6 +447,13 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - **PWA** — `vite-plugin-pwa` 0.21 with Workbox; `registerType: 'autoUpdate'`; inline manifest (name "SpendStack", `theme_color: '#1e3a8a'`, `display: 'standalone'`); `NetworkFirst` strategy for `/api/` routes with 10s timeout; `includeAssets: ['favicon.svg']`; icon entries split into separate `"any"` and `"maskable"` purpose objects (4 entries total for 192+512 sizes); SVG icons `public/icon-192.svg` + `public/icon-512.svg` (dark-blue rounded rect with chart-line polyline)
 - **`index.html`** — `<link rel="manifest">`, `<meta name="theme-color">`, `<link rel="apple-touch-icon">`, iOS-specific apple PWA meta tags
 
+### Phase 18 — Mobile-Native Feel ✅ COMPLETE
+- **`viewport-fit=cover`** — added to `index.html` viewport meta so `env(safe-area-inset-bottom)` works on iPhone X+ notch/home-indicator
+- **`BottomNav` component** — `frontend/src/components/BottomNav.tsx`; `md:hidden print:hidden` fixed bottom bar with 4 primary tabs (Dashboard, Transactions, Budgets, Import) + "More" button that opens the sidebar; active tab: `text-blue-600 dark:text-blue-400`; `paddingBottom: env(safe-area-inset-bottom)` for iPhone safe area
+- **`useInstallPrompt` hook** — `frontend/src/hooks/useInstallPrompt.ts`; captures `beforeinstallprompt` event; exposes `canInstall`, `promptInstall` (clears deferred prompt unconditionally after OS dialog regardless of outcome), `dismiss` (persists to localStorage key `spends-install-dismissed`)
+- **`InstallBanner` component** — `frontend/src/components/InstallBanner.tsx`; `md:hidden` floating card above bottom nav; positions with `calc(4rem + env(safe-area-inset-bottom) + 0.5rem)`; Install + dismiss buttons; renders nothing when `!canInstall`
+- **`Layout.tsx` updates** — `pb-24 md:pb-0` on `<main>` to clear bottom nav; `BottomNav` + `InstallBanner` wired in; swipe-to-dismiss on backdrop AND sidebar `<aside>` (both have `onTouchStart`/`onTouchEnd`/`onTouchCancel` handlers — `onTouchCancel` resets the `touchStartX` ref to prevent phantom swipes after OS touch interrupts)
+
 ### Phase 12 — Recurring Transaction Detection ✅ COMPLETE
 - `RecurringDto` — `RecurringPattern` (merchantName, categoryName/color, frequency, averageAmount, occurrences, lastMonth, nextExpected, activeThisMonth) · `RecurringSummary` (month, patterns[])
 - `TransactionRepository.merchantMonthlyActivity` — JPQL groups by merchant + calendar month using `SUM` (not AVG — Hibernate 6 returns Double for AVG on BigDecimal columns); returns [merchantName, categoryName, categoryColor, yearMonth, sumWithdrawal, sumDeposit, count]
