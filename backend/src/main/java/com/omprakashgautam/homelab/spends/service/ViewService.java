@@ -160,7 +160,7 @@ public class ViewService {
 
         return new ViewDto.SummaryResponse(
                 viewId, view.getName(), view.getTotalBudget(),
-                totalSpent, count, categories, members);
+                totalSpent != null ? totalSpent : BigDecimal.ZERO, count, categories, members);
     }
 
     // ── Manually add transactions ─────────────────────────────────────────────
@@ -200,9 +200,12 @@ public class ViewService {
     }
 
     private Household requireHousehold(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"))
-                .getHousehold();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (user.getHousehold() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User has no household");
+        }
+        return user.getHousehold();
     }
 
     private ViewDto.ViewResponse toViewResponse(SpendView view) {

@@ -24,11 +24,18 @@ public interface ViewTransactionLinkRepository extends JpaRepository<ViewTransac
 
     // ── List tab: paginated transactions in a view ─────────────────────────────
 
-    @Query("""
+    @Query(value = """
         SELECT vtl.transaction
         FROM ViewTransactionLink vtl
+        JOIN FETCH vtl.transaction.bankAccount ba
+        JOIN FETCH ba.user
         WHERE vtl.view.id = :viewId
         ORDER BY vtl.transaction.valueDate DESC
+        """,
+        countQuery = """
+        SELECT COUNT(vtl)
+        FROM ViewTransactionLink vtl
+        WHERE vtl.view.id = :viewId
         """)
     Page<Transaction> findTransactionsByViewId(@Param("viewId") UUID viewId, Pageable pageable);
 
