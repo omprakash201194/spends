@@ -175,4 +175,39 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> topMerchants(@Param("userId") UUID userId,
                                 @Param("from") LocalDate from,
                                 @Param("to") LocalDate to);
+
+    // ── Recurring: merchant monthly activity pattern detection ────────────────
+
+    /**
+     * Groups all non-null-merchant transactions by merchant + calendar month.
+     * Returns one row per (merchant, month) with the average withdrawal,
+     * average deposit, and transaction count. Used by RecurringService to
+     * detect recurring patterns.
+     *
+     * Row layout: [merchantName, categoryName, categoryColor, yearMonth (yyyy-MM),
+     *              avgWithdrawal, avgDeposit, count]
+     */
+    @Query("""
+            SELECT t.merchantName,
+                   t.category.name,
+                   t.category.color,
+                   FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+                   COALESCE(AVG(t.withdrawalAmount), 0),
+                   COALESCE(AVG(t.depositAmount), 0),
+                   COUNT(t)
+            FROM Transaction t
+            WHERE t.bankAccount.user.id = :userId
+              AND t.valueDate >= :from
+              AND t.merchantName IS NOT NULL
+              AND (t.withdrawalAmount > 0 OR t.depositAmount > 0)
+            GROUP BY t.merchantName,
+                     t.category.id,
+                     t.category.name,
+                     t.category.color,
+                     FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+            ORDER BY t.merchantName,
+                     FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+            """)
+    List<Object[]> merchantMonthlyActivity(@Param("userId") UUID userId,
+                                            @Param("from") LocalDate from);
 }
