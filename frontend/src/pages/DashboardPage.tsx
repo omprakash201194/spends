@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import {
   TrendingDown, TrendingUp, Wallet, BarChart3, ShoppingBag, ArrowRight,
-  AlertTriangle, Sparkles, ChevronDown, ChevronUp,
+  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
 import { getAlerts, type AlertSummary, type Alert, type AlertType } from '../api/alerts'
+import { getRecurring, type RecurringSummary } from '../api/recurring'
 import { Link } from 'react-router-dom'
 import InsightCard from '../components/InsightCard'
 
@@ -44,6 +45,12 @@ export default function DashboardPage() {
     staleTime: 60_000,
   })
 
+  const { data: recurringData } = useQuery<RecurringSummary>({
+    queryKey: ['recurring'],
+    queryFn: getRecurring,
+    staleTime: 5 * 60_000,
+  })
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -58,14 +65,14 @@ export default function DashboardPage() {
 
       {isLoading && <LoadingSkeleton />}
       {isError  && <ErrorState />}
-      {data     && <DashboardContent data={data} alertData={alertData} />}
+      {data     && <DashboardContent data={data} alertData={alertData} recurringData={recurringData} />}
     </div>
   )
 }
 
 // ── Content (loaded) ──────────────────────────────────────────────────────────
 
-function DashboardContent({ data, alertData }: { data: DashboardSummary; alertData?: AlertSummary }) {
+function DashboardContent({ data, alertData, recurringData }: { data: DashboardSummary; alertData?: AlertSummary; recurringData?: RecurringSummary }) {
   const hasData = data.transactionCount > 0
 
   return (
@@ -81,6 +88,24 @@ function DashboardContent({ data, alertData }: { data: DashboardSummary; alertDa
       {/* Alerts panel — only shown when there are alerts */}
       {alertData && alertData.alerts.length > 0 && (
         <AlertsPanel data={alertData} />
+      )}
+
+      {/* Recurring patterns banner */}
+      {recurringData && recurringData.patterns.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <Repeat className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <span>
+              <span className="font-semibold">{recurringData.patterns.length}</span> recurring pattern
+              {recurringData.patterns.length !== 1 ? 's' : ''} detected
+              {' '}(salary, rent, subscriptions)
+            </span>
+          </div>
+          <Link to="/recurring"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
+            View all <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
       )}
 
       {!hasData ? (
