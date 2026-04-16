@@ -69,6 +69,7 @@ Household
 Category        (12 system categories, seeded at startup)
 CategoryRule    (UPI handle / keyword → Category, per user, priority-ordered)
 Budget          (User × Category × Month → spending limit)
+SavingsGoal     (User × named target × date range → progress computed from net savings)
 ```
 
 ### System Categories (seeded)
@@ -191,6 +192,9 @@ spends/
 | GET | `/api/import/history` | JWT | List all import batches for user (with bank account info, counts) |
 | DELETE | `/api/import/batches/{batchId}` | JWT | Delete a specific import batch and its transactions (cascade); returns 204 |
 | DELETE | `/api/import/all` | JWT | Delete all transactions and import batches for user; returns 204 |
+| GET | `/api/goals` | JWT | List user's savings goals with computed progress |
+| POST | `/api/goals` | JWT | Create a savings goal; returns 201 |
+| DELETE | `/api/goals/{id}` | JWT | Delete a savings goal; returns 204 |
 
 ---
 
@@ -445,6 +449,15 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - **Structured JSON logging** — `logstash-logback-encoder:8.0` added to `pom.xml`; `logback-spring.xml` with two `<springProfile>` blocks: `local` profile = human-readable console with `%X{requestId:-      }` in pattern; `k8s` profile = `LogstashEncoder` JSON with `<fieldNames>` remapping (timestamp/message/logger/thread/level, levelValue suppressed), all MDC keys included by default
 - **`RequestCorrelationFilter`** — `@Component @Order(HIGHEST_PRECEDENCE)`, extends `OncePerRequestFilter`; per-request 8-char hex `requestId` (UUID stripped + substring); puts `requestId`, `method`, `path` into SLF4J MDC; sets `X-Request-Id` response header; `MDC.clear()` in `finally`
 - **LogQL queries for Grafana Explore:** `{namespace="homelab", app="spends-backend"}` · `{namespace="homelab", app="spends-backend"} |= "ERROR"` · `{namespace="homelab", app="spends-backend"} | json | level="ERROR"` · `{namespace="homelab"} | json | requestId="<8-char-id>"`
+
+### Phase 22 — Savings Goals ✅ COMPLETE
+- **DB migration 010** — `savings_goal` table: `id UUID PK`, `user_id FK`, `name VARCHAR(100)`, `target NUMERIC(15,2) CHECK > 0`, `start_date DATE`, `target_date DATE` (nullable), `created_at TIMESTAMP`; index on `user_id`
+- **`SavingsGoal` entity** — `@Getter @Setter @ToString @EqualsAndHashCode(onlyExplicitlyIncluded = true)` (safe for JPA lazy associations); `@EqualsAndHashCode.Include` on `id`; `@PrePersist` sets `createdAt`
+- **`SavingsGoalRepository`** — `findAllByUserIdOrderByCreatedAtAsc(UUID userId)`
+- **`SavingsGoalDto`** — `CreateRequest(name, target, startDate, targetDate)` · `GoalResponse(id, name, target, startDate, targetDate, saved, percentage, achieved)`
+- **`SavingsGoalService`** — progress computed at query time: `deposits - withdrawals` from `startDate` to `min(today, targetDate-if-passed)`, clamped to ≥0, capped at 100%; reuses existing `TransactionRepository.sumDeposits`/`sumWithdrawals`; 6 Mockito unit tests
+- **`SavingsGoalController`** — `GET /api/goals` (list), `POST /api/goals` (201), `DELETE /api/goals/{id}` (204)
+- **Frontend** — `frontend/src/api/savingsGoals.ts` (Axios client); `frontend/src/pages/GoalsPage.tsx` (card grid + inline create form + `GoalCard` with progress bar + status badges: achieved/overdue/days-left/no-deadline + two-step delete confirm + `EmptyState` + `LoadingSkeleton`; full dark mode); route `/goals` in `App.tsx`; Goals nav entry (Target icon, between Budgets and Household) in `Layout.tsx`; emerald banner on Dashboard showing `{achieved} of {total} savings goals achieved` with "View all" link
 
 ### Phase 19 — Settings Danger Zone ✅ COMPLETE
 - **5 bulk-delete endpoints** — `DELETE /api/danger-zone/{transactions,rules,budgets,views,custom-categories}` all JWT-protected, returning 204; scoped to current user (rules/budgets/transactions) or household (views/custom-categories)
