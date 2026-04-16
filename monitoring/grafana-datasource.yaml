@@ -1,0 +1,32 @@
+# Grafana provisioning ConfigMap for Loki data source.
+#
+# BEFORE APPLYING:
+#   1. Find your Grafana namespace:
+#        kubectl get pods -A | grep grafana
+#   2. Replace YOUR_GRAFANA_NAMESPACE below with that namespace.
+#   3. Apply: kubectl apply -f monitoring/grafana-datasource.yaml
+#
+# After applying, patch the Grafana deployment to mount this ConfigMap, OR
+# add the Loki data source manually via Grafana UI:
+#   Connections → Data Sources → Add → Loki
+#   URL: http://loki.monitoring.svc.cluster.local:3100
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-loki-datasource
+  namespace: YOUR_GRAFANA_NAMESPACE
+  labels:
+    grafana_datasource: "1"
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki.monitoring.svc.cluster.local:3100
+        isDefault: false
+        jsonData:
+          maxLines: 1000
+          timeout: 60
