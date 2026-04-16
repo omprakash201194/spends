@@ -20,6 +20,7 @@ export async function downloadTransactionsCsv(params: TransactionExportParams): 
   if (params.search)                          url.searchParams.set('search', params.search)
   if (params.categoryId)                      url.searchParams.set('categoryId', params.categoryId)
   if (params.accountId)                       url.searchParams.set('accountId', params.accountId)
+  // 'ALL' means no filter; only send if a specific direction is selected
   if (params.type && params.type !== 'ALL')   url.searchParams.set('type', params.type)
   if (params.dateFrom)                        url.searchParams.set('dateFrom', params.dateFrom)
   if (params.dateTo)                          url.searchParams.set('dateTo', params.dateTo)
@@ -27,6 +28,11 @@ export async function downloadTransactionsCsv(params: TransactionExportParams): 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   })
+  if (res.status === 401) {
+    useAuthStore.getState().logout()
+    window.location.href = '/login'
+    return
+  }
   if (!res.ok) throw new Error('Export failed')
 
   const blob = await res.blob()

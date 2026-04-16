@@ -3,7 +3,6 @@ import { Download } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
 import InsightCard from '../components/InsightCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useQuery as useQueryCategories } from '@tanstack/react-query'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   ChevronLeft, ChevronRight, Check, X, CircleDot,
@@ -71,7 +70,7 @@ export default function TransactionPage() {
     placeholderData: (prev) => prev,
   })
 
-  const { data: categories = [] } = useQueryCategories({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
     staleTime: Infinity,
@@ -118,6 +117,8 @@ export default function TransactionPage() {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
       })
+    } catch {
+      window.alert('Export failed. Please try again.')
     } finally {
       setExporting(false)
     }
