@@ -24,8 +24,6 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardDto.Summary getSummary(UUID userId) {
-        // Use the most recent month that has data.
-        // Handles the common case where statements are historical and today's month is empty.
         LocalDate anchor  = resolveAnchorMonth(userId);
         LocalDate from    = anchor.withDayOfMonth(1);
         LocalDate to      = anchor.withDayOfMonth(anchor.lengthOfMonth());
@@ -35,6 +33,26 @@ public class DashboardService {
         BigDecimal income = transactionRepository.sumDeposits(userId, from, to);
         long count        = transactionRepository.countInPeriod(userId, from, to);
         BigDecimal net    = income.subtract(spent);
+
+        // Previous month (anchor − 1 month)
+        LocalDate prevMonthDate = anchor.minusMonths(1);
+        LocalDate prevMonthFrom = prevMonthDate.withDayOfMonth(1);
+        LocalDate prevMonthTo   = prevMonthDate.withDayOfMonth(prevMonthDate.lengthOfMonth());
+        DashboardDto.Comparison prevMonth = new DashboardDto.Comparison(
+                transactionRepository.sumWithdrawals(userId, prevMonthFrom, prevMonthTo),
+                transactionRepository.sumDeposits(userId, prevMonthFrom, prevMonthTo),
+                transactionRepository.countInPeriod(userId, prevMonthFrom, prevMonthTo)
+        );
+
+        // Same month last year (anchor − 12 months)
+        LocalDate prevYearDate = anchor.minusYears(1);
+        LocalDate prevYearFrom = prevYearDate.withDayOfMonth(1);
+        LocalDate prevYearTo   = prevYearDate.withDayOfMonth(prevYearDate.lengthOfMonth());
+        DashboardDto.Comparison prevYear = new DashboardDto.Comparison(
+                transactionRepository.sumWithdrawals(userId, prevYearFrom, prevYearTo),
+                transactionRepository.sumDeposits(userId, prevYearFrom, prevYearTo),
+                transactionRepository.countInPeriod(userId, prevYearFrom, prevYearTo)
+        );
 
         List<DashboardDto.CategoryStat> categories = transactionRepository
                 .categoryBreakdown(userId, from, to)
@@ -64,7 +82,8 @@ public class DashboardService {
         return new DashboardDto.Summary(
                 anchor.format(MONTH_HEADER),
                 spent, income, net, count,
-                categories, trend, merchants
+                categories, trend, merchants,
+                prevMonth, prevYear
         );
     }
 

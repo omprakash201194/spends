@@ -24,6 +24,15 @@ public class DashboardDto {
             long count
     ) {}
 
+    /**
+     * Aggregate totals for a comparison period (prev month or prev year same month).
+     */
+    public record Comparison(
+            BigDecimal spent,
+            BigDecimal income,
+            long transactionCount
+    ) {}
+
     public record Summary(
             String month,               // "April 2025"
             BigDecimal totalSpent,
@@ -32,6 +41,8 @@ public class DashboardDto {
             long transactionCount,
             List<CategoryStat> categoryBreakdown,
             List<MonthlyTrend> monthlyTrend,
-            List<MerchantStat> topMerchants
+            List<MerchantStat> topMerchants,
+            Comparison prevMonth,       // aggregates for the month before anchor
+            Comparison prevYear         // aggregates for same month one year ago
     ) {}
 }
