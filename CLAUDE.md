@@ -428,6 +428,17 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `ImportPage` — Import History section with per-row confirm-before-delete, "Delete All" with confirmation step, error banner on failure; `onSuccess` invalidates `['import-history']`, `['transactions']`, `['dashboard']`, `['budgets']`, `['recurring']`
 - 5 unit tests in `ImportServiceTest` (Mockito, InOrder ordering verification)
 
+### Phase 17 — Data Health / Audit Page ✅ COMPLETE
+- `DataHealthDto` — 4 nested records: `TransactionStats` (total, uncategorized, miscellaneous, earliestDate/latestDate as nullable ISO strings, accountCount), `RuleStats` (userRules, globalRules), `NearDuplicate` (accountLabel, date, amount, count), `Report`
+- 6 new `TransactionRepository` JPQL queries: `countByUserId`, `countUncategorized`, `countByCategoryName` (explicit `IS NOT NULL` guard), `earliestDate` (returns `LocalDate`), `countDistinctBankAccounts`, `findNearDuplicates` (groups withdrawals by account+date+amount, HAVING COUNT > 1, LIMIT 10 — deposit-only duplicates intentionally excluded)
+- 2 new `CategoryRuleRepository` queries: `countByUserId`, `countGlobal`
+- `DataHealthService` — `@Transactional(readOnly = true)`, orchestrates all 8 queries, maps `Object[]` near-duplicate rows to `NearDuplicate` records with `"XXXX1234 · ICICI"` account label format
+- `DataHealthController` — `GET /api/data-health`, JWT-protected via `@AuthenticationPrincipal`
+- 3 unit tests in `DataHealthServiceTest` (Mockito): correct stats mapping, near-duplicate row parsing, zero-transaction edge case (null dates)
+- `frontend/src/api/dataHealth.ts` — Axios client with full TypeScript interfaces
+- `frontend/src/pages/DataHealthPage.tsx` — stat cards (total/accounts/date range), categorization health bar (green ≥80% / amber ≥60% / red <60%), rule coverage panel with link to /rules, near-duplicate candidates table with top-10 footnote; full dark mode coverage
+- Route `/data-health` added to App.tsx; "Data Health" nav entry with `ShieldCheck` icon added to Layout.tsx (between Reports and Settings)
+
 ### Phase 16 — Dark Mode + PWA ✅ COMPLETE
 - **Dark mode infrastructure** — `tailwind.config.js`: `darkMode: 'class'`; `frontend/src/store/themeStore.ts`: Zustand `persist` store (`spends-theme` localStorage key), `theme: 'light' | 'dark'`, `setTheme`, `toggle`; `ThemeApplier` component in `App.tsx` uses `useEffect([theme])` to add/remove `dark` class on `document.documentElement`
 - **Layout chrome** — `Layout.tsx`: outer div `dark:bg-gray-950`; sidebar/mobile header `dark:bg-gray-800 dark:border-gray-700`; moon/sun toggle button (lucide-react `Moon`/`Sun`) in sidebar, shows "Dark mode" / "Light mode" label; all text and icon classes have dark variants
