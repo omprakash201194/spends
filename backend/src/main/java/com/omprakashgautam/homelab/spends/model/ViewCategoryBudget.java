@@ -11,6 +11,7 @@ import java.util.UUID;
     name = "view_category_budget",
     uniqueConstraints = @UniqueConstraint(columnNames = {"view_id", "category_id"})
 )
+@ToString(exclude = {"view", "category"})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

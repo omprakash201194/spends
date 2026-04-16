@@ -10,6 +10,7 @@ import java.util.UUID;
     name = "view_transaction",
     uniqueConstraints = @UniqueConstraint(columnNames = {"view_id", "transaction_id"})
 )
+@ToString(exclude = {"view", "transaction"})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

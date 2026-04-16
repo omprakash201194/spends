@@ -10,6 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "spend_view")
+@ToString(exclude = "household")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
