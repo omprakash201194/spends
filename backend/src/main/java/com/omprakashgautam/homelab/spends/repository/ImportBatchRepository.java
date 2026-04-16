@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,13 +23,18 @@ public interface ImportBatchRepository extends JpaRepository<ImportBatch, UUID> 
 
     /** Returns true if the batch exists and belongs to the user. */
     @Query("""
-        SELECT COUNT(b) > 0 FROM ImportBatch b
+        SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
+        FROM ImportBatch b
         WHERE b.id = :batchId AND b.bankAccount.user.id = :userId
         """)
     boolean existsByIdAndUserId(@Param("batchId") UUID batchId, @Param("userId") UUID userId);
 
-    /** Bulk-deletes all import_batch rows for the user (used by "Delete All"). */
+    /**
+     * Bulk-deletes all import_batch rows for the user.
+     * DB cascade (migration 008) automatically removes associated financial_transaction rows.
+     */
     @Modifying
+    @Transactional
     @Query("""
         DELETE FROM ImportBatch b
         WHERE b.bankAccount.user.id = :userId
