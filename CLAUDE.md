@@ -129,7 +129,7 @@ spends/
 │       ├── api/{client,auth,budget,household,alerts,settings,insights,dashboard}.ts
 │       ├── store/authStore.ts         ← Zustand, persisted to localStorage
 │       ├── components/{Layout,InsightCard,ProtectedRoute}.tsx
-│       └── pages/{Login,Register,Dashboard,BankAccounts,Import,Transaction,Budget,Household,Settings}Page.tsx
+│       └── pages/{Login,Register,Dashboard,BankAccounts,Import,Transaction,Budget,Household,Settings,Views,ViewDetail}Page.tsx
 └── k8s/
     ├── backend-deployment.yaml        ← terminationGracePeriodSeconds: 30
     ├── frontend-deployment.yaml
@@ -167,6 +167,23 @@ spends/
 | PUT | `/api/settings/api-key` | JWT | Save/update Anthropic API key for the current user |
 | DELETE | `/api/settings/api-key` | JWT | Remove stored API key |
 | POST | `/api/insights/{type}` | JWT | Generate AI insight (type: DASHBOARD, BUDGET, TRANSACTIONS); uses user's stored Anthropic key |
+| GET | `/api/categories` | JWT | List all categories (system + household custom) |
+| POST | `/api/categories` | JWT | Create custom household category |
+| PUT | `/api/categories/{id}` | JWT | Update custom category |
+| DELETE | `/api/categories/{id}` | JWT | Delete custom category |
+| GET | `/api/category-rules` | JWT | List user's categorization rules |
+| POST | `/api/category-rules` | JWT | Create a rule |
+| PUT | `/api/category-rules/{id}` | JWT | Update a rule |
+| DELETE | `/api/category-rules/{id}` | JWT | Delete a rule |
+| GET | `/api/views` | JWT | List all household views |
+| POST | `/api/views` | JWT | Create view (auto-tags household transactions in date range); returns 201 |
+| GET | `/api/views/{id}` | JWT | Get view detail |
+| PUT | `/api/views/{id}` | JWT | Update view metadata + category budgets |
+| DELETE | `/api/views/{id}` | JWT | Delete view; returns 204 |
+| GET | `/api/views/{id}/transactions` | JWT | Paginated list of transactions in view |
+| GET | `/api/views/{id}/summary` | JWT | Total spent, category breakdown, member breakdown |
+| POST | `/api/views/{id}/transactions` | JWT | Add transaction(s) to view; returns 204 |
+| DELETE | `/api/views/{id}/transactions/{txId}` | JWT | Remove transaction from view; returns 204 |
 
 ---
 
@@ -350,3 +367,25 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `InsightCard` component — four states: idle (prompt), loading (spinner), done (bullet list + Regenerate), error (message + Settings link)
 - Insight buttons on: Dashboard page, Budget page ("Get Budget Advice"), Transactions page ("Analyse My Spending")
 - `SettingsPage` — password-type API key input, Save/Remove buttons, link to console.anthropic.com
+
+### Phase 10 — Custom Categories + Rules Management UI ✅ COMPLETE
+- Migration 006: `household_id` (nullable FK) + `is_system` boolean added to `category` table
+- System categories: `is_system=true`, `household_id=null` — visible to all, not editable/deletable
+- Custom categories: `is_system=false`, scoped to household — full CRUD via `CategoryController`
+- `CategoryRuleController` — full CRUD for user's categorization rules; edit priority, target category, pattern, delete
+- `CategoryPage` — two-tab UI (System categories read-only, Custom categories with create/edit/delete)
+- `RulesPage` — table of all rules, inline edit, drag-to-reorder priority (or numeric input), create form
+
+### Phase 11 — Views (Events / Trips) ✅ COMPLETE
+- Migration 007: `spend_view` (household-scoped, name, type, dates, color, total_budget), `view_transaction` join table, `view_category_budget` table
+- `ViewType` enum: TRIP | EVENT | CUSTOM
+- Entities: `SpendView`, `ViewTransactionLink`, `ViewCategoryBudget` (all with @ToString exclude on lazy associations)
+- `ViewDto` — 10 nested records covering all request/response shapes
+- `ViewRepository`, `ViewTransactionLinkRepository` (JOIN FETCH to avoid N+1), `ViewCategoryBudgetRepository`
+- `ViewService` — createView auto-tags household transactions in date range; getSummary returns total + category + member breakdowns; add/remove transactions; CRUD
+- `ViewController` — 9 endpoints at `/api/views`
+- `frontend/src/api/views.ts` — full client with TRIP_TEMPLATE and EVENT_TEMPLATE category budgets
+- `ViewsPage` — card grid (color dot, type badge, budget progress bar), 3-step create modal (Details → Type+Template → Budget)
+- `ViewDetailPage` — back nav, stats row, List/Board/Summary tabs; Board groups 500 txs client-side by category; Summary has over-budget badges + member breakdown (only if >1 member)
+- Bookmark "Add to view" button on each transaction row in `TransactionPage` — opens picker overlay
+- Views nav link (LayoutGrid icon) in sidebar
