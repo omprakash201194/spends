@@ -150,6 +150,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                          @Param("from") LocalDate from,
                                          @Param("to") LocalDate to);
 
+    // ── Reports: distinct years with transaction data ──────────────────────────
+
+    @Query("""
+        SELECT DISTINCT YEAR(t.valueDate)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+        ORDER BY YEAR(t.valueDate) DESC
+        """)
+    List<Integer> availableYears(@Param("userId") UUID userId);
+
     // ── Household: most recent transaction date across all members ────────────
 
     @Query("""
