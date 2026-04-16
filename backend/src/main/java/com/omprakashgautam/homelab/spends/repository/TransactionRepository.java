@@ -231,4 +231,53 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             """)
     List<Object[]> merchantMonthlyActivity(@Param("userId") UUID userId,
                                             @Param("from") LocalDate from);
+
+    // ── Data health: aggregate counts ─────────────────────────────────────────
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.bankAccount.user.id = :userId")
+    long countByUserId(@Param("userId") UUID userId);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.bankAccount.user.id = :userId AND t.category IS NULL")
+    long countUncategorized(@Param("userId") UUID userId);
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.category.name = :categoryName
+        """)
+    long countByCategoryName(@Param("userId") UUID userId,
+                             @Param("categoryName") String categoryName);
+
+    @Query("SELECT MIN(t.valueDate) FROM Transaction t WHERE t.bankAccount.user.id = :userId")
+    LocalDate earliestDate(@Param("userId") UUID userId);
+
+    @Query("""
+        SELECT COUNT(DISTINCT t.bankAccount.id) FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+        """)
+    long countDistinctBankAccounts(@Param("userId") UUID userId);
+
+    // ── Data health: near-duplicate candidates ────────────────────────────────
+
+    /**
+     * Groups withdrawals by (bank account, date, amount). If a group has more than one row,
+     * the transactions may be accidental duplicates (same amount + date but different remarks).
+     * Returns at most 10 groups, ordered by count desc then amount desc.
+     *
+     * Row layout: [accountNumberMasked (String), bankName (String), valueDate (LocalDate),
+     *              withdrawalAmount (BigDecimal), count (Long)]
+     */
+    @Query("""
+        SELECT t.bankAccount.accountNumberMasked, t.bankAccount.bankName,
+               t.valueDate, t.withdrawalAmount, COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.withdrawalAmount > 0
+        GROUP BY t.bankAccount.id, t.bankAccount.accountNumberMasked, t.bankAccount.bankName,
+                 t.valueDate, t.withdrawalAmount
+        HAVING COUNT(t) > 1
+        ORDER BY COUNT(t) DESC, t.withdrawalAmount DESC
+        LIMIT 10
+        """)
+    List<Object[]> findNearDuplicates(@Param("userId") UUID userId);
 }

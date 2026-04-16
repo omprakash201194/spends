@@ -32,4 +32,10 @@ public interface CategoryRuleRepository extends JpaRepository<CategoryRule, UUID
         ORDER BY r.priority DESC, r.createdAt DESC
         """)
     List<CategoryRule> listRulesForUser(@Param("userId") UUID userId);
+
+    @Query("SELECT COUNT(r) FROM CategoryRule r WHERE r.user.id = :userId")
+    long countByUserId(@Param("userId") UUID userId);
+
+    @Query("SELECT COUNT(r) FROM CategoryRule r WHERE r.global = TRUE")
+    long countGlobal();
 }
