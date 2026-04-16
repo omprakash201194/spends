@@ -25,3 +25,27 @@ export async function importIciciFiles(files: File[]): Promise<ImportResult> {
   })
   return data
 }
+
+export interface BatchEntry {
+  id: string
+  filename: string
+  bankName: string
+  accountNumberMasked: string | null
+  bankAccountId: string
+  importedAt: string   // ISO 8601: "2026-04-16T10:30:00"
+  transactionCount: number
+  duplicateCount: number
+}
+
+export async function getImportHistory(): Promise<BatchEntry[]> {
+  const { data } = await apiClient.get<{ batches: BatchEntry[] }>('/import/history')
+  return data.batches
+}
+
+export async function deleteImportBatch(batchId: string): Promise<void> {
+  await apiClient.delete(`/import/batches/${batchId}`)
+}
+
+export async function deleteAllTransactions(): Promise<void> {
+  await apiClient.delete('/import/all')
+}
