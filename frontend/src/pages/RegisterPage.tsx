@@ -52,25 +52,25 @@ export default function RegisterPage() {
     error && (error as { response?: { data?: { message?: string } } }).response?.data?.message
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-6 py-12">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
         <div className="flex items-center gap-2 mb-6">
           <TrendingUp className="w-6 h-6 text-blue-600" />
-          <span className="text-lg font-bold text-gray-900">SpendStack</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">SpendStack</span>
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900">Create your account</h1>
-        <p className="text-sm text-gray-500 mt-1">Track expenses across your household.</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Create your account</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track expenses across your household.</p>
 
         {/* Household mode toggle */}
-        <div className="mt-5 flex rounded-lg border border-gray-200 overflow-hidden">
+        <div className="mt-5 flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <button
             type="button"
             onClick={() => setMode('create')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'create'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             New household
@@ -81,7 +81,7 @@ export default function RegisterPage() {
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'join'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             Join existing
@@ -140,7 +140,7 @@ export default function RegisterPage() {
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -148,12 +148,12 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder="Min 8 characters"
-                className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -172,7 +172,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-sm text-center text-gray-500">
+        <p className="mt-5 text-sm text-center text-gray-500 dark:text-gray-400">
           Already have an account?{' '}
           <Link to="/login" className="text-blue-600 font-medium hover:underline">
             Sign in
@@ -200,14 +200,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{label}</label>
       <input
         type={type}
         required
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
       />
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
