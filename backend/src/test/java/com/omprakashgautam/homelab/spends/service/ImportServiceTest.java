@@ -7,6 +7,7 @@ import com.omprakashgautam.homelab.spends.repository.ImportBatchRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -100,9 +101,11 @@ class ImportServiceTest {
 
     @Test
     void deleteAll_deletesTransactionsThenBatches() {
+        InOrder order = inOrder(transactionRepository, importBatchRepository);
+
         importService.deleteAll(USER_ID);
 
-        verify(transactionRepository).deleteAllByUserId(USER_ID);
-        verify(importBatchRepository).deleteAllByUserId(USER_ID);
+        order.verify(transactionRepository).deleteAllByUserId(USER_ID);
+        order.verify(importBatchRepository).deleteAllByUserId(USER_ID);
     }
 }

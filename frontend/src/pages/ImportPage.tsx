@@ -284,7 +284,7 @@ export default function ImportPage() {
                 batch={batch}
                 isDeleting={deletingBatchId === batch.id}
                 isPending={deleteBatchMut.isPending && deletingBatchId === batch.id}
-                onDeleteClick={() => setDeletingBatchId(batch.id)}
+                onDeleteClick={() => { setDeleteError(null); setDeletingBatchId(batch.id) }}
                 onDeleteConfirm={() => deleteBatchMut.mutate(batch.id)}
                 onDeleteCancel={() => setDeletingBatchId(null)}
               />
