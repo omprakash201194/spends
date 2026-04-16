@@ -32,7 +32,7 @@ class DashboardServiceTest {
     }
 
     @Test
-    void getSummary_prevMonthFieldsMatchPreviousMonthAggregates() {
+    void getSummary_prevComparisonFieldsMatchExpectedAggregates() {
         LocalDate anchor = LocalDate.of(2025, 4, 15);
         when(transactionRepository.latestTransactionDate(USER_ID)).thenReturn(anchor);
         stubSharedQueries();
@@ -51,31 +51,12 @@ class DashboardServiceTest {
 
         DashboardDto.Summary summary = dashboardService.getSummary(USER_ID);
 
+        // Previous month assertions (March 2025)
         assertThat(summary.prevMonth().spent()).isEqualByComparingTo("8000");
         assertThat(summary.prevMonth().income()).isEqualByComparingTo("45000");
         assertThat(summary.prevMonth().transactionCount()).isEqualTo(15L);
-    }
 
-    @Test
-    void getSummary_prevYearFieldsMatchSameMonthLastYear() {
-        LocalDate anchor = LocalDate.of(2025, 4, 15);
-        when(transactionRepository.latestTransactionDate(USER_ID)).thenReturn(anchor);
-        stubSharedQueries();
-
-        when(transactionRepository.sumWithdrawals(USER_ID, LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30))).thenReturn(new BigDecimal("10000"));
-        when(transactionRepository.sumDeposits(USER_ID,    LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30))).thenReturn(new BigDecimal("50000"));
-        when(transactionRepository.countInPeriod(USER_ID,  LocalDate.of(2025, 4, 1), LocalDate.of(2025, 4, 30))).thenReturn(20L);
-
-        when(transactionRepository.sumWithdrawals(USER_ID, LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31))).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumDeposits(USER_ID,    LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31))).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.countInPeriod(USER_ID,  LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31))).thenReturn(0L);
-
-        when(transactionRepository.sumWithdrawals(USER_ID, LocalDate.of(2024, 4, 1), LocalDate.of(2024, 4, 30))).thenReturn(new BigDecimal("9000"));
-        when(transactionRepository.sumDeposits(USER_ID,    LocalDate.of(2024, 4, 1), LocalDate.of(2024, 4, 30))).thenReturn(new BigDecimal("48000"));
-        when(transactionRepository.countInPeriod(USER_ID,  LocalDate.of(2024, 4, 1), LocalDate.of(2024, 4, 30))).thenReturn(18L);
-
-        DashboardDto.Summary summary = dashboardService.getSummary(USER_ID);
-
+        // Previous year assertions (April 2024)
         assertThat(summary.prevYear().spent()).isEqualByComparingTo("9000");
         assertThat(summary.prevYear().income()).isEqualByComparingTo("48000");
         assertThat(summary.prevYear().transactionCount()).isEqualTo(18L);
@@ -95,5 +76,7 @@ class DashboardServiceTest {
         assertThat(summary.prevMonth().spent()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(summary.prevMonth().transactionCount()).isEqualTo(0L);
         assertThat(summary.prevYear().spent()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.prevYear().income()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.prevYear().transactionCount()).isEqualTo(0L);
     }
 }
