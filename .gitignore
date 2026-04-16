@@ -39,3 +39,7 @@ logs/
 # Temp / scratch scripts
 test_*.ps1
 test_*.sh
+
+# Temporary files
+*.tmp
+*.tmp.*
