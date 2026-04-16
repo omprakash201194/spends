@@ -18,6 +18,7 @@ import {
   FileText,
   Moon,
   Sun,
+  ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
@@ -32,6 +33,7 @@ const nav = [
   { to: '/views',        label: 'Views',        icon: LayoutGrid },
   { to: '/recurring',    label: 'Recurring',    icon: Repeat },
   { to: '/reports',      label: 'Reports',      icon: FileText },
+  { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 

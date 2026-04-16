@@ -13,6 +13,7 @@ import ViewsPage from './pages/ViewsPage'
 import ViewDetailPage from './pages/ViewDetailPage'
 import RecurringPage from './pages/RecurringPage'
 import ReportsPage from './pages/ReportsPage'
+import DataHealthPage from './pages/DataHealthPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="views/:id" element={<ViewDetailPage />} />
           <Route path="recurring" element={<RecurringPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="data-health" element={<DataHealthPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
