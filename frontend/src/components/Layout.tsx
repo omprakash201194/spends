@@ -15,6 +15,7 @@ import {
   X,
   LayoutGrid,
   Repeat,
+  FileText,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -27,6 +28,7 @@ const nav = [
   { to: '/household',    label: 'Household',    icon: Users },
   { to: '/views',        label: 'Views',        icon: LayoutGrid },
   { to: '/recurring',    label: 'Recurring',    icon: Repeat },
+  { to: '/reports',      label: 'Reports',      icon: FileText },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
