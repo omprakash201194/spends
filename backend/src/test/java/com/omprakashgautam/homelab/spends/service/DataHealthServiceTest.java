@@ -79,6 +79,7 @@ class DataHealthServiceTest {
 
     @Test
     void getReport_handlesNoTransactions() {
+        stubDefaults();
         when(transactionRepository.countByUserId(USER_ID)).thenReturn(0L);
         when(transactionRepository.countUncategorized(USER_ID)).thenReturn(0L);
         when(transactionRepository.countByCategoryName(USER_ID, "Miscellaneous")).thenReturn(0L);
@@ -86,8 +87,6 @@ class DataHealthServiceTest {
         when(transactionRepository.latestTransactionDate(USER_ID)).thenReturn(null);
         when(transactionRepository.countDistinctBankAccounts(USER_ID)).thenReturn(0L);
         when(categoryRuleRepository.countByUserId(USER_ID)).thenReturn(0L);
-        when(categoryRuleRepository.countGlobal()).thenReturn(52L);
-        when(transactionRepository.findNearDuplicates(USER_ID)).thenReturn(List.of());
 
         DataHealthDto.Report report = dataHealthService.getReport(USER_ID);
 
