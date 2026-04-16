@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -14,10 +15,24 @@ import RecurringPage from './pages/RecurringPage'
 import ReportsPage from './pages/ReportsPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useThemeStore } from './store/themeStore'
+
+function ThemeApplier() {
+  const { theme } = useThemeStore()
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
+  return null
+}
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeApplier />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
