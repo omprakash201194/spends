@@ -13,6 +13,7 @@ import {
   Users,
   Menu,
   X,
+  LayoutGrid,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -23,6 +24,7 @@ const nav = [
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/budgets',      label: 'Budgets',      icon: PiggyBank },
   { to: '/household',    label: 'Household',    icon: Users },
+  { to: '/views',        label: 'Views',        icon: LayoutGrid },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 

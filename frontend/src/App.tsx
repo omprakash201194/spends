@@ -8,6 +8,8 @@ import TransactionPage from './pages/TransactionPage'
 import BudgetPage from './pages/BudgetPage'
 import HouseholdPage from './pages/HouseholdPage'
 import SettingsPage from './pages/SettingsPage'
+import ViewsPage from './pages/ViewsPage'
+import ViewDetailPage from './pages/ViewDetailPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -32,6 +34,8 @@ export default function App() {
           <Route path="budgets" element={<BudgetPage />} />
           <Route path="household" element={<HouseholdPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="views" element={<ViewsPage />} />
+          <Route path="views/:id" element={<ViewDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
