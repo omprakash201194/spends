@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!--
+    local profile: human-readable coloured console.
+    k8s   profile: structured JSON consumed by Promtail → Loki.
+  -->
+
+  <springProfile name="local">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%cyan(%X{requestId:-      })] %cyan(%logger{36}) - %msg%n</pattern>
+      </encoder>
+    </appender>
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="com.omprakashgautam" level="DEBUG"/>
+  </springProfile>
+
+  <springProfile name="k8s">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <!-- MDC fields injected by RequestCorrelationFilter -->
+        <includeMdcKeyName>requestId</includeMdcKeyName>
+        <includeMdcKeyName>method</includeMdcKeyName>
+        <includeMdcKeyName>path</includeMdcKeyName>
+        <!-- Rename default fields to match Loki/Grafana conventions -->
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <message>message</message>
+          <logger>logger</logger>
+          <thread>thread</thread>
+          <level>level</level>
+          <levelValue>[ignore]</levelValue>
+        </fieldNames>
+      </encoder>
+    </appender>
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+</configuration>
