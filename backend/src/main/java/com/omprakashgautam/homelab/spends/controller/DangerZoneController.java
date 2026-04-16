@@ -1,5 +1,6 @@
 package com.omprakashgautam.homelab.spends.controller;
 
+import com.omprakashgautam.homelab.spends.model.Household;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
 import com.omprakashgautam.homelab.spends.security.UserDetailsImpl;
@@ -57,7 +58,13 @@ public class DangerZoneController {
 
     private UUID resolveHouseholdId(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        return user.getHousehold().getId();
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "User record not found"));
+        Household household = user.getHousehold();
+        if (household == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "User has no household");
+        }
+        return household.getId();
     }
 }
