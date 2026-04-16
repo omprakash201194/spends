@@ -269,6 +269,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
      * Groups withdrawals by (bank account, date, amount). If a group has more than one row,
      * the transactions may be accidental duplicates (same amount + date but different remarks).
      * Returns at most 10 groups, ordered by count desc then amount desc.
+     * Deposit-only duplicates are intentionally excluded — withdrawal duplicates are the primary risk.
      *
      * Row layout: [accountNumberMasked (String), bankName (String), valueDate (LocalDate),
      *              withdrawalAmount (BigDecimal), count (Long)]

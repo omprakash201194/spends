@@ -254,6 +254,11 @@ export default function DataHealthPage() {
                 ))}
               </tbody>
             </table>
+            {data.nearDuplicates.length === 10 && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                Showing top 10 groups. There may be additional duplicates not listed here.
+              </p>
+            )}
           </>
         )}
       </div>
