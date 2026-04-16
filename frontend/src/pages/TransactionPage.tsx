@@ -357,7 +357,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
                   onClick={() => handleSelectCategory(cat)}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color ?? undefined }} />
                   {cat.name}
                   {cat.id === tx.category?.id && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" />}
                 </button>
