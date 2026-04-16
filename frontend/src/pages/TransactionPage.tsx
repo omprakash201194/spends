@@ -5,6 +5,7 @@ import { useQuery as useQueryCategories } from '@tanstack/react-query'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   ChevronLeft, ChevronRight, Check, X, CircleDot,
+  Bookmark,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
@@ -13,6 +14,7 @@ import {
 } from '../api/transactions'
 import { getCategories, type Category } from '../api/categories'
 import { getBankAccounts } from '../api/bankAccounts'
+import { listViews, addTransactionsToView, type ViewResponse } from '../api/views'
 import { useDebounce } from '../hooks/useDebounce'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -204,13 +206,14 @@ export default function TransactionPage() {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wide w-16">
                   Done
                 </th>
+                <th className="px-2 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={8} className="text-center py-16 text-gray-400">Loading…</td></tr>
               ) : !data || data.content.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">No transactions found</td></tr>
+                <tr><td colSpan={8} className="text-center py-16 text-gray-400">No transactions found</td></tr>
               ) : data.content.map((tx) => (
                 <TxRow
                   key={tx.id}
@@ -285,6 +288,50 @@ function Th({ col, label, current, dir, onSort, className }: {
   )
 }
 
+// ── Add to view picker ────────────────────────────────────────────────────────
+
+function AddToViewPicker({
+  txId,
+  onClose,
+}: {
+  txId: string
+  onClose: () => void
+}) {
+  const qc = useQueryClient()
+  const { data: views = [] } = useQuery<ViewResponse[]>({
+    queryKey: ['views'],
+    queryFn: listViews,
+  })
+
+  const addMut = useMutation({
+    mutationFn: (viewId: string) => addTransactionsToView(viewId, [txId]),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['views'] })
+      onClose()
+    },
+  })
+
+  return (
+    <div className="absolute z-40 right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-1">
+      <p className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Add to view</p>
+      {views.length === 0 && (
+        <p className="px-3 py-2 text-sm text-gray-400">No views yet</p>
+      )}
+      {views.map(v => (
+        <button
+          key={v.id}
+          onClick={() => addMut.mutate(v.id)}
+          disabled={addMut.isPending}
+          className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+        >
+          {v.color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: v.color }} />}
+          <span className="truncate">{v.name}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Transaction row ───────────────────────────────────────────────────────────
 
 function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
@@ -295,6 +342,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
 }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [rulePrompt, setRulePrompt] = useState<{ categoryId: string; categoryName: string } | null>(null)
+  const [viewPickerOpen, setViewPickerOpen] = useState(false)
 
   const updateCatMut = useMutation({
     mutationFn: ({ catId, createRule, pattern }: { catId: string; createRule: boolean; pattern?: string }) =>
@@ -391,12 +439,26 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
             {tx.reviewed && <Check className="w-3 h-3" />}
           </button>
         </td>
+
+        {/* Add to view */}
+        <td className="px-2 py-3 text-center relative">
+          <button
+            onClick={() => setViewPickerOpen(v => !v)}
+            className="p-1 text-gray-300 hover:text-blue-500 rounded transition-colors"
+            title="Add to view"
+          >
+            <Bookmark className="w-4 h-4" />
+          </button>
+          {viewPickerOpen && (
+            <AddToViewPicker txId={tx.id} onClose={() => setViewPickerOpen(false)} />
+          )}
+        </td>
       </tr>
 
       {/* Rule creation prompt */}
       {rulePrompt && (
         <tr>
-          <td colSpan={7} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
+          <td colSpan={8} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-blue-800">
                 Create a rule to automatically categorize <strong>{tx.merchantName ?? 'this merchant'}</strong> as{' '}
