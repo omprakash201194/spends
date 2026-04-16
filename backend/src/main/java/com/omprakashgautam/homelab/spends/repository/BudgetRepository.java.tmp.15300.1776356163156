@@ -14,9 +14,4 @@ import java.util.UUID;
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
     List<Budget> findByUserIdAndYearAndMonth(UUID userId, int year, int month);
     Optional<Budget> findByUserIdAndCategoryIdAndYearAndMonth(UUID userId, UUID categoryId, int year, int month);
-
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM Budget b WHERE b.user.id = :userId")
-    void deleteAllByUserId(@Param("userId") UUID userId);
 }

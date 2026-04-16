@@ -2,8 +2,10 @@ package com.omprakashgautam.homelab.spends.repository;
 
 import com.omprakashgautam.homelab.spends.model.CategoryRule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,4 +40,9 @@ public interface CategoryRuleRepository extends JpaRepository<CategoryRule, UUID
 
     @Query("SELECT COUNT(r) FROM CategoryRule r WHERE r.global = TRUE")
     long countGlobal();
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CategoryRule r WHERE r.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") UUID userId);
 }
