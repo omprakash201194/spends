@@ -202,6 +202,7 @@ function GoalCard({ goal }: { goal: GoalResponse }) {
   const deleteMutation = useMutation({
     mutationFn: () => deleteGoal(goal.id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    onError: () => setConfirmDelete(false),
   })
 
   const days = goal.targetDate ? daysRemaining(goal.targetDate) : null
