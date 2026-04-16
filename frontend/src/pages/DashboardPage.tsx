@@ -28,6 +28,12 @@ function inrFull(n: number) {
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/** Returns percentage change from prev to current, or null if prev is zero (no baseline). */
+function pctDelta(current: number, prev: number): number | null {
+  if (prev === 0) return null
+  return ((current - prev) / prev) * 100
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -74,15 +80,81 @@ export default function DashboardPage() {
 
 function DashboardContent({ data, alertData, recurringData }: { data: DashboardSummary; alertData?: AlertSummary; recurringData?: RecurringSummary }) {
   const hasData = data.transactionCount > 0
+  const [compareMode, setCompareMode] = useState<'month' | 'year'>('month')
+  const comp      = compareMode === 'month' ? data.prevMonth : data.prevYear
+  const compLabel = compareMode === 'month' ? 'last month' : 'last year'
 
   return (
     <>
+      {/* Compare mode toggle */}
+      <div className="flex justify-end mb-2">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-xs">
+          <button
+            onClick={() => setCompareMode('month')}
+            className={`px-3 py-1 rounded-md transition-colors ${
+              compareMode === 'month'
+                ? 'bg-gray-900 text-white font-medium'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            vs last month
+          </button>
+          <button
+            onClick={() => setCompareMode('year')}
+            className={`px-3 py-1 rounded-md transition-colors ${
+              compareMode === 'year'
+                ? 'bg-gray-900 text-white font-medium'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            vs last year
+          </button>
+        </div>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <StatCard label="Total Spent"   value={inr(data.totalSpent)}   sub={data.month} icon={TrendingDown} iconColor="text-red-500"    iconBg="bg-red-50"    />
-        <StatCard label="Total Income"  value={inr(data.totalIncome)}  sub={data.month} icon={TrendingUp}   iconColor="text-green-500"  iconBg="bg-green-50"  />
-        <StatCard label="Net Savings"   value={inr(Math.abs(data.netSavings))} sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'} icon={Wallet} iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'} iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'} />
-        <StatCard label="Transactions"  value={data.transactionCount.toString()} sub={data.month} icon={BarChart3} iconColor="text-purple-500" iconBg="bg-purple-50" />
+        <StatCard
+          label="Total Spent"
+          value={inr(data.totalSpent)}
+          sub={data.month}
+          icon={TrendingDown}
+          iconColor="text-red-500"
+          iconBg="bg-red-50"
+          delta={pctDelta(data.totalSpent, comp.spent)}
+          positiveIsGood={false}
+          deltaLabel={compLabel}
+        />
+        <StatCard
+          label="Total Income"
+          value={inr(data.totalIncome)}
+          sub={data.month}
+          icon={TrendingUp}
+          iconColor="text-green-500"
+          iconBg="bg-green-50"
+          delta={pctDelta(data.totalIncome, comp.income)}
+          positiveIsGood={true}
+          deltaLabel={compLabel}
+        />
+        <StatCard
+          label="Net Savings"
+          value={inr(Math.abs(data.netSavings))}
+          sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'}
+          icon={Wallet}
+          iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'}
+          iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'}
+        />
+        <StatCard
+          label="Transactions"
+          value={data.transactionCount.toString()}
+          sub={data.month}
+          icon={BarChart3}
+          iconColor="text-purple-500"
+          iconBg="bg-purple-50"
+          delta={pctDelta(data.transactionCount, comp.transactionCount)}
+          positiveIsGood={false}
+          deltaLabel={compLabel}
+        />
       </div>
 
       {/* Alerts panel — only shown when there are alerts */}
@@ -291,11 +363,35 @@ function AlertRow({ alert }: { alert: Alert }) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+function DeltaBadge({
+  delta,
+  positiveIsGood,
+  label,
+}: {
+  delta: number | null
+  positiveIsGood: boolean
+  label: string
+}) {
+  if (delta === null) return null
+  const isPositive = delta >= 0
+  const isGood     = positiveIsGood ? isPositive : !isPositive
+  const colorClass = isGood ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+  const arrow      = isPositive ? '↑' : '↓'
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${colorClass}`}>
+      {arrow} {Math.abs(delta).toFixed(1)}%
+      <span className="text-gray-400 font-normal ml-1">{label}</span>
+    </span>
+  )
+}
+
 function StatCard({
   label, value, sub, icon: Icon, iconColor, iconBg,
+  delta, positiveIsGood, deltaLabel,
 }: {
   label: string; value: string; sub: string
   icon: React.ElementType; iconColor: string; iconBg: string
+  delta?: number | null; positiveIsGood?: boolean; deltaLabel?: string
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
@@ -306,7 +402,12 @@ function StatCard({
         </span>
       </div>
       <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{sub}</p>
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <p className="text-xs text-gray-400">{sub}</p>
+        {delta !== undefined && delta !== null && positiveIsGood !== undefined && deltaLabel !== undefined && (
+          <DeltaBadge delta={delta} positiveIsGood={positiveIsGood} label={deltaLabel} />
+        )}
+      </div>
     </div>
   )
 }

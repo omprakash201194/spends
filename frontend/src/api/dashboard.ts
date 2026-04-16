@@ -19,6 +19,12 @@ export interface MerchantStat {
   count: number
 }
 
+export interface Comparison {
+  spent: number
+  income: number
+  transactionCount: number
+}
+
 export interface DashboardSummary {
   month: string
   totalSpent: number
@@ -28,6 +34,8 @@ export interface DashboardSummary {
   categoryBreakdown: CategoryStat[]
   monthlyTrend: MonthlyTrend[]
   topMerchants: MerchantStat[]
+  prevMonth: Comparison
+  prevYear: Comparison
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
