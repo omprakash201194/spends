@@ -22,8 +22,11 @@ function fmtFull(n: number) {
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function fmtDate(s: string) {
-  const [y, m, d] = s.split('-')
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return '—'
+  const parts = s.split('T')[0].split('-')
+  if (parts.length !== 3) return s
+  const [y, m, d] = parts
   return `${d}/${m}/${y}`
 }
 
@@ -32,18 +35,23 @@ function fmtDate(s: string) {
 function ListTab({ viewId }: { viewId: string }) {
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['view-transactions', viewId, page],
     queryFn: () => getViewTransactions(viewId, page, 25),
   })
 
   const removeMut = useMutation({
-    mutationFn: (txId: string) => removeTransactionFromView(viewId, txId),
+    mutationFn: (txId: string) => {
+      setRemovingId(txId)
+      return removeTransactionFromView(viewId, txId)
+    },
+    onSettled: () => setRemovingId(null),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['view-transactions', viewId] }),
   })
 
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+  if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
   if (!data || data.content.length === 0) return <p className="text-center text-gray-400 py-12">No transactions in this view.</p>
 
   return (
@@ -83,8 +91,9 @@ function ListTab({ viewId }: { viewId: string }) {
                 <td className="py-2 text-right">
                   <button
                     onClick={() => removeMut.mutate(tx.id)}
-                    disabled={removeMut.isPending}
+                    disabled={removingId === tx.id}
                     className="p-1 text-gray-300 hover:text-red-500 rounded"
+                    aria-label={`Remove ${tx.merchantName ?? tx.rawRemarks} from view`}
                     title="Remove from view"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -120,12 +129,12 @@ function ListTab({ viewId }: { viewId: string }) {
 // ── Board tab ─────────────────────────────────────────────────────────────────
 
 function BoardTab({ viewId }: { viewId: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['view-transactions', viewId, 'all'],
+  const { data, isPending } = useQuery({
+    queryKey: ['view-board', viewId],
     queryFn: () => getViewTransactions(viewId, 0, 500),
   })
 
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+  if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
   if (!data || data.content.length === 0) return <p className="text-center text-gray-400 py-12">No transactions in this view.</p>
 
   // Group by category
@@ -138,6 +147,11 @@ function BoardTab({ viewId }: { viewId: string }) {
 
   return (
     <div className="overflow-x-auto">
+      {data.totalElements > data.content.length && (
+        <p className="text-xs text-amber-600 mb-3">
+          Showing first {data.content.length} of {data.totalElements} transactions.
+        </p>
+      )}
       <div className="flex gap-4 pb-4" style={{ minWidth: `${Object.keys(groups).length * 220}px` }}>
         {Object.entries(groups).map(([cat, txs]) => {
           const total = txs.reduce((s, tx) => s + tx.withdrawalAmount, 0)
@@ -172,15 +186,15 @@ function BoardTab({ viewId }: { viewId: string }) {
 // ── Summary tab ───────────────────────────────────────────────────────────────
 
 function SummaryTab({ viewId }: { viewId: string }) {
-  const { data: summary, isLoading } = useQuery<ViewSummary>({
+  const { data: summary, isPending } = useQuery<ViewSummary>({
     queryKey: ['view-summary', viewId],
     queryFn: () => getViewSummary(viewId),
   })
 
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+  if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
   if (!summary) return null
 
-  const budgetPct = summary.totalBudget && summary.totalBudget > 0
+  const budgetPct = summary.totalBudget != null && summary.totalBudget > 0
     ? Math.min(100, Math.round((summary.totalSpent / summary.totalBudget) * 100))
     : null
 
@@ -190,7 +204,7 @@ function SummaryTab({ viewId }: { viewId: string }) {
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <p className="text-sm text-gray-500 mb-1">Total Spent</p>
         <p className="text-3xl font-bold text-gray-900 mb-3">{fmtFull(summary.totalSpent)}</p>
-        {summary.totalBudget && (
+        {budgetPct !== null && summary.totalBudget != null && (
           <>
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>Budget: {fmtFull(summary.totalBudget)}</span>
@@ -198,7 +212,7 @@ function SummaryTab({ viewId }: { viewId: string }) {
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className={clsx('h-full rounded-full', budgetPct! >= 100 ? 'bg-red-500' : budgetPct! >= 80 ? 'bg-amber-400' : 'bg-blue-500')}
+                className={clsx('h-full rounded-full', budgetPct >= 100 ? 'bg-red-500' : budgetPct >= 80 ? 'bg-amber-400' : 'bg-blue-500')}
                 style={{ width: `${budgetPct}%` }}
               />
             </div>
@@ -232,7 +246,10 @@ function SummaryTab({ viewId }: { viewId: string }) {
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className={clsx('h-full rounded-full', budgetOver ? 'bg-red-400' : 'bg-blue-500')}
-                      style={{ width: `${pct}%`, backgroundColor: cat.categoryColor ?? undefined }}
+                      style={{
+                        width: `${pct}%`,
+                        backgroundColor: budgetOver ? undefined : (cat.categoryColor ?? undefined),
+                      }}
                     />
                   </div>
                 </div>
@@ -254,7 +271,7 @@ function SummaryTab({ viewId }: { viewId: string }) {
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                        {m.displayName[0].toUpperCase()}
+                        {(m.displayName[0] ?? '?').toUpperCase()}
                       </div>
                       <span className="text-gray-700">{m.displayName}</span>
                       <span className="text-gray-400 text-xs">({m.count} txns)</span>
@@ -289,16 +306,16 @@ export default function ViewDetailPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<TabId>('list')
 
-  const { data: view, isLoading } = useQuery<ViewResponse>({
+  const { data: view, isPending } = useQuery<ViewResponse>({
     queryKey: ['view', id],
     queryFn: () => getView(id!),
     enabled: !!id,
   })
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+  if (isPending) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
   if (!view) return null
 
-  const pct = view.totalBudget && view.totalBudget > 0
+  const pct = view.totalBudget != null && view.totalBudget > 0
     ? Math.min(100, Math.round((view.totalSpent / view.totalBudget) * 100))
     : null
 
@@ -320,7 +337,9 @@ export default function ViewDetailPage() {
       {/* Stats row */}
       <div className="flex items-center gap-4 text-sm mb-5">
         <span className="font-semibold text-gray-900">{fmt(view.totalSpent)} spent</span>
-        {view.totalBudget && <span className="text-gray-400">of {fmt(view.totalBudget)} budget ({pct}%)</span>}
+        {pct !== null && view.totalBudget != null && (
+          <span className="text-gray-400">of {fmt(view.totalBudget)} budget ({pct}%)</span>
+        )}
         <span className="text-gray-400">{view.transactionCount} transactions</span>
       </div>
 
