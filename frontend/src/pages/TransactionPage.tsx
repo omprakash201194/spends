@@ -104,7 +104,7 @@ export default function TransactionPage() {
   const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo
 
   return (
-    <div className="p-4 sm:p-6 flex flex-col h-full">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -189,9 +189,10 @@ export default function TransactionPage() {
         />
       </div>
 
-      {/* Table */}
-      <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col min-h-0">
-        <div className="overflow-auto flex-1">
+      {/* Table + InsightCard sidebar */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 lg:items-start">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
@@ -251,12 +252,12 @@ export default function TransactionPage() {
             </div>
           </div>
         )}
-      </div>
+      </div>{/* end table card */}
 
-      {/* AI Insights */}
-      <div className="mt-4">
+      <div className="mt-4 lg:mt-0 lg:sticky lg:top-6">
         <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
       </div>
+      </div>{/* end sidebar grid */}
     </div>
   )
 }

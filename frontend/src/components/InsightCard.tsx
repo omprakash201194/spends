@@ -104,21 +104,35 @@ export default function InsightCard({ type, label }: Props) {
   )
 }
 
-// Render bullet lines nicely
+// Render bullet lines with inline **bold** support
 function InsightText({ text }: { text: string }) {
   const lines = text.split('\n').filter(l => l.trim())
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2.5">
       {lines.map((line, i) => {
         const clean = line.replace(/^[•\-*]\s*/, '').trim()
         return (
-          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+          <li key={i} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
             <span className="text-purple-400 mt-0.5 flex-shrink-0">•</span>
-            <span>{clean}</span>
+            <span>{renderInline(clean)}</span>
           </li>
         )
       })}
     </ul>
+  )
+}
+
+/** Parse **bold** markers into <strong> elements. */
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong key={i} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+          : part
+      )}
+    </>
   )
 }
 

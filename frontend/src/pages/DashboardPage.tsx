@@ -111,108 +111,111 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
       {!hasData ? (
         <EmptyState />
       ) : (
-        <>
-          {/* Charts row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">12-Month Spending Trend</h2>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={data.monthlyTrend} barSize={12}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={inr} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
-                  <BarTooltip
-                    formatter={(val: number, name: string) => [inrFull(val), name === 'spent' ? 'Spent' : 'Income']}
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                  />
-                  <Bar dataKey="spent"  fill="#f87171" radius={[3, 3, 0, 0]} name="spent"  />
-                  <Bar dataKey="income" fill="#4ade80" radius={[3, 3, 0, 0]} name="income" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">Category Breakdown — {data.month}</h2>
-              {data.categoryBreakdown.length === 0 ? (
-                <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No spending data</div>
-              ) : (
+        <div className="xl:grid xl:grid-cols-[1fr_320px] xl:gap-6 xl:items-start">
+          {/* Main column */}
+          <div className="space-y-6">
+            {/* Charts row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-gray-700 mb-4">12-Month Spending Trend</h2>
                 <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={data.categoryBreakdown}
-                      dataKey="amount"
-                      nameKey="name"
-                      cx="50%" cy="50%"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={2}
-                    >
-                      {data.categoryBreakdown.map((entry, i) => (
-                        <Cell key={i} fill={entry.color ?? '#94a3b8'} />
-                      ))}
-                    </Pie>
-                    <PieTooltip
-                      formatter={(val: number) => inrFull(val)}
+                  <BarChart data={data.monthlyTrend} barSize={12}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tickFormatter={inr} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
+                    <BarTooltip
+                      formatter={(val: number, name: string) => [inrFull(val), name === 'spent' ? 'Spent' : 'Income']}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
-                    <Legend
-                      iconType="circle"
-                      iconSize={8}
-                      formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
-                    />
-                  </PieChart>
+                    <Bar dataKey="spent"  fill="#f87171" radius={[3, 3, 0, 0]} name="spent"  />
+                    <Bar dataKey="income" fill="#4ade80" radius={[3, 3, 0, 0]} name="income" />
+                  </BarChart>
                 </ResponsiveContainer>
+              </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+                <h2 className="text-sm font-semibold text-gray-700 mb-4">Category Breakdown — {data.month}</h2>
+                {data.categoryBreakdown.length === 0 ? (
+                  <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No spending data</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie
+                        data={data.categoryBreakdown}
+                        dataKey="amount"
+                        nameKey="name"
+                        cx="50%" cy="50%"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={2}
+                      >
+                        {data.categoryBreakdown.map((entry, i) => (
+                          <Cell key={i} fill={entry.color ?? '#94a3b8'} />
+                        ))}
+                      </Pie>
+                      <PieTooltip
+                        formatter={(val: number) => inrFull(val)}
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={8}
+                        formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Top merchants */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-700">Top Merchants — {data.month}</h2>
+                <Link to="/transactions" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  View all <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              {data.topMerchants.length === 0 ? (
+                <p className="text-sm text-gray-400">No merchant data this month</p>
+              ) : (
+                <div className="space-y-3">
+                  {data.topMerchants.map((m, i) => {
+                    const max = data.topMerchants[0].amount
+                    const pct = max > 0 ? (m.amount / max) * 100 : 0
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-800 truncate">{m.merchant}</span>
+                            <span className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">{inrFull(m.amount)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{m.count}×</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Top merchants */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-700">Top Merchants — {data.month}</h2>
-              <Link to="/transactions" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            {data.topMerchants.length === 0 ? (
-              <p className="text-sm text-gray-400">No merchant data this month</p>
-            ) : (
-              <div className="space-y-3">
-                {data.topMerchants.map((m, i) => {
-                  const max = data.topMerchants[0].amount
-                  const pct = max > 0 ? (m.amount / max) * 100 : 0
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <ShoppingBag className="w-3.5 h-3.5 text-gray-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-800 truncate">{m.merchant}</span>
-                          <span className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">{inrFull(m.amount)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                            <div
-                              className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-400 flex-shrink-0">{m.count}×</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* AI Insights */}
-          <div className="mt-6">
+          {/* AI Insights sidebar */}
+          <div className="mt-6 xl:mt-0 xl:sticky xl:top-6">
             <InsightCard type="DASHBOARD" />
           </div>
-        </>
+        </div>
       )}
     </>
   )

@@ -27,7 +27,7 @@ export default function BudgetPage() {
   })
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Budgets</h1>
         {data && (
@@ -38,12 +38,12 @@ export default function BudgetPage() {
       {isLoading && <LoadingSkeleton />}
       {isError   && <ErrorState />}
       {data      && (
-        <>
+        <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6 lg:items-start">
           <BudgetGrid summary={data} />
-          <div className="mt-6">
+          <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
             <InsightCard type="BUDGET" label="Get Budget Advice" />
           </div>
-        </>
+        </div>
       )}
     </div>
   )

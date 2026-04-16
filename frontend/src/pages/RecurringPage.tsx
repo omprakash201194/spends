@@ -123,7 +123,7 @@ export default function RecurringPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
@@ -162,35 +162,42 @@ export default function RecurringPage() {
         are typically detected automatically.
       </div>
 
-      {/* Empty state */}
-      {data.patterns.length === 0 && (
-        <div className="text-center py-16">
-          <Repeat className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="font-medium text-gray-500">No recurring patterns detected</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {lookback > 0 && lookback < 12
-              ? `Try extending the window to 12M or more.`
-              : 'Import at least 3 months of statements to see patterns.'}
-          </p>
+      {/* Main + InsightCard sidebar */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6 lg:items-start">
+        <div>
+          {/* Empty state */}
+          {data.patterns.length === 0 && (
+            <div className="text-center py-16">
+              <Repeat className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="font-medium text-gray-500">No recurring patterns detected</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {lookback > 0 && lookback < 12
+                  ? `Try extending the window to 12M or more.`
+                  : 'Import at least 3 months of statements to see patterns.'}
+              </p>
+            </div>
+          )}
+
+          {/* Pattern cards */}
+          {data.patterns.length > 0 && (
+            <>
+              <p className="text-sm text-gray-500 mb-3">
+                {data.patterns.length} pattern{data.patterns.length !== 1 ? 's' : ''} detected
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {data.patterns.map(p => (
+                  <PatternCard key={`${p.merchantName}-${p.categoryName ?? 'none'}`} p={p} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      )}
 
-      {/* Pattern cards */}
-      {data.patterns.length > 0 && (
-        <>
-          <p className="text-sm text-gray-500 mb-3">
-            {data.patterns.length} pattern{data.patterns.length !== 1 ? 's' : ''} detected
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 mb-6">
-            {data.patterns.map(p => (
-              <PatternCard key={`${p.merchantName}-${p.categoryName ?? 'none'}`} p={p} />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* AI Insights */}
-      <InsightCard type="RECURRING" label="Analyse Recurring Patterns" />
+        {/* AI Insights sidebar */}
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
+          <InsightCard type="RECURRING" label="Analyse Recurring Patterns" />
+        </div>
+      </div>
     </div>
   )
 }
