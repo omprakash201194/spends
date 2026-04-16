@@ -185,15 +185,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
      * detect recurring patterns.
      *
      * Row layout: [merchantName, categoryName, categoryColor, yearMonth (yyyy-MM),
-     *              avgWithdrawal, avgDeposit, count]
+     *              sumWithdrawal, sumDeposit, count]
      */
     @Query("""
             SELECT t.merchantName,
                    t.category.name,
                    t.category.color,
                    FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
-                   COALESCE(AVG(t.withdrawalAmount), 0),
-                   COALESCE(AVG(t.depositAmount), 0),
+                   COALESCE(SUM(t.withdrawalAmount), 0),
+                   COALESCE(SUM(t.depositAmount), 0),
                    COUNT(t)
             FROM Transaction t
             WHERE t.bankAccount.user.id = :userId
