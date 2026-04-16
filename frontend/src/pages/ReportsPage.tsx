@@ -13,17 +13,25 @@ function inrFull(n: number) {
 
 // ── Client-side CSV generation ────────────────────────────────────────────────
 
+/** RFC 4180: wrap field in double-quotes if it contains comma, double-quote, CR, or LF. */
+function escapeCsvField(value: string): string {
+  if (/[,"\r\n]/.test(value)) {
+    return '"' + value.replace(/"/g, '""') + '"'
+  }
+  return value
+}
+
 function generateCsv(months: MonthRow[], year: number): void {
   const rows = ['Month,Total Spent (INR),Total Income (INR),Net (INR),Top Category']
   for (const m of months) {
     const hasData = m.totalSpent > 0 || m.totalIncome > 0
     const topCat = [...m.categories].sort((a, b) => b.amount - a.amount)[0]?.category ?? ''
     rows.push([
-      m.monthLabel,
+      escapeCsvField(m.monthLabel),
       hasData ? m.totalSpent.toFixed(2) : '',
       hasData ? m.totalIncome.toFixed(2) : '',
       hasData ? m.net.toFixed(2) : '',
-      topCat,
+      escapeCsvField(topCat),
     ].join(','))
   }
 
@@ -88,10 +96,13 @@ export default function ReportsPage() {
     staleTime: 5 * 60_000,
   })
 
+  // selectedYear is null until the user explicitly picks a year; we fall back to the first
+  // year returned by the API (most recent) so the page is useful on first load without an
+  // extra round-trip or a useState initializer that races the years query.
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const year = selectedYear ?? (years.length > 0 ? years[0] : new Date().getFullYear())
 
-  const { data: summary, isPending } = useQuery({
+  const { data: summary, isLoading, isFetching } = useQuery({
     queryKey: ['report-summary', year],
     queryFn: () => getMonthlySummary(year),
     enabled: years.length > 0,
@@ -156,14 +167,14 @@ export default function ReportsPage() {
         <p className="text-sm text-gray-500 mt-1">Monthly income and spending summary</p>
       </div>
 
-      {isPending && (
+      {isLoading && (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       )}
 
       {summary && (
-        <>
+        <div className={clsx(isFetching && !isLoading && 'opacity-50 pointer-events-none')}>
           {/* Annual stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -222,7 +233,7 @@ export default function ReportsPage() {
               </tfoot>
             </table>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

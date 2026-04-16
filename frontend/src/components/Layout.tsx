@@ -61,6 +61,7 @@ export default function Layout() {
           'fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col',
           'transition-transform duration-200 ease-in-out',
           'md:relative md:z-auto md:translate-x-0 md:flex',
+          'print:hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -131,7 +132,7 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Mobile top bar */}
-        <header className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <header className="md:hidden print:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
