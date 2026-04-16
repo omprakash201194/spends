@@ -93,8 +93,8 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
 
       {/* Recurring patterns banner */}
       {recurringData && recurringData.patterns.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2 text-sm text-blue-800">
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-300">
             <Repeat className="w-4 h-4 text-blue-600 flex-shrink-0" />
             <span>
               <span className="font-semibold">{recurringData.patterns.length}</span> recurring pattern
@@ -103,7 +103,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
             </span>
           </div>
           <Link to="/recurring"
-                className="text-xs text-blue-600 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
@@ -120,7 +120,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
                 onClick={() => setCompareMode('month')}
                 className={`px-3 py-1 rounded-md transition-colors ${
                   compareMode === 'month'
-                    ? 'bg-gray-900 text-white font-medium'
+                    ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
@@ -130,7 +130,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
                 onClick={() => setCompareMode('year')}
                 className={`px-3 py-1 rounded-md transition-colors ${
                   compareMode === 'year'
-                    ? 'bg-gray-900 text-white font-medium'
+                    ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-medium'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
@@ -147,7 +147,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
               sub={data.month}
               icon={TrendingDown}
               iconColor="text-red-500"
-              iconBg="bg-red-50"
+              iconBg="bg-red-50 dark:bg-red-950"
               delta={comp ? pctDelta(data.totalSpent, comp.spent) : null}
               positiveIsGood={false}
               deltaLabel={compLabel}
@@ -158,7 +158,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
               sub={data.month}
               icon={TrendingUp}
               iconColor="text-green-500"
-              iconBg="bg-green-50"
+              iconBg="bg-green-50 dark:bg-green-950"
               delta={comp ? pctDelta(data.totalIncome, comp.income) : null}
               positiveIsGood={true}
               deltaLabel={compLabel}
@@ -169,7 +169,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
               sub={data.netSavings >= 0 ? 'Surplus' : 'Deficit'}
               icon={Wallet}
               iconColor={data.netSavings >= 0 ? 'text-blue-500' : 'text-orange-500'}
-              iconBg={data.netSavings >= 0 ? 'bg-blue-50' : 'bg-orange-50'}
+              iconBg={data.netSavings >= 0 ? 'bg-blue-50 dark:bg-blue-950' : 'bg-orange-50 dark:bg-orange-950'}
             />
             <StatCard
               label="Transactions"
@@ -177,7 +177,7 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
               sub={data.month}
               icon={BarChart3}
               iconColor="text-purple-500"
-              iconBg="bg-purple-50"
+              iconBg="bg-purple-50 dark:bg-purple-950"
             />
           </div>
 
@@ -295,9 +295,9 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
 // ── Alerts panel ──────────────────────────────────────────────────────────────
 
 const ALERT_META: Record<AlertType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  LARGE_TRANSACTION: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50',  label: 'Large transaction' },
-  NEW_MERCHANT:      { icon: Sparkles,      color: 'text-blue-600',  bg: 'bg-blue-50',   label: 'New merchant'      },
-  CATEGORY_SPIKE:    { icon: TrendingUp,    color: 'text-red-600',   bg: 'bg-red-50',    label: 'Spending spike'    },
+  LARGE_TRANSACTION: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950',  label: 'Large transaction' },
+  NEW_MERCHANT:      { icon: Sparkles,      color: 'text-blue-600',  bg: 'bg-blue-50 dark:bg-blue-950',   label: 'New merchant'      },
+  CATEGORY_SPIKE:    { icon: TrendingUp,    color: 'text-red-600',   bg: 'bg-red-50 dark:bg-red-950',    label: 'Spending spike'    },
 }
 
 function inrFull2(n: number) {
@@ -377,7 +377,7 @@ function DeltaBadge({ delta, positiveIsGood, label }: {
   }
   const isPositive = delta > 0
   const isGood     = positiveIsGood ? isPositive : !isPositive
-  const colorClass = isGood ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+  const colorClass = isGood ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950' : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950'
   const arrow      = isPositive ? '↑' : '↓'
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${colorClass}`}>
@@ -445,9 +445,9 @@ function LoadingSkeleton() {
 
 function ErrorState() {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-      <p className="text-red-600 font-medium">Failed to load dashboard</p>
-      <p className="text-sm text-red-400 mt-1">Check backend logs for details</p>
+    <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
+      <p className="text-red-600 dark:text-red-400 font-medium">Failed to load dashboard</p>
+      <p className="text-sm text-red-400 dark:text-red-500 mt-1">Check backend logs for details</p>
     </div>
   )
 }
