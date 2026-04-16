@@ -32,6 +32,7 @@ export default function ImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null)
   const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null)
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -51,6 +52,10 @@ export default function ImportPage() {
       setResult(data)
       setFiles([])
       queryClient.invalidateQueries({ queryKey: ['import-history'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring'] })
     },
   })
 
@@ -60,7 +65,16 @@ export default function ImportPage() {
     mutationFn: (batchId: string) => deleteImportBatch(batchId),
     onSuccess: () => {
       setDeletingBatchId(null)
+      setDeleteError(null)
       queryClient.invalidateQueries({ queryKey: ['import-history'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring'] })
+    },
+    onError: () => {
+      setDeletingBatchId(null)
+      setDeleteError('Delete failed. Please try again.')
     },
   })
 
@@ -70,7 +84,16 @@ export default function ImportPage() {
     mutationFn: deleteAllTransactions,
     onSuccess: () => {
       setConfirmDeleteAll(false)
+      setDeleteError(null)
       queryClient.invalidateQueries({ queryKey: ['import-history'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['recurring'] })
+    },
+    onError: () => {
+      setConfirmDeleteAll(false)
+      setDeleteError('Delete failed. Please try again.')
     },
   })
 
@@ -240,6 +263,13 @@ export default function ImportPage() {
             </div>
           )}
         </div>
+
+        {deleteError && (
+          <div className="mb-3 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{deleteError}</p>
+          </div>
+        )}
 
         {history.length === 0 ? (
           <div className="text-center py-10 border border-dashed border-gray-200 rounded-xl">
