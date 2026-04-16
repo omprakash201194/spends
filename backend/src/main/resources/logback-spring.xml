@@ -21,10 +21,7 @@
   <springProfile name="k8s">
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
       <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-        <!-- MDC fields injected by RequestCorrelationFilter -->
-        <includeMdcKeyName>requestId</includeMdcKeyName>
-        <includeMdcKeyName>method</includeMdcKeyName>
-        <includeMdcKeyName>path</includeMdcKeyName>
+        <!-- All MDC keys are included by default (requestId, method, path from RequestCorrelationFilter) -->
         <!-- Rename default fields to match Loki/Grafana conventions -->
         <fieldNames>
           <timestamp>timestamp</timestamp>
