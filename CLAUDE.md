@@ -428,6 +428,14 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `ImportPage` — Import History section with per-row confirm-before-delete, "Delete All" with confirmation step, error banner on failure; `onSuccess` invalidates `['import-history']`, `['transactions']`, `['dashboard']`, `['budgets']`, `['recurring']`
 - 5 unit tests in `ImportServiceTest` (Mockito, InOrder ordering verification)
 
+### Phase 16 — Dark Mode + PWA ✅ COMPLETE
+- **Dark mode infrastructure** — `tailwind.config.js`: `darkMode: 'class'`; `frontend/src/store/themeStore.ts`: Zustand `persist` store (`spends-theme` localStorage key), `theme: 'light' | 'dark'`, `setTheme`, `toggle`; `ThemeApplier` component in `App.tsx` uses `useEffect([theme])` to add/remove `dark` class on `document.documentElement`
+- **Layout chrome** — `Layout.tsx`: outer div `dark:bg-gray-950`; sidebar/mobile header `dark:bg-gray-800 dark:border-gray-700`; moon/sun toggle button (lucide-react `Moon`/`Sun`) in sidebar, shows "Dark mode" / "Light mode" label; all text and icon classes have dark variants
+- **Page-by-page dark mode** — all 13 pages + `InsightCard`: cards `dark:bg-gray-800 dark:border-gray-700`; page backgrounds `dark:bg-gray-950`; inset panels `dark:bg-gray-700`; inputs `dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400`; table rows `dark:bg-gray-800 dark:hover:bg-gray-700`
+- **Dashboard accent colours** — recurring banner `dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200`; alert panel `dark:bg-amber-950 dark:border-amber-800`; `DeltaBadge` dark variants; `StatCard` icon backgrounds all have dark tints; `ErrorState` dark text; compare toggle active state `dark:bg-gray-100 dark:text-gray-900` for contrast
+- **PWA** — `vite-plugin-pwa` 0.21 with Workbox; `registerType: 'autoUpdate'`; inline manifest (name "SpendStack", `theme_color: '#1e3a8a'`, `display: 'standalone'`); `NetworkFirst` strategy for `/api/` routes with 10s timeout; `includeAssets: ['favicon.svg']`; icon entries split into separate `"any"` and `"maskable"` purpose objects (4 entries total for 192+512 sizes); SVG icons `public/icon-192.svg` + `public/icon-512.svg` (dark-blue rounded rect with chart-line polyline)
+- **`index.html`** — `<link rel="manifest">`, `<meta name="theme-color">`, `<link rel="apple-touch-icon">`, iOS-specific apple PWA meta tags
+
 ### Phase 12 — Recurring Transaction Detection ✅ COMPLETE
 - `RecurringDto` — `RecurringPattern` (merchantName, categoryName/color, frequency, averageAmount, occurrences, lastMonth, nextExpected, activeThisMonth) · `RecurringSummary` (month, patterns[])
 - `TransactionRepository.merchantMonthlyActivity` — JPQL groups by merchant + calendar month using `SUM` (not AVG — Hibernate 6 returns Double for AVG on BigDecimal columns); returns [merchantName, categoryName, categoryColor, yearMonth, sumWithdrawal, sumDeposit, count]
