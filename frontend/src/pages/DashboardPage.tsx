@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import {
   TrendingDown, TrendingUp, Wallet, BarChart3, ShoppingBag, ArrowRight,
-  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat,
+  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat, Target,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -13,6 +13,7 @@ import {
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
 import { getAlerts, type AlertSummary, type Alert, type AlertType } from '../api/alerts'
 import { getRecurring, type RecurringSummary } from '../api/recurring'
+import { getGoals, type GoalResponse } from '../api/savingsGoals'
 import { Link } from 'react-router-dom'
 import InsightCard from '../components/InsightCard'
 
@@ -57,6 +58,12 @@ export default function DashboardPage() {
     staleTime: 5 * 60_000,
   })
 
+  const { data: goalsData } = useQuery<GoalResponse[]>({
+    queryKey: ['goals'],
+    queryFn: getGoals,
+    staleTime: 60_000,
+  })
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -71,14 +78,19 @@ export default function DashboardPage() {
 
       {isLoading && <LoadingSkeleton />}
       {isError  && <ErrorState />}
-      {data     && <DashboardContent data={data} alertData={alertData} recurringData={recurringData} />}
+      {data     && <DashboardContent data={data} alertData={alertData} recurringData={recurringData} goalsData={goalsData} />}
     </div>
   )
 }
 
 // ── Content (loaded) ──────────────────────────────────────────────────────────
 
-function DashboardContent({ data, alertData, recurringData }: { data: DashboardSummary; alertData?: AlertSummary; recurringData?: RecurringSummary }) {
+function DashboardContent({ data, alertData, recurringData, goalsData }: {
+  data: DashboardSummary
+  alertData?: AlertSummary
+  recurringData?: RecurringSummary
+  goalsData?: GoalResponse[]
+}) {
   const hasData = data.transactionCount > 0
   const [compareMode, setCompareMode] = useState<'month' | 'year'>('month')
   const comp      = (compareMode === 'month' ? data.prevMonth : data.prevYear) ?? null
@@ -104,6 +116,26 @@ function DashboardContent({ data, alertData, recurringData }: { data: DashboardS
           </div>
           <Link to="/recurring"
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 flex-shrink-0 ml-4">
+            View all <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
+
+      {goalsData && goalsData.length > 0 && (
+        <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
+            <Target className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>
+              <span className="font-semibold">{goalsData.filter(g => g.achieved).length}</span>
+              {' '}of{' '}
+              <span className="font-semibold">{goalsData.length}</span>
+              {' '}savings {goalsData.length === 1 ? 'goal' : 'goals'} achieved
+            </span>
+          </div>
+          <Link
+            to="/goals"
+            className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 flex-shrink-0 ml-4"
+          >
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

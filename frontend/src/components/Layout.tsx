@@ -19,6 +19,7 @@ import {
   Moon,
   Sun,
   ShieldCheck,
+  Target,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
@@ -31,6 +32,7 @@ const nav = [
   { to: '/import',       label: 'Import',       icon: Upload },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/budgets',      label: 'Budgets',      icon: PiggyBank },
+  { to: '/goals',        label: 'Goals',        icon: Target },
   { to: '/household',    label: 'Household',    icon: Users },
   { to: '/views',        label: 'Views',        icon: LayoutGrid },
   { to: '/recurring',    label: 'Recurring',    icon: Repeat },
