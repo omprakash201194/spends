@@ -166,7 +166,8 @@ spends/
 | GET | `/api/settings/api-key` | JWT | Returns `{ hasApiKey: boolean }` — never returns the actual key |
 | PUT | `/api/settings/api-key` | JWT | Save/update Anthropic API key for the current user |
 | DELETE | `/api/settings/api-key` | JWT | Remove stored API key |
-| POST | `/api/insights/{type}` | JWT | Generate AI insight (type: DASHBOARD, BUDGET, TRANSACTIONS); uses user's stored Anthropic key |
+| POST | `/api/insights/{type}` | JWT | Generate AI insight (type: DASHBOARD, BUDGET, TRANSACTIONS, RECURRING); uses user's stored Anthropic key |
+| GET | `/api/recurring` | JWT | Recurring pattern summary; optional `?months=` (6/12/24, 0=all data, default 12) |
 | GET | `/api/categories` | JWT | List all categories (system + household custom) |
 | POST | `/api/categories` | JWT | Create custom household category |
 | PUT | `/api/categories/{id}` | JWT | Update custom category |
@@ -389,3 +390,14 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `ViewDetailPage` — back nav, stats row, List/Board/Summary tabs; Board groups 500 txs client-side by category; Summary has over-budget badges + member breakdown (only if >1 member)
 - Bookmark "Add to view" button on each transaction row in `TransactionPage` — opens picker overlay
 - Views nav link (LayoutGrid icon) in sidebar
+
+### Phase 12 — Recurring Transaction Detection ✅ COMPLETE
+- `RecurringDto` — `RecurringPattern` (merchantName, categoryName/color, frequency, averageAmount, occurrences, lastMonth, nextExpected, activeThisMonth) · `RecurringSummary` (month, patterns[])
+- `TransactionRepository.merchantMonthlyActivity` — JPQL groups by merchant + calendar month using `SUM` (not AVG — Hibernate 6 returns Double for AVG on BigDecimal columns); returns [merchantName, categoryName, categoryColor, yearMonth, sumWithdrawal, sumDeposit, count]
+- `RecurringService.getPatterns(userId, months)` — 13-month window (12 prior + anchor), min 3 occurrences, same debit/credit direction, ≤20% amount variance (max−min)/min; sorts by avgAmount DESC. Optional `months` param: null=12, 0=all data from 2000-01-01, N=last N months
+- `RecurringController` — GET `/api/recurring?months=` (optional)
+- `InsightService` — added `RECURRING` insight type; `buildRecurringPrompt` summarises all patterns, expense/income totals, missed-this-month flags
+- `RecurringServiceTest` — 7 unit tests with Mockito (first test file in the project)
+- `RecurringPage` — pattern cards (TrendingUp green for income/salary, TrendingDown blue for expenses), segmented 6M/12M/24M/All lookback control, `InsightCard` below the grid
+- `DashboardPage` — blue banner showing recurring pattern count with "View all" link
+- Recurring nav link (Repeat icon) in sidebar
