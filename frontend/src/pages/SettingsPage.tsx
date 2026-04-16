@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Key, Trash2, Check, ExternalLink, Plus, Pencil, X, Tag, Sliders } from 'lucide-react'
+import { Key, Trash2, Check, ExternalLink, Plus, Pencil, X, Tag, Sliders, AlertTriangle } from 'lucide-react'
 import { getSettings, saveApiKey, deleteApiKey } from '../api/settings'
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
@@ -10,6 +10,13 @@ import {
   getCategoryRules, createCategoryRule, updateCategoryRule, deleteCategoryRule,
   type CategoryRule,
 } from '../api/categoryRules'
+import {
+  deleteAllTransactions as apiDeleteTransactions,
+  deleteAllRules as apiDeleteRules,
+  deleteAllBudgets as apiDeleteBudgets,
+  deleteAllViews as apiDeleteViews,
+  deleteAllCustomCategories as apiDeleteCustomCategories,
+} from '../api/dangerZone'
 
 // ── Colour palette for custom categories ─────────────────────────────────────
 
@@ -21,7 +28,7 @@ const COLOUR_SWATCHES = [
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'apikey' | 'categories' | 'rules'
+type Tab = 'apikey' | 'categories' | 'rules' | 'danger'
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('apikey')
@@ -36,9 +43,10 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit">
         {([
-          { id: 'apikey',     label: 'API Key',    icon: Key     },
-          { id: 'categories', label: 'Categories', icon: Tag     },
-          { id: 'rules',      label: 'Rules',      icon: Sliders },
+          { id: 'apikey',     label: 'API Key',    icon: Key          },
+          { id: 'categories', label: 'Categories', icon: Tag          },
+          { id: 'rules',      label: 'Rules',      icon: Sliders      },
+          { id: 'danger',     label: 'Danger Zone',  icon: AlertTriangle },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -58,6 +66,7 @@ export default function SettingsPage() {
       {tab === 'apikey'     && <ApiKeyTab />}
       {tab === 'categories' && <CategoriesTab />}
       {tab === 'rules'      && <RulesTab />}
+      {tab === 'danger'     && <DangerZoneTab />}
     </div>
   )
 }
@@ -513,6 +522,171 @@ function RulesTab() {
               )}
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Tab: Danger Zone ──────────────────────────────────────────────────────────
+
+interface DangerActionConfig {
+  key: string
+  title: string
+  description: string
+  mutationFn: () => Promise<void>
+  invalidateKeys: string[][]
+}
+
+function DangerZoneTab() {
+  const qc = useQueryClient()
+
+  const actions: DangerActionConfig[] = [
+    {
+      key: 'transactions',
+      title: 'Delete all transactions',
+      description: 'Permanently deletes every transaction and import record across all your bank accounts. This cannot be undone.',
+      mutationFn: apiDeleteTransactions,
+      invalidateKeys: [['transactions'], ['dashboard'], ['budgets'], ['recurring'], ['import-history'], ['data-health']],
+    },
+    {
+      key: 'rules',
+      title: 'Delete all categorization rules',
+      description: 'Removes all your keyword rules. Auto-categorization will fall back to the global rules only.',
+      mutationFn: apiDeleteRules,
+      invalidateKeys: [['category-rules']],
+    },
+    {
+      key: 'budgets',
+      title: 'Delete all budget limits',
+      description: 'Removes every budget limit you have set. Historical spending data is unaffected.',
+      mutationFn: apiDeleteBudgets,
+      invalidateKeys: [['budgets']],
+    },
+    {
+      key: 'views',
+      title: 'Delete all views',
+      description: 'Removes all trip and event views for your household. The underlying transactions are not deleted.',
+      mutationFn: apiDeleteViews,
+      invalidateKeys: [['views']],
+    },
+    {
+      key: 'custom-categories',
+      title: 'Delete all custom categories',
+      description: 'Removes all custom categories created by your household. Transactions assigned to them will lose their category.',
+      mutationFn: apiDeleteCustomCategories,
+      invalidateKeys: [['categories'], ['transactions'], ['data-health']],
+    },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-5 py-4">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+          <h2 className="text-sm font-semibold text-red-700 dark:text-red-400">Danger Zone</h2>
+        </div>
+        <p className="text-xs text-red-600 dark:text-red-500">
+          These actions are permanent and cannot be undone. Each requires you to type DELETE to confirm.
+        </p>
+      </div>
+      {actions.map(action => (
+        <DangerActionCard
+          key={action.key}
+          action={action}
+          onSuccess={() => action.invalidateKeys.forEach(k => qc.invalidateQueries({ queryKey: k }))}
+        />
+      ))}
+    </div>
+  )
+}
+
+function DangerActionCard({
+  action,
+  onSuccess,
+}: {
+  action: DangerActionConfig
+  onSuccess: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [input, setInput]           = useState('')
+  const [done, setDone]             = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: action.mutationFn,
+    onSuccess: () => {
+      onSuccess()
+      setConfirming(false)
+      setInput('')
+      setDone(true)
+      setTimeout(() => setDone(false), 4000)
+    },
+  })
+
+  const cancel = () => {
+    setConfirming(false)
+    setInput('')
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{action.title}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{action.description}</p>
+        </div>
+        {!confirming && !done && (
+          <button
+            onClick={() => setConfirming(true)}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+          >
+            Delete
+          </button>
+        )}
+        {done && (
+          <span className="flex-shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+            <Check className="w-3.5 h-3.5" /> Done
+          </span>
+        )}
+      </div>
+
+      {confirming && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            Type <span className="font-mono font-bold text-red-600 dark:text-red-400">DELETE</span> to confirm:
+          </p>
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="DELETE"
+              className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+              onKeyDown={e => {
+                if (e.key === 'Enter' && input === 'DELETE') mutation.mutate()
+                if (e.key === 'Escape') cancel()
+              }}
+            />
+            <button
+              onClick={() => mutation.mutate()}
+              disabled={input !== 'DELETE' || mutation.isPending}
+              className="px-3 py-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-40 transition-colors"
+            >
+              {mutation.isPending ? '…' : 'Confirm'}
+            </button>
+            <button
+              onClick={cancel}
+              className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+          {mutation.isError && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+              Something went wrong. Please try again.
+            </p>
+          )}
         </div>
       )}
     </div>
