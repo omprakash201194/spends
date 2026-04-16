@@ -126,10 +126,10 @@ spends/
 │   ├── nginx.conf                     ← /api/ proxy; /assets/ 1yr immutable cache; index.html no-store
 │   └── src/
 │       ├── App.tsx                    ← BrowserRouter + route definitions
-│       ├── api/{client,auth,budget,household,alerts,settings,insights,dashboard}.ts
+│       ├── api/{client,auth,budget,household,alerts,settings,insights,dashboard,recurring}.ts
 │       ├── store/authStore.ts         ← Zustand, persisted to localStorage
 │       ├── components/{Layout,InsightCard,ProtectedRoute}.tsx
-│       └── pages/{Login,Register,Dashboard,BankAccounts,Import,Transaction,Budget,Household,Settings,Views,ViewDetail}Page.tsx
+│       └── pages/{Login,Register,Dashboard,BankAccounts,Import,Transaction,Budget,Household,Settings,Views,ViewDetail,Recurring}Page.tsx
 └── k8s/
     ├── backend-deployment.yaml        ← terminationGracePeriodSeconds: 30
     ├── frontend-deployment.yaml
@@ -398,6 +398,7 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `RecurringController` — GET `/api/recurring?months=` (optional)
 - `InsightService` — added `RECURRING` insight type; `buildRecurringPrompt` summarises all patterns, expense/income totals, missed-this-month flags
 - `RecurringServiceTest` — 7 unit tests with Mockito (first test file in the project)
-- `RecurringPage` — pattern cards (TrendingUp green for income/salary, TrendingDown blue for expenses), segmented 6M/12M/24M/All lookback control, `InsightCard` below the grid
+- `RecurringPage` — pattern cards (TrendingUp green for income/salary, TrendingDown blue for expenses), segmented 6M/12M/24M/All lookback control, `InsightCard` in sticky right sidebar
 - `DashboardPage` — blue banner showing recurring pattern count with "View all" link
 - Recurring nav link (Repeat icon) in sidebar
+- **InsightCard improvements (all pages):** persistent localStorage cache (`spendstack-insight-{type}`); hydrated on mount via lazy `useState` initializer; stores `{insight, month, generatedAt}`; header shows relative age ("just now" / "5m ago" / "3h ago" / "yesterday" / "16 Apr"); inline `**bold**` markdown rendered as `<strong>`; card lives in a sticky 320px right sidebar on all four insight pages (Dashboard, Budget, Transactions, Recurring); all pages use `max-w-7xl` two-column layout (`lg:grid lg:grid-cols-[1fr_320px]`)
