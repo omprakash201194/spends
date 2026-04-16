@@ -76,6 +76,10 @@ export default function Layout() {
           'print:hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+        onTouchEnd={(e) => {
+          if (e.changedTouches[0].clientX - touchStartX.current < -50) closeSidebar()
+        }}
       >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-gray-700 flex items-start justify-between gap-2">
