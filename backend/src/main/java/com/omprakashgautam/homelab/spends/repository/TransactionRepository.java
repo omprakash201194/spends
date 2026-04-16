@@ -240,9 +240,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.bankAccount.user.id = :userId AND t.category IS NULL")
     long countUncategorized(@Param("userId") UUID userId);
 
+    /**
+     * Counts transactions assigned to a named category. The implicit inner join on
+     * t.category means null-category rows are already excluded, but the explicit
+     * IS NOT NULL guard makes the intent clear and protects against accidental outer joins.
+     */
     @Query("""
         SELECT COUNT(t) FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
+          AND t.category IS NOT NULL
           AND t.category.name = :categoryName
         """)
     long countByCategoryName(@Param("userId") UUID userId,
