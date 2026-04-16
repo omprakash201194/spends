@@ -10,6 +10,7 @@ import HouseholdPage from './pages/HouseholdPage'
 import SettingsPage from './pages/SettingsPage'
 import ViewsPage from './pages/ViewsPage'
 import ViewDetailPage from './pages/ViewDetailPage'
+import RecurringPage from './pages/RecurringPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="views" element={<ViewsPage />} />
           <Route path="views/:id" element={<ViewDetailPage />} />
+          <Route path="recurring" element={<RecurringPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
