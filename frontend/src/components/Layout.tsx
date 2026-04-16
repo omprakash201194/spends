@@ -23,6 +23,7 @@ import {
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
 import BottomNav from './BottomNav'
+import InstallBanner from './InstallBanner'
 
 const nav = [
   { to: '/',             label: 'Dashboard',    icon: LayoutDashboard },
@@ -175,6 +176,7 @@ export default function Layout() {
         </main>
 
         <BottomNav onMoreClick={() => setSidebarOpen(true)} />
+        <InstallBanner />
       </div>
     </div>
   )
