@@ -28,6 +28,10 @@ public class Household {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "max_category_depth", nullable = false)
+    @Builder.Default
+    private int maxCategoryDepth = 5;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

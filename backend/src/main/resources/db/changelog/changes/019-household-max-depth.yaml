@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-household-max-depth
+      author: system
+      changes:
+        - addColumn:
+            tableName: household
+            columns:
+              - column:
+                  name: max_category_depth
+                  type: INT
+                  defaultValueNumeric: 5
+                  constraints:
+                    nullable: false
