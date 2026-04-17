@@ -80,8 +80,8 @@ public class AlertService {
 
         // This month's spend per category
         for (Object[] row : transactionRepository.categoryBreakdown(userId, from, to)) {
-            String     catName    = (String)    row[0];
-            BigDecimal thisAmount = (BigDecimal) row[2];
+            String     catName    = (String)    row[1];
+            BigDecimal thisAmount = (BigDecimal) row[3];
 
             BigDecimal sum = priorSum.getOrDefault(catName, BigDecimal.ZERO);
             BigDecimal avg = sum.divide(BigDecimal.valueOf(ROLLING_MONTHS), 2, RoundingMode.HALF_UP);

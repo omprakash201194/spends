@@ -55,8 +55,8 @@ public class HouseholdService {
                     long count        = transactionRepository.countInPeriod(member.getId(), from, to);
 
                     List<Object[]> catBreakdown = transactionRepository.categoryBreakdown(member.getId(), from, to);
-                    String topCategory      = catBreakdown.isEmpty() ? null : (String) catBreakdown.get(0)[0];
-                    String topCategoryColor = catBreakdown.isEmpty() ? null : (String) catBreakdown.get(0)[1];
+                    String topCategory      = catBreakdown.isEmpty() ? null : (String) catBreakdown.get(0)[1];
+                    String topCategoryColor = catBreakdown.isEmpty() ? null : (String) catBreakdown.get(0)[2];
 
                     return new HouseholdDto.MemberStat(
                             member.getId(),
