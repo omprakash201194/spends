@@ -80,9 +80,10 @@ function BudgetCard({
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState('')
+  const [rollover, setRollover] = useState(false)
 
   const saveMutation = useMutation({
-    mutationFn: (limit: number) => setBudget(cat.categoryId, year, monthNumber, limit),
+    mutationFn: (limit: number) => setBudget(cat.categoryId, year, monthNumber, limit, rollover),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['budgets'] })
       setEditing(false)
@@ -96,6 +97,7 @@ function BudgetCard({
 
   const startEdit = () => {
     setInput(cat.limit != null ? String(Math.round(cat.limit)) : '')
+    setRollover(cat.rollover)
     setEditing(true)
   }
 
@@ -104,11 +106,14 @@ function BudgetCard({
     if (!isNaN(val) && val > 0) saveMutation.mutate(val)
   }
 
-  const hasLimit   = cat.limit != null
-  const pct        = cat.percentage
-  const barColor   = progressColor(pct, hasLimit)
-  const barWidth   = hasLimit ? `${Math.min(pct, 100)}%` : '0%'
-  const overBudget = hasLimit && pct >= 100
+  const hasLimit      = cat.limit != null
+  const displayLimit  = cat.effectiveLimit ?? cat.limit   // show effective limit when rollover active
+  const pct           = cat.percentage
+  const barColor      = progressColor(pct, hasLimit)
+  const barWidth      = hasLimit ? `${Math.min(pct, 100)}%` : '0%'
+  const overBudget    = hasLimit && pct >= 100
+  const hasCarryOver  = cat.rollover && cat.effectiveLimit != null && cat.limit != null
+                        && cat.effectiveLimit > cat.limit
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl border p-4 sm:p-5 ${overBudget ? 'border-red-300' : 'border-gray-200 dark:border-gray-700'}`}>
@@ -166,7 +171,7 @@ function BudgetCard({
       <div className="flex items-baseline justify-between mb-2 gap-2">
         <span className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(cat.spent)}</span>
         {hasLimit && !editing ? (
-          <span className="text-sm text-gray-400 dark:text-gray-500 flex-shrink-0">of {inrFull(cat.limit!)}</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500 flex-shrink-0">of {inrFull(displayLimit!)}</span>
         ) : editing ? (
           <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-sm text-gray-400 dark:text-gray-500">₹</span>
@@ -193,6 +198,26 @@ function BudgetCard({
           </button>
         )}
       </div>
+
+      {/* Rollover toggle (visible while editing) */}
+      {editing && (
+        <label className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={rollover}
+            onChange={e => setRollover(e.target.checked)}
+            className="rounded accent-blue-600"
+          />
+          Carry forward unspent budget to next month
+        </label>
+      )}
+
+      {/* Carry-over badge (visible when rollover is active and there is a bonus) */}
+      {hasCarryOver && !editing && (
+        <p className="text-xs text-blue-500 dark:text-blue-400 mb-1">
+          +{inrFull(cat.effectiveLimit! - cat.limit!)} carried over from last month
+        </p>
+      )}
 
       {/* Progress bar */}
       <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">

@@ -64,6 +64,21 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                        @Param("from") LocalDate from,
                        @Param("to") LocalDate to);
 
+    // ── Budget: category-specific withdrawal sum (used for rollover calculation) ─
+
+    @Query("""
+        SELECT COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.category.name = :categoryName
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+        """)
+    BigDecimal sumWithdrawalsForCategory(@Param("userId") UUID userId,
+                                         @Param("categoryName") String categoryName,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
+
     // ── Dashboard: category breakdown ─────────────────────────────────────────
 
     @Query("""

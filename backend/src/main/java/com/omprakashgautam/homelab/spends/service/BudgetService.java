@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -57,16 +58,31 @@ public class BudgetService {
                 .stream()
                 .collect(Collectors.toMap(b -> b.getCategory().getId(), b -> b));
 
+        // Previous month date range (for rollover calculation)
+        YearMonth prevYearMonth = YearMonth.of(year, month).minusMonths(1);
+        LocalDate prevFrom = prevYearMonth.atDay(1);
+        LocalDate prevTo   = prevYearMonth.atEndOfMonth();
+
         List<Category> categories = categoryRepository.findAll();
         List<BudgetDto.CategoryBudget> items = categories.stream()
                 .map(cat -> {
                     BigDecimal spent = spentByCategory.getOrDefault(cat.getName(), BigDecimal.ZERO);
                     Budget budget = budgetByCategory.get(cat.getId());
                     BigDecimal limit = budget != null ? budget.getAmount() : null;
+
+                    // Compute effective limit (adds unspent from previous month when rollover=true)
+                    BigDecimal effectiveLimit = limit;
+                    if (limit != null && budget.isRollover()) {
+                        BigDecimal prevSpent = transactionRepository.sumWithdrawalsForCategory(
+                                userId, cat.getName(), prevFrom, prevTo);
+                        BigDecimal unspent = limit.subtract(prevSpent).max(BigDecimal.ZERO);
+                        effectiveLimit = limit.add(unspent);
+                    }
+
                     int pct = 0;
-                    if (limit != null && limit.compareTo(BigDecimal.ZERO) > 0) {
+                    if (effectiveLimit != null && effectiveLimit.compareTo(BigDecimal.ZERO) > 0) {
                         pct = spent.multiply(BigDecimal.valueOf(100))
-                                .divide(limit, 0, RoundingMode.HALF_UP)
+                                .divide(effectiveLimit, 0, RoundingMode.HALF_UP)
                                 .intValue();
                     }
                     return new BudgetDto.CategoryBudget(
@@ -75,8 +91,10 @@ public class BudgetService {
                             cat.getName(),
                             cat.getColor(),
                             limit,
+                            effectiveLimit,
                             spent,
-                            pct
+                            pct,
+                            budget != null && budget.isRollover()
                     );
                 })
                 // Sort: categories with spending or a budget first, then alphabetically
@@ -107,6 +125,7 @@ public class BudgetService {
                         .build());
 
         budget.setAmount(req.limit());
+        budget.setRollover(req.rollover());
         Budget saved = budgetRepository.save(budget);
 
         LocalDate anchor = LocalDate.of(req.year(), req.month(), 1);
@@ -121,16 +140,26 @@ public class BudgetService {
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
 
+        // Compute effective limit for the response
+        BigDecimal effectiveLimit = req.limit();
+        if (req.rollover()) {
+            YearMonth prevYM = YearMonth.of(req.year(), req.month()).minusMonths(1);
+            BigDecimal prevSpent = transactionRepository.sumWithdrawalsForCategory(
+                    userId, category.getName(), prevYM.atDay(1), prevYM.atEndOfMonth());
+            BigDecimal unspent = req.limit().subtract(prevSpent).max(BigDecimal.ZERO);
+            effectiveLimit = req.limit().add(unspent);
+        }
+
         int pct = 0;
-        if (req.limit().compareTo(BigDecimal.ZERO) > 0) {
+        if (effectiveLimit.compareTo(BigDecimal.ZERO) > 0) {
             pct = spent.multiply(BigDecimal.valueOf(100))
-                    .divide(req.limit(), 0, RoundingMode.HALF_UP)
+                    .divide(effectiveLimit, 0, RoundingMode.HALF_UP)
                     .intValue();
         }
 
         return new BudgetDto.CategoryBudget(
                 saved.getId(), category.getId(), category.getName(), category.getColor(),
-                req.limit(), spent, pct
+                req.limit(), effectiveLimit, spent, pct, req.rollover()
         );
     }
 

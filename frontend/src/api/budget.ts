@@ -6,8 +6,10 @@ export interface CategoryBudget {
   categoryName: string
   categoryColor: string
   limit: number | null
+  effectiveLimit: number | null  // limit + rolled-over unspent from prev month
   spent: number
-  percentage: number
+  percentage: number             // computed against effectiveLimit
+  rollover: boolean
 }
 
 export interface MonthSummary {
@@ -26,9 +28,10 @@ export async function setBudget(
   categoryId: string,
   year: number,
   month: number,
-  limit: number
+  limit: number,
+  rollover: boolean = false
 ): Promise<CategoryBudget> {
-  const { data } = await apiClient.post<CategoryBudget>('/budgets', { categoryId, year, month, limit })
+  const { data } = await apiClient.post<CategoryBudget>('/budgets', { categoryId, year, month, limit, rollover })
   return data
 }
 

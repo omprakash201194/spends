@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-budget-rollover
+      author: system
+      changes:
+        - addColumn:
+            tableName: budget
+            columns:
+              - column:
+                  name: rollover
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

@@ -10,7 +10,8 @@ public class BudgetDto {
             UUID categoryId,
             int year,
             int month,
-            BigDecimal limit
+            BigDecimal limit,
+            boolean rollover
     ) {}
 
     public record CategoryBudget(
@@ -19,8 +20,10 @@ public class BudgetDto {
             String categoryName,
             String categoryColor,
             BigDecimal limit,       // null if not set
+            BigDecimal effectiveLimit, // limit + rollover from prev month (same as limit when rollover=false)
             BigDecimal spent,
-            int percentage          // 0 if no limit
+            int percentage,         // 0 if no limit; computed against effectiveLimit
+            boolean rollover
     ) {}
 
     public record MonthSummary(

@@ -40,6 +40,9 @@ public class Budget {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Column(nullable = false)
+    private boolean rollover = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
