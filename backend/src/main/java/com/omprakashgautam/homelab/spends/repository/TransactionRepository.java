@@ -308,6 +308,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                                 @Param("categoryId") UUID categoryId,
                                                 @Param("year") int year);
 
+    // ── Notifications: large withdrawal detection ─────────────────────────────
+
+    @Query("""
+        SELECT t FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.withdrawalAmount >= :threshold
+          AND t.valueDate >= :since
+        ORDER BY t.withdrawalAmount DESC
+        """)
+    List<Transaction> findLargeWithdrawalsInLast24Hours(
+        @Param("userId") UUID userId,
+        @Param("since") LocalDate since,
+        @Param("threshold") BigDecimal threshold);
+
     // ── Data health: near-duplicate candidates ────────────────────────────────
 
     /**

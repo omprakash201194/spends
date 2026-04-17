@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-notification-email
+      author: system
+      changes:
+        - addColumn:
+            tableName: app_user
+            columns:
+              - column:
+                  name: notification_email
+                  type: varchar(255)
+                  constraints:
+                    nullable: true

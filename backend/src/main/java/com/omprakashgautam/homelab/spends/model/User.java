@@ -42,6 +42,9 @@ public class User {
     @Column(name = "claude_api_key", length = 200)
     private String claudeApiKey;
 
+    @Column(name = "notification_email", length = 255)
+    private String notificationEmail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

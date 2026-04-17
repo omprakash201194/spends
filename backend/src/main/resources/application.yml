@@ -11,11 +11,25 @@ spring:
         format_sql: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000  # 24 hours
+
+notification:
+  enabled: ${NOTIFICATION_ENABLED:false}
 
 management:
   endpoints:

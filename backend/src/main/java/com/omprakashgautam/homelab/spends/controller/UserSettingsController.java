@@ -17,13 +17,18 @@ public class UserSettingsController {
 
     private final UserRepository userRepository;
 
+    private UserSettingsDto.Settings toSettings(User user) {
+        return new UserSettingsDto.Settings(
+                user.getClaudeApiKey() != null && !user.getClaudeApiKey().isBlank(),
+                user.getNotificationEmail()
+        );
+    }
+
     @GetMapping
     public ResponseEntity<UserSettingsDto.Settings> getSettings(
             @AuthenticationPrincipal UserDetailsImpl principal) {
         User user = userRepository.findById(principal.getId()).orElseThrow();
-        return ResponseEntity.ok(new UserSettingsDto.Settings(
-                user.getClaudeApiKey() != null && !user.getClaudeApiKey().isBlank()
-        ));
+        return ResponseEntity.ok(toSettings(user));
     }
 
     @PutMapping("/api-key")
@@ -34,7 +39,7 @@ public class UserSettingsController {
         User user = userRepository.findById(principal.getId()).orElseThrow();
         user.setClaudeApiKey(request.apiKey() != null ? request.apiKey().trim() : null);
         userRepository.save(user);
-        return ResponseEntity.ok(new UserSettingsDto.Settings(true));
+        return ResponseEntity.ok(toSettings(user));
     }
 
     @DeleteMapping("/api-key")
@@ -44,6 +49,18 @@ public class UserSettingsController {
         User user = userRepository.findById(principal.getId()).orElseThrow();
         user.setClaudeApiKey(null);
         userRepository.save(user);
-        return ResponseEntity.ok(new UserSettingsDto.Settings(false));
+        return ResponseEntity.ok(toSettings(user));
+    }
+
+    @PutMapping("/notification-email")
+    @Transactional
+    public ResponseEntity<UserSettingsDto.Settings> saveNotificationEmail(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody UserSettingsDto.NotificationEmailRequest request) {
+        User user = userRepository.findById(principal.getId()).orElseThrow();
+        String email = request.notificationEmail();
+        user.setNotificationEmail(email != null && !email.isBlank() ? email.trim() : null);
+        userRepository.save(user);
+        return ResponseEntity.ok(toSettings(user));
     }
 }

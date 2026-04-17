@@ -21,5 +21,6 @@
     <include file="changes/014-merchant-alias.yaml" relativeToChangelogFile="true"/>
     <include file="changes/015-transaction-split.yaml" relativeToChangelogFile="true"/>
     <include file="changes/016-settlement.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/017-notification-email.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

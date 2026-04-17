@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Key, Trash2, Check, ExternalLink, Plus, Pencil, X, Tag, Sliders, AlertTriangle } from 'lucide-react'
-import { getSettings, saveApiKey, deleteApiKey } from '../api/settings'
+import { Key, Trash2, Check, ExternalLink, Plus, Pencil, X, Tag, Sliders, AlertTriangle, Bell } from 'lucide-react'
+import { getSettings, saveApiKey, deleteApiKey, saveNotificationEmail } from '../api/settings'
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
   type Category,
@@ -28,7 +28,7 @@ const COLOUR_SWATCHES = [
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'apikey' | 'categories' | 'rules' | 'danger'
+type Tab = 'apikey' | 'notifications' | 'categories' | 'rules' | 'danger'
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('apikey')
@@ -43,10 +43,11 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit">
         {([
-          { id: 'apikey',     label: 'API Key',    icon: Key          },
-          { id: 'categories', label: 'Categories', icon: Tag          },
-          { id: 'rules',      label: 'Rules',      icon: Sliders      },
-          { id: 'danger',     label: 'Danger Zone',  icon: AlertTriangle },
+          { id: 'apikey',        label: 'API Key',       icon: Key           },
+          { id: 'notifications', label: 'Notifications', icon: Bell          },
+          { id: 'categories',   label: 'Categories',    icon: Tag           },
+          { id: 'rules',        label: 'Rules',         icon: Sliders       },
+          { id: 'danger',       label: 'Danger Zone',   icon: AlertTriangle },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -63,10 +64,11 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {tab === 'apikey'     && <ApiKeyTab />}
-      {tab === 'categories' && <CategoriesTab />}
-      {tab === 'rules'      && <RulesTab />}
-      {tab === 'danger'     && <DangerZoneTab />}
+      {tab === 'apikey'        && <ApiKeyTab />}
+      {tab === 'notifications' && <NotificationsTab />}
+      {tab === 'categories'    && <CategoriesTab />}
+      {tab === 'rules'         && <RulesTab />}
+      {tab === 'danger'        && <DangerZoneTab />}
     </div>
   )
 }
@@ -157,6 +159,85 @@ function ApiKeyTab() {
       <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
         Your key is stored securely and only used to generate insights on demand. It is never shared.
       </p>
+    </div>
+  )
+}
+
+// ── Tab: Notifications ────────────────────────────────────────────────────────
+
+function NotificationsTab() {
+  const qc = useQueryClient()
+  const { data } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
+  const [emailInput, setEmailInput] = useState(data?.notificationEmail ?? '')
+  const [saved, setSaved] = useState(false)
+
+  const saveMutation = useMutation({
+    mutationFn: () => saveNotificationEmail(emailInput.trim()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    },
+  })
+
+  const clearMutation = useMutation({
+    mutationFn: () => saveNotificationEmail(''),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings'] })
+      setEmailInput('')
+    },
+  })
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Bell className="w-4 h-4 text-blue-500" />
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Anomaly Digest Email</h2>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Receive a daily email alert at 8am for transactions over ₹10,000. Leave blank to disable.
+      </p>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="email"
+          value={emailInput}
+          onChange={e => setEmailInput(e.target.value)}
+          placeholder="email@example.com"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+          onKeyDown={e => {
+            if (e.key === 'Enter') saveMutation.mutate()
+          }}
+        />
+        <button
+          onClick={() => saveMutation.mutate()}
+          disabled={saveMutation.isPending}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saved ? <Check className="w-4 h-4" /> : 'Save'}
+        </button>
+        {data?.notificationEmail && (
+          <button
+            onClick={() => clearMutation.mutate()}
+            disabled={clearMutation.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Remove
+          </button>
+        )}
+      </div>
+
+      {saved && (
+        <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+          <Check className="w-3.5 h-3.5" /> Notification email saved
+        </p>
+      )}
+      {data?.notificationEmail && !saved && (
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+          Currently sending to <span className="font-medium text-gray-600 dark:text-gray-300">{data.notificationEmail}</span>
+        </p>
+      )}
     </div>
   )
 }
