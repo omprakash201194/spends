@@ -213,9 +213,8 @@ public class TransactionService {
     // ── Note update ──────────────────────────────────────────────────────────
 
     @Transactional
-    public TransactionDto.Response updateNote(UUID id, String note) {
-        Transaction tx = transactionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public TransactionDto.Response updateNote(UUID id, UUID userId, String note) {
+        Transaction tx = getOwnedTransaction(id, userId);
         tx.setNote(note);
         return TransactionDto.Response.from(transactionRepository.save(tx));
     }

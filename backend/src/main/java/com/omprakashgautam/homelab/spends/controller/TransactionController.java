@@ -74,9 +74,10 @@ public class TransactionController {
 
     @PatchMapping("/{id}/note")
     public ResponseEntity<TransactionDto.Response> updateNote(
+            @AuthenticationPrincipal UserDetailsImpl principal,
             @PathVariable UUID id,
             @Valid @RequestBody TransactionDto.NoteRequest req
     ) {
-        return ResponseEntity.ok(transactionService.updateNote(id, req.note()));
+        return ResponseEntity.ok(transactionService.updateNote(id, principal.getId(), req.note()));
     }
 }
