@@ -18,5 +18,6 @@
     <include file="changes/011-transaction-note.yaml" relativeToChangelogFile="true"/>
     <include file="changes/012-budget-rollover.yaml" relativeToChangelogFile="true"/>
     <include file="changes/013-annual-budget.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/014-merchant-alias.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

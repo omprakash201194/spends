@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-merchant-alias
+      author: system
+      changes:
+        - createTable:
+            tableName: merchant_alias
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_merchant_alias_user
+                    references: app_user(id)
+              - column:
+                  name: raw_pattern
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: merchant_alias
+            columnNames: user_id, raw_pattern
+            constraintName: uq_merchant_alias_user_raw_pattern

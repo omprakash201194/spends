@@ -1,7 +1,10 @@
 package com.omprakashgautam.homelab.spends.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,7 +21,10 @@ import java.util.regex.Pattern;
  *   ECS/NACH/LIC Premium
  */
 @Component
+@RequiredArgsConstructor
 public class MerchantExtractor {
+
+    private final MerchantAliasService merchantAliasService;
 
     // UPI/<handle>/<description>/<bank>/<ref>
     private static final Pattern UPI_PATTERN =
@@ -27,6 +33,22 @@ public class MerchantExtractor {
     // Mobile number as UPI handle — not useful as merchant name
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^\\d{10}(@\\S+)?$");
+
+    /**
+     * Extracts merchant name, checking user-defined aliases first.
+     * If the raw remarks contain any aliased pattern, the alias display name is returned.
+     * Falls back to heuristic extraction.
+     */
+    public String extract(String rawRemarks, UUID userId) {
+        if (rawRemarks == null || rawRemarks.isBlank()) return null;
+        Map<String, String> aliases = merchantAliasService.getAliasMap(userId);
+        for (Map.Entry<String, String> entry : aliases.entrySet()) {
+            if (rawRemarks.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return extract(rawRemarks);
+    }
 
     public String extract(String rawRemarks) {
         if (rawRemarks == null || rawRemarks.isBlank()) return null;
