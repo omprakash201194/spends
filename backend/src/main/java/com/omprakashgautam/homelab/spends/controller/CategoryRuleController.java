@@ -30,16 +30,16 @@ public class CategoryRuleController {
     private final CategorizationService categorizationService;
 
     public record RuleResponse(UUID id, String pattern, UUID categoryId, String categoryName,
-                               String categoryColor, int priority) {
+                               String categoryColor, int priority, boolean aiGenerated) {
         public static RuleResponse from(CategoryRule r) {
             return new RuleResponse(
                     r.getId(), r.getPattern(),
                     r.getCategory().getId(), r.getCategory().getName(), r.getCategory().getColor(),
-                    r.getPriority());
+                    r.getPriority(), r.isAiGenerated());
         }
     }
 
-    public record CreateRequest(String pattern, UUID categoryId, int priority) {}
+    public record CreateRequest(String pattern, UUID categoryId, int priority, boolean aiGenerated) {}
     public record UpdateRequest(String pattern, UUID categoryId, Integer priority) {}
 
     @GetMapping
@@ -67,6 +67,7 @@ public class CategoryRuleController {
                 .category(category)
                 .priority(req.priority())
                 .global(false)
+                .aiGenerated(req.aiGenerated())
                 .build());
 
         return ResponseEntity.status(CREATED).body(RuleResponse.from(saved));

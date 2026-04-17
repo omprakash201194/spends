@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-ai-generated-rule
+      author: spends
+      changes:
+        - addColumn:
+            tableName: category_rule
+            columns:
+              - column:
+                  name: ai_generated
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

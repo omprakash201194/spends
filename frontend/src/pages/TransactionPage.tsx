@@ -5,7 +5,7 @@ import { getSplits, saveSplits } from '../api/splits'
 import InsightCard from '../components/InsightCard'
 import { getAutoCategorizeSuggestions, type RuleSuggestion } from '../api/insights'
 import { createCategory } from '../api/categories'
-import { createCategoryRule, reapplyCategoryRules } from '../api/categoryRules'
+import { createCategoryRule, reapplyCategoryRules, getCategoryRules } from '../api/categoryRules'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
@@ -100,6 +100,14 @@ export default function TransactionPage() {
     queryFn: getBankAccounts,
     staleTime: Infinity,
   })
+
+  const { data: rules = [] } = useQuery({
+    queryKey: ['category-rules'],
+    queryFn: getCategoryRules,
+    staleTime: 30_000,
+  })
+
+  const aiRuleCategoryIds = new Set(rules.filter(r => r.aiGenerated).map(r => r.categoryId))
 
   const toggleReviewedMut = useMutation({
     mutationFn: toggleReviewed,
@@ -220,7 +228,7 @@ export default function TransactionPage() {
         }
 
         if (categoryId) {
-          await createCategoryRule(s.pattern, categoryId, 0)
+          await createCategoryRule(s.pattern, categoryId, 0, true)
           ruleCount++
         }
       }
@@ -396,6 +404,7 @@ export default function TransactionPage() {
                   key={tx.id}
                   tx={tx}
                   categories={categories}
+                  aiRuleCategoryIds={aiRuleCategoryIds}
                   checked={selectedIds.has(tx.id)}
                   onToggle={() => toggleSelect(tx.id)}
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
@@ -699,9 +708,10 @@ function AddToViewPicker({
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 
-function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit }: {
+function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit }: {
   tx: Transaction
   categories: Category[]
+  aiRuleCategoryIds: Set<string>
   checked: boolean
   onToggle: () => void
   onToggleReviewed: () => void
@@ -781,6 +791,9 @@ function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategory
           >
             <CircleDot className="w-3 h-3" />
             {tx.category?.name ?? 'Uncategorized'}
+            {tx.category && aiRuleCategoryIds.has(tx.category.id) && (
+              <Sparkles className="w-3 h-3 opacity-80" />
+            )}
           </button>
 
           {pickerOpen && (

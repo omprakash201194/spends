@@ -38,6 +38,10 @@ public class CategoryRule {
     @Builder.Default
     private boolean global = false;
 
+    @Column(name = "ai_generated", nullable = false)
+    @Builder.Default
+    private boolean aiGenerated = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

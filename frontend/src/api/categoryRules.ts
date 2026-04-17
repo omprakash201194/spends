@@ -7,6 +7,7 @@ export interface CategoryRule {
   categoryName: string
   categoryColor: string | null
   priority: number
+  aiGenerated: boolean
 }
 
 export async function getCategoryRules(): Promise<CategoryRule[]> {
@@ -17,9 +18,10 @@ export async function getCategoryRules(): Promise<CategoryRule[]> {
 export async function createCategoryRule(
   pattern: string,
   categoryId: string,
-  priority: number
+  priority: number,
+  aiGenerated = false
 ): Promise<CategoryRule> {
-  const { data } = await apiClient.post<CategoryRule>('/category-rules', { pattern, categoryId, priority })
+  const { data } = await apiClient.post<CategoryRule>('/category-rules', { pattern, categoryId, priority, aiGenerated })
   return data
 }
 

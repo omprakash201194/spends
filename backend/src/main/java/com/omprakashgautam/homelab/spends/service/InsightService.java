@@ -192,11 +192,11 @@ public class InsightService {
 
         sb.append("Spending by category:\n");
         for (Object[] row : transactionRepository.categoryBreakdown(userId, from, to)) {
-            BigDecimal amount = (BigDecimal) row[2];
+            BigDecimal amount = (BigDecimal) row[3];
             BigDecimal pct = spent.compareTo(BigDecimal.ZERO) > 0
                     ? amount.multiply(BigDecimal.valueOf(100)).divide(spent, 0, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            sb.append("  ").append(row[0]).append(": ₹").append(fmt(amount))
+            sb.append("  ").append(row[1]).append(": ₹").append(fmt(amount))
               .append(" (").append(pct).append("%)\n");
         }
 
@@ -221,7 +221,7 @@ public class InsightService {
         // map categoryName → spent
         var spentMap = new java.util.HashMap<String, BigDecimal>();
         for (Object[] row : catSpend) {
-            spentMap.put((String) row[0], (BigDecimal) row[2]);
+            spentMap.put((String) row[1], (BigDecimal) row[3]);
         }
 
         var sb = new StringBuilder();
@@ -251,9 +251,9 @@ public class InsightService {
         sb.append("\nCategories with spending but no budget:\n");
         boolean any = false;
         for (Object[] row : catSpend) {
-            String cat = (String) row[0];
+            String cat = (String) row[1];
             if (!budgetedCategories.contains(cat)) {
-                sb.append("  ").append(cat).append(": ₹").append(fmt((BigDecimal) row[2])).append("\n");
+                sb.append("  ").append(cat).append(": ₹").append(fmt((BigDecimal) row[3])).append("\n");
                 any = true;
             }
         }
@@ -274,7 +274,7 @@ public class InsightService {
 
         sb.append("By category:\n");
         for (Object[] row : transactionRepository.categoryBreakdown(userId, from, to)) {
-            sb.append("  ").append(row[0]).append(": ₹").append(fmt((BigDecimal) row[2])).append("\n");
+            sb.append("  ").append(row[1]).append(": ₹").append(fmt((BigDecimal) row[3])).append("\n");
         }
 
         sb.append("\nTop merchants:\n");
