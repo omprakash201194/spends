@@ -3,6 +3,7 @@ package com.omprakashgautam.homelab.spends.service;
 import com.omprakashgautam.homelab.spends.dto.TransactionDto;
 import com.omprakashgautam.homelab.spends.model.BankAccount;
 import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.Household;
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -113,5 +115,35 @@ class TransactionServiceTest {
 
         assertThat(count).isEqualTo(2);
         txs.forEach(tx -> assertThat(tx.getCategory()).isEqualTo(cat));
+    }
+
+    @Test
+    void list_withCategoryFilter_expandsToIncludeDescendants() {
+        UUID userId = UUID.randomUUID();
+        UUID householdId = UUID.randomUUID();
+        UUID foodId = UUID.randomUUID();
+        UUID swiggyId = UUID.randomUUID();
+
+        Category food   = Category.builder().id(foodId).name("Food").system(true).build();
+        Category swiggy = Category.builder().id(swiggyId).name("Swiggy").system(false).parent(food).build();
+
+        User user = User.builder().id(userId)
+                .household(Household.builder().id(householdId).name("H").inviteCode("X").maxCategoryDepth(5).build())
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(categoryRepository.findBySystemTrueOrHouseholdId(householdId))
+                .thenReturn(List.of(food, swiggy));
+        when(transactionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        // Filter by parent "foodId" — should expand to include swiggyId
+        transactionService.list(userId, null, foodId, null, null, null, null, 0, 25, null, null);
+
+        verify(transactionRepository).findAll(
+                any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class));
+        verify(categoryRepository).findBySystemTrueOrHouseholdId(householdId);
     }
 }

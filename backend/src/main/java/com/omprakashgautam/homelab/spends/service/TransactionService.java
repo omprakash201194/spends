@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -53,7 +54,13 @@ public class TransactionService {
         Sort sort = buildSort(sortBy, sortDir);
         PageRequest pageable = PageRequest.of(page, size, sort);
 
-        Specification<Transaction> spec = buildSpec(userId, search, categoryId, accountId, type, dateFrom, dateTo);
+        Set<UUID> categoryIds = null;
+        if (categoryId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+            categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
+        }
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
         Page<Transaction> result = transactionRepository.findAll(spec, pageable);
 
         List<TransactionDto.Response> content = result.getContent()
@@ -79,14 +86,20 @@ public class TransactionService {
     public List<Transaction> listAll(UUID userId, String search, UUID categoryId,
                                      UUID accountId, String type,
                                      LocalDate dateFrom, LocalDate dateTo) {
-        Specification<Transaction> spec = buildSpec(userId, search, categoryId, accountId, type, dateFrom, dateTo);
+        Set<UUID> categoryIds = null;
+        if (categoryId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+            categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
+        }
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
         return transactionRepository.findAll(spec, Sort.by("valueDate").descending());
     }
 
     private Specification<Transaction> buildSpec(
             UUID userId,
             String search,
-            UUID categoryId,
+            Set<UUID> categoryIds,
             UUID accountId,
             String type,
             LocalDate dateFrom,
@@ -107,8 +120,8 @@ public class TransactionService {
                 ));
             }
 
-            if (categoryId != null) {
-                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                predicates.add(root.get("category").get("id").in(categoryIds));
             }
 
             if (accountId != null) {
@@ -242,6 +255,15 @@ public class TransactionService {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private Set<UUID> expandCategoryIds(UUID categoryId, UUID householdId) {
+        if (categoryId == null) return null;
+        List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(householdId);
+        Set<UUID> ids = new java.util.LinkedHashSet<>();
+        ids.add(categoryId);
+        ids.addAll(CategoryTreeUtils.getDescendantIds(categoryId, allCats));
+        return ids;
+    }
 
     private Transaction getOwnedTransaction(UUID txId, UUID userId) {
         Transaction tx = transactionRepository.findById(txId)
