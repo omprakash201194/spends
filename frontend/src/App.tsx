@@ -13,6 +13,7 @@ import ViewsPage from './pages/ViewsPage'
 import ViewDetailPage from './pages/ViewDetailPage'
 import RecurringPage from './pages/RecurringPage'
 import ReportsPage from './pages/ReportsPage'
+import NetWorthPage from './pages/NetWorthPage'
 import DataHealthPage from './pages/DataHealthPage'
 import GoalsPage from './pages/GoalsPage'
 import Layout from './components/Layout'
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="views/:id" element={<ViewDetailPage />} />
           <Route path="recurring" element={<RecurringPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="net-worth" element={<NetWorthPage />} />
           <Route path="data-health" element={<DataHealthPage />} />
           <Route path="goals" element={<GoalsPage />} />
         </Route>

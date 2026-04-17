@@ -37,6 +37,7 @@ const nav = [
   { to: '/views',        label: 'Views',        icon: LayoutGrid },
   { to: '/recurring',    label: 'Recurring',    icon: Repeat },
   { to: '/reports',      label: 'Reports',      icon: FileText },
+  { to: '/net-worth',   label: 'Net Worth',    icon: TrendingUp },
   { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
