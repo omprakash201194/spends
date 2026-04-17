@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-transaction-split
+      author: system
+      changes:
+        - createTable:
+            tableName: transaction_split
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transaction_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+              - column:
+                  name: amount
+                  type: decimal(15,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: note
+                  type: varchar(500)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >-
+              ALTER TABLE transaction_split
+                ADD CONSTRAINT fk_split_transaction
+                  FOREIGN KEY (transaction_id)
+                  REFERENCES financial_transaction(id)
+                  ON DELETE CASCADE;
+              ALTER TABLE transaction_split
+                ADD CONSTRAINT fk_split_category
+                  FOREIGN KEY (category_id)
+                  REFERENCES category(id)
+                  ON DELETE SET NULL;
