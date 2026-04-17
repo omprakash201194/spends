@@ -6,6 +6,7 @@ import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
 import com.omprakashgautam.homelab.spends.security.UserDetailsImpl;
+import com.omprakashgautam.homelab.spends.service.CategoryTreeUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.*;
@@ -25,16 +27,18 @@ public class CategoryController {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    public record CategoryResponse(UUID id, String name, String icon, String color, boolean system) {
+    public record CategoryResponse(UUID id, String name, String icon, String color, boolean system, UUID parentId) {
         public static CategoryResponse from(Category c) {
-            return new CategoryResponse(c.getId(), c.getName(), c.getIcon(), c.getColor(), c.isSystem());
+            return new CategoryResponse(
+                    c.getId(), c.getName(), c.getIcon(), c.getColor(), c.isSystem(),
+                    c.getParent() != null ? c.getParent().getId() : null
+            );
         }
     }
 
-    public record CreateRequest(String name, String color) {}
-    public record UpdateRequest(String name, String color) {}
+    public record CreateRequest(String name, String color, UUID parentId) {}
+    public record UpdateRequest(String name, String color, UUID parentId) {}
 
-    /** System categories + this household's custom categories. */
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> list(@AuthenticationPrincipal UserDetailsImpl principal) {
         UUID householdId = resolveHouseholdId(principal);
@@ -61,11 +65,19 @@ public class CategoryController {
             throw new ResponseStatusException(CONFLICT, "A category with this name already exists");
         }
 
+        Category parent = null;
+        if (req.parentId() != null) {
+            parent = categoryRepository.findById(req.parentId())
+                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Parent category not found"));
+            validateDepth(parent, household, categoryRepository.findBySystemTrueOrHouseholdId(household.getId()));
+        }
+
         Category saved = categoryRepository.save(Category.builder()
                 .name(req.name().trim())
                 .color(req.color() != null ? req.color().trim() : "#94a3b8")
                 .household(household)
                 .system(false)
+                .parent(parent)
                 .build());
 
         return ResponseEntity.status(CREATED).body(CategoryResponse.from(saved));
@@ -83,16 +95,36 @@ public class CategoryController {
         if (cat.isSystem()) {
             throw new ResponseStatusException(FORBIDDEN, "System categories cannot be modified");
         }
-        UUID householdId = resolveHouseholdId(principal);
-        if (!householdId.equals(cat.getHousehold().getId())) {
+        User user = resolveUser(principal);
+        Household household = user.getHousehold();
+        if (!household.getId().equals(cat.getHousehold().getId())) {
             throw new ResponseStatusException(FORBIDDEN, "Not your category");
         }
+
         if (req.name() != null && !req.name().isBlank()) {
             cat.setName(req.name().trim());
         }
         if (req.color() != null && !req.color().isBlank()) {
             cat.setColor(req.color().trim());
         }
+
+        if (req.parentId() != null) {
+            if (req.parentId().equals(id)) {
+                throw new ResponseStatusException(BAD_REQUEST, "A category cannot be its own parent");
+            }
+            List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(household.getId());
+            Set<UUID> descendants = CategoryTreeUtils.getDescendantIds(id, allCats);
+            if (descendants.contains(req.parentId())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Cannot create a circular parent-child relationship");
+            }
+            Category newParent = categoryRepository.findById(req.parentId())
+                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Parent category not found"));
+            validateDepth(newParent, household, allCats);
+            cat.setParent(newParent);
+        } else {
+            cat.setParent(null);
+        }
+
         return ResponseEntity.ok(CategoryResponse.from(categoryRepository.save(cat)));
     }
 
@@ -116,6 +148,15 @@ public class CategoryController {
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
+
+    private void validateDepth(Category parent, Household household, List<Category> allCats) {
+        int parentDepth = CategoryTreeUtils.getDepth(parent, allCats);
+        int maxDepth = household.getMaxCategoryDepth();
+        if (parentDepth + 1 >= maxDepth) {
+            throw new ResponseStatusException(BAD_REQUEST,
+                    "Maximum category depth of " + maxDepth + " would be exceeded");
+        }
+    }
 
     private User resolveUser(UserDetailsImpl principal) {
         return userRepository.findById(principal.getId())
