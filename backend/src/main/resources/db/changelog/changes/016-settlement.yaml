@@ -1,0 +1,99 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-settlement
+      author: system
+      changes:
+        - createTable:
+            tableName: settlement
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: participant_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(500)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled_at
+                  type: timestamp
+                  constraints:
+                    nullable: true
+        - createTable:
+            tableName: settlement_item
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: settlement_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transaction_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+              - column:
+                  name: description
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_amount
+                  type: decimal(15,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: your_share
+                  type: decimal(15,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >-
+              ALTER TABLE settlement
+                ADD CONSTRAINT fk_settlement_user
+                  FOREIGN KEY (user_id)
+                  REFERENCES app_user(id);
+              ALTER TABLE settlement_item
+                ADD CONSTRAINT fk_settlement_item_settlement
+                  FOREIGN KEY (settlement_id)
+                  REFERENCES settlement(id)
+                  ON DELETE CASCADE;
+              ALTER TABLE settlement_item
+                ADD CONSTRAINT fk_settlement_item_transaction
+                  FOREIGN KEY (transaction_id)
+                  REFERENCES financial_transaction(id)
+                  ON DELETE SET NULL;
