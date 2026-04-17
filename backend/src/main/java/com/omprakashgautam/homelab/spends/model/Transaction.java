@@ -64,6 +64,9 @@ public class Transaction {
     @Builder.Default
     private boolean reviewed = false;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Column(name = "import_hash", unique = true, length = 64)
     private String importHash;
 

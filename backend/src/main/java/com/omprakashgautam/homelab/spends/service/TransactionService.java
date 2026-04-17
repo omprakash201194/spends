@@ -210,6 +210,16 @@ public class TransactionService {
         return null;
     }
 
+    // ── Note update ──────────────────────────────────────────────────────────
+
+    @Transactional
+    public TransactionDto.Response updateNote(UUID id, String note) {
+        Transaction tx = transactionRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        tx.setNote(note);
+        return TransactionDto.Response.from(transactionRepository.save(tx));
+    }
+
     // ── Reviewed toggle ──────────────────────────────────────────────────────
 
     @Transactional

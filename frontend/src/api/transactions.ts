@@ -25,6 +25,7 @@ export interface Transaction {
   balance: number | null
   category: TxCategory | null
   reviewed: boolean
+  note: string | null
   createdAt: string
 }
 
@@ -73,5 +74,10 @@ export async function updateCategory(
 
 export async function toggleReviewed(id: string): Promise<Transaction> {
   const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/reviewed`)
+  return data
+}
+
+export async function updateNote(id: string, note: string): Promise<Transaction> {
+  const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/note`, { note })
   return data
 }

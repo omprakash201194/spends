@@ -15,5 +15,6 @@
     <include file="db/changelog/changes/008-import-batch.sql"/>
     <include file="changes/009-category-fk-set-null.sql" relativeToChangelogFile="true"/>
     <include file="changes/010-savings-goals.sql" relativeToChangelogFile="true"/>
+    <include file="changes/011-transaction-note.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

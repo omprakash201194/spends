@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Download } from 'lucide-react'
+import { Download, MessageSquare } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
 import InsightCard from '../components/InsightCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
-  getTransactions, updateCategory, toggleReviewed,
+  getTransactions, updateCategory, toggleReviewed, updateNote,
   type Transaction, type TransactionFilters,
 } from '../api/transactions'
 import { getCategories, type Category } from '../api/categories'
@@ -238,14 +238,17 @@ export default function TransactionPage() {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">
                   Done
                 </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Note
+                </th>
                 <th className="px-2 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-16 text-gray-400 dark:text-gray-500">Loading…</td></tr>
+                <tr><td colSpan={9} className="text-center py-16 text-gray-400 dark:text-gray-500">Loading…</td></tr>
               ) : !data || data.content.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-16 text-gray-400 dark:text-gray-500">No transactions found</td></tr>
+                <tr><td colSpan={9} className="text-center py-16 text-gray-400 dark:text-gray-500">No transactions found</td></tr>
               ) : data.content.map((tx) => (
                 <TxRow
                   key={tx.id}
@@ -372,9 +375,17 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
   onToggleReviewed: () => void
   onCategoryUpdated: () => void
 }) {
+  const qc = useQueryClient()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [rulePrompt, setRulePrompt] = useState<{ categoryId: string; categoryName: string } | null>(null)
   const [viewPickerOpen, setViewPickerOpen] = useState(false)
+  const [editingNote, setEditingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
+
+  const noteMutation = useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) => updateNote(id, note),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  })
 
   const updateCatMut = useMutation({
     mutationFn: ({ catId, createRule, pattern }: { catId: string; createRule: boolean; pattern?: string }) =>
@@ -472,6 +483,34 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
           </button>
         </td>
 
+        {/* Note */}
+        <td className="px-3 py-2 max-w-[8rem]">
+          {editingNote ? (
+            <input
+              autoFocus
+              className="w-full text-xs border rounded px-1 py-0.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              onBlur={() => {
+                noteMutation.mutate({ id: tx.id, note: noteText })
+                setEditingNote(false)
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { noteMutation.mutate({ id: tx.id, note: noteText }); setEditingNote(false) }
+                if (e.key === 'Escape') setEditingNote(false)
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => { setEditingNote(true); setNoteText(tx.note ?? '') }}
+              className="text-xs text-gray-400 hover:text-blue-500 truncate max-w-full block text-left"
+              title={tx.note ?? 'Add note'}
+            >
+              {tx.note ? <span className="text-gray-600 dark:text-gray-300">{tx.note}</span> : <MessageSquare size={14} />}
+            </button>
+          )}
+        </td>
+
         {/* Add to view */}
         <td className="px-2 py-3 text-center relative">
           <button
@@ -490,7 +529,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
       {/* Rule creation prompt */}
       {rulePrompt && (
         <tr>
-          <td colSpan={8} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
+          <td colSpan={9} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-blue-800">
                 Create a rule to automatically categorize <strong>{tx.merchantName ?? 'this merchant'}</strong> as{' '}

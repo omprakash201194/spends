@@ -1,6 +1,7 @@
 package com.omprakashgautam.homelab.spends.dto;
 
 import com.omprakashgautam.homelab.spends.model.Transaction;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ public class TransactionDto {
             BigDecimal balance,
             CategoryResponse category,
             boolean reviewed,
+            String note,
             LocalDateTime createdAt
     ) {
         public static Response from(Transaction t) {
@@ -45,10 +47,12 @@ public class TransactionDto {
                     t.getValueDate(), t.getTransactionDate(),
                     t.getRawRemarks(), t.getMerchantName(),
                     t.getWithdrawalAmount(), t.getDepositAmount(), t.getBalance(),
-                    cat, t.isReviewed(), t.getCreatedAt()
+                    cat, t.isReviewed(), t.getNote(), t.getCreatedAt()
             );
         }
     }
+
+    public record NoteRequest(@NotBlank String note) {}
 
     public record CategoryUpdateRequest(
             @NotNull UUID categoryId,

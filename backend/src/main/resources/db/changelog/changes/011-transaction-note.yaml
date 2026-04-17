@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-transaction-note
+      author: system
+      changes:
+        - addColumn:
+            tableName: financial_transaction
+            columns:
+              - column:
+                  name: note
+                  type: TEXT
+                  constraints:
+                    nullable: true

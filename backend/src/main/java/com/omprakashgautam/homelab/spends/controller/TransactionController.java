@@ -71,4 +71,12 @@ public class TransactionController {
     ) {
         return ResponseEntity.ok(transactionService.toggleReviewed(id, principal.getId()));
     }
+
+    @PatchMapping("/{id}/note")
+    public ResponseEntity<TransactionDto.Response> updateNote(
+            @PathVariable UUID id,
+            @Valid @RequestBody TransactionDto.NoteRequest req
+    ) {
+        return ResponseEntity.ok(transactionService.updateNote(id, req.note()));
+    }
 }
