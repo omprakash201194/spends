@@ -21,4 +21,10 @@ public class InsightController {
             @PathVariable InsightDto.InsightType type) {
         return ResponseEntity.ok(insightService.getInsight(principal.getId(), type));
     }
+
+    @PostMapping("/auto-categorize")
+    public ResponseEntity<InsightDto.AutoCategorizeResponse> autoCategorizeSuggestions(
+            @AuthenticationPrincipal UserDetailsImpl principal) {
+        return ResponseEntity.ok(insightService.autoCategorizeSuggestions(principal.getId()));
+    }
 }

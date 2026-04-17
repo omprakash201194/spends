@@ -1,10 +1,14 @@
 package com.omprakashgautam.homelab.spends.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omprakashgautam.homelab.spends.dto.InsightDto;
 import com.omprakashgautam.homelab.spends.dto.RecurringDto;
+import com.omprakashgautam.homelab.spends.model.Category;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.BudgetRepository;
+import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +36,9 @@ public class InsightService {
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
     private final RecurringService recurringService;
+    private final CategoryRepository categoryRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String CLAUDE_MODEL     = "claude-haiku-4-5-20251001";
     private static final int    MAX_TOKENS       = 600;
@@ -65,6 +72,106 @@ public class InsightService {
 
         String insight = callClaude(apiKey, prompt);
         return new InsightDto.Response(insight, month);
+    }
+
+    // ── Auto-categorize ───────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public InsightDto.AutoCategorizeResponse autoCategorizeSuggestions(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        String apiKey = user.getClaudeApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No API key configured. Go to Settings and add your Anthropic API key.");
+        }
+
+        List<String> merchants = transactionRepository.findDistinctMerchantNames(userId);
+        if (merchants.isEmpty()) {
+            return new InsightDto.AutoCategorizeResponse(List.of());
+        }
+
+        UUID householdId = user.getHousehold().getId();
+        List<Category> categories = categoryRepository.findBySystemTrueOrHouseholdId(householdId);
+
+        var catList = new StringBuilder();
+        for (Category c : categories) {
+            catList.append("  - ").append(c.getName());
+            if (c.getParent() != null) catList.append(" (child of ").append(c.getParent().getName()).append(")");
+            catList.append("\n");
+        }
+
+        var merchantList = new StringBuilder();
+        for (String m : merchants) merchantList.append("  - ").append(m).append("\n");
+
+        String prompt = """
+            You are a personal finance categorization engine for an Indian household expense app.
+
+            Existing categories:
+            %s
+
+            Merchant names extracted from bank statement remarks:
+            %s
+
+            Task: For each merchant, suggest the best matching category rule.
+            Rules:
+            1. Use an existing category where it clearly fits.
+            2. If no existing category fits well, suggest a NEW category with a parent from the existing list.
+            3. Skip merchants that are too ambiguous (e.g. single letters, random codes like "NFS/CASH WDL").
+            4. The "pattern" must be a short, lowercase keyword that would reliably match that merchant in remarks (e.g. "swiggy", "salary", "irctc"). Avoid overly generic patterns like "cash" or "nfs".
+            5. For new categories, suggest a hex color code appropriate for the category type.
+
+            Respond ONLY with a JSON array (no markdown, no explanation). Each element:
+            {
+              "pattern": "keyword",
+              "existingCategoryName": "Category Name or null",
+              "suggestNewCategoryName": "New Name or null",
+              "suggestParentCategoryName": "Parent Name or null",
+              "suggestColor": "#hexcolor or null"
+            }
+            """.formatted(catList, merchantList);
+
+        String raw = callClaude(apiKey, prompt, 2000);
+
+        try {
+            // strip markdown fences if model wrapped it anyway
+            String json = raw.strip();
+            if (json.startsWith("```")) {
+                json = json.replaceAll("^```[a-z]*\\n?", "").replaceAll("```$", "").strip();
+            }
+            List<Map<String, String>> items = objectMapper.readValue(json, new TypeReference<>() {});
+            List<InsightDto.RuleSuggestion> suggestions = items.stream()
+                .filter(item -> item.get("pattern") != null && !item.get("pattern").isBlank())
+                .map(item -> new InsightDto.RuleSuggestion(
+                    item.get("pattern").toLowerCase().trim(),
+                    null,
+                    item.get("existingCategoryName"),
+                    item.get("suggestNewCategoryName"),
+                    item.get("suggestParentCategoryName"),
+                    item.get("suggestColor")
+                ))
+                .toList();
+
+            // Resolve existingCategoryId from name
+            Map<String, String> nameToId = new java.util.HashMap<>();
+            for (Category c : categories) nameToId.put(c.getName(), c.getId().toString());
+
+            List<InsightDto.RuleSuggestion> resolved = suggestions.stream()
+                .map(s -> new InsightDto.RuleSuggestion(
+                    s.pattern(),
+                    s.existingCategoryName() != null ? nameToId.get(s.existingCategoryName()) : null,
+                    s.existingCategoryName(),
+                    s.suggestNewCategoryName(),
+                    s.suggestParentCategoryName(),
+                    s.suggestColor()
+                ))
+                .toList();
+
+            return new InsightDto.AutoCategorizeResponse(resolved);
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Failed to parse AI response: " + e.getMessage());
+        }
     }
 
     // ── Prompt builders ───────────────────────────────────────────────────────
@@ -233,9 +340,13 @@ public class InsightService {
     // ── Claude API call ───────────────────────────────────────────────────────
 
     private String callClaude(String apiKey, String prompt) {
+        return callClaude(apiKey, prompt, MAX_TOKENS);
+    }
+
+    private String callClaude(String apiKey, String prompt, int maxTokens) {
         var body = Map.of(
                 "model", CLAUDE_MODEL,
-                "max_tokens", MAX_TOKENS,
+                "max_tokens", maxTokens,
                 "messages", List.of(Map.of("role", "user", "content", prompt))
         );
 

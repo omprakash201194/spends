@@ -23,6 +23,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     List<Transaction> findAllByBankAccountUserId(UUID userId);
 
+    @Query("""
+        SELECT DISTINCT t.merchantName
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.merchantName IS NOT NULL
+          AND t.merchantName <> ''
+        ORDER BY t.merchantName
+        """)
+    List<String> findDistinctMerchantNames(@Param("userId") UUID userId);
+
     List<Transaction> findAllByIdInAndBankAccountUser(List<UUID> ids, User user);
 
     /**

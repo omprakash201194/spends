@@ -1,8 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Download, MessageSquare, Scissors } from 'lucide-react'
+import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
 import { getSplits, saveSplits } from '../api/splits'
 import InsightCard from '../components/InsightCard'
+import { getAutoCategorizeSuggestions, type RuleSuggestion } from '../api/insights'
+import { createCategory } from '../api/categories'
+import { createCategoryRule, reapplyCategoryRules } from '../api/categoryRules'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
@@ -152,6 +155,92 @@ export default function TransactionPage() {
 
   const [exporting, setExporting] = useState(false)
   const [splitTxId, setSplitTxId] = useState<string | null>(null)
+
+  // ── Auto-categorize modal ─────────────────────────────────────────────────
+  const [showAutoCat, setShowAutoCat]             = useState(false)
+  const [autoCatLoading, setAutoCatLoading]       = useState(false)
+  const [autoCatError, setAutoCatError]           = useState<string | null>(null)
+  const [suggestions, setSuggestions]             = useState<RuleSuggestion[]>([])
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set())
+  const [overrideCategoryId, setOverrideCategoryId]   = useState<Record<number, string>>({})
+  const [autoCatApplying, setAutoCatApplying]     = useState(false)
+  const [autoCatResult, setAutoCatResult]         = useState<string | null>(null)
+
+  const openAutoCat = async () => {
+    setShowAutoCat(true)
+    setAutoCatLoading(true)
+    setAutoCatError(null)
+    setSuggestions([])
+    setSelectedSuggestions(new Set())
+    setOverrideCategoryId({})
+    setAutoCatResult(null)
+    try {
+      const res = await getAutoCategorizeSuggestions()
+      setSuggestions(res.suggestions)
+      setSelectedSuggestions(new Set(res.suggestions.map((_, i) => i)))
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to get suggestions'
+      setAutoCatError(msg)
+    } finally {
+      setAutoCatLoading(false)
+    }
+  }
+
+  const applyAutoCat = async () => {
+    setAutoCatApplying(true)
+    try {
+      let newCatCount = 0
+      let ruleCount = 0
+      // Re-fetch categories so we can resolve new ones
+      const freshCats = await import('../api/categories').then(m => m.getCategories())
+      const nameToId: Record<string, string> = {}
+      for (const c of freshCats) nameToId[c.name] = c.id
+
+      for (const idx of Array.from(selectedSuggestions).sort((a, b) => a - b)) {
+        const s = suggestions[idx]
+        const overrideId = overrideCategoryId[idx]
+
+        let categoryId = overrideId || s.existingCategoryId || null
+
+        // Create new category if needed
+        if (!categoryId && s.suggestNewCategoryName) {
+          if (nameToId[s.suggestNewCategoryName]) {
+            categoryId = nameToId[s.suggestNewCategoryName]
+          } else {
+            const parentId = s.suggestParentCategoryName ? nameToId[s.suggestParentCategoryName] ?? null : null
+            const newCat = await createCategory(
+              s.suggestNewCategoryName,
+              s.suggestColor ?? '#94a3b8',
+              parentId,
+            )
+            nameToId[newCat.name] = newCat.id
+            categoryId = newCat.id
+            newCatCount++
+          }
+        }
+
+        if (categoryId) {
+          await createCategoryRule(s.pattern, categoryId, 0)
+          ruleCount++
+        }
+      }
+
+      const reapply = await reapplyCategoryRules()
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      setAutoCatResult(
+        `${ruleCount} rule${ruleCount !== 1 ? 's' : ''} created` +
+        (newCatCount > 0 ? `, ${newCatCount} new categor${newCatCount !== 1 ? 'ies' : 'y'}` : '') +
+        `, ${reapply.updated} transaction${reapply.updated !== 1 ? 's' : ''} updated.`
+      )
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to apply'
+      setAutoCatError(msg)
+    } finally {
+      setAutoCatApplying(false)
+    }
+  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -344,8 +433,15 @@ export default function TransactionPage() {
         )}
       </div>{/* end table card */}
 
-      <div className="mt-4 lg:mt-0 lg:sticky lg:top-6">
+      <div className="mt-4 lg:mt-0 lg:sticky lg:top-6 space-y-3">
         <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
+        <button
+          onClick={openAutoCat}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-xl transition-colors"
+        >
+          <Sparkles className="w-4 h-4" />
+          Auto-categorize with AI
+        </button>
       </div>
       </div>{/* end sidebar grid */}
 
@@ -356,6 +452,145 @@ export default function TransactionPage() {
           categories={categories}
           onClose={() => setSplitTxId(null)}
         />
+      )}
+
+      {/* Auto-categorize modal */}
+      {showAutoCat && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  Auto-categorize with AI
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Review suggested rules before applying
+                </p>
+              </div>
+              <button onClick={() => setShowAutoCat(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {autoCatLoading && (
+                <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Analysing your transactions…
+                </div>
+              )}
+              {autoCatError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  {autoCatError}
+                </div>
+              )}
+              {autoCatResult && (
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-800 dark:text-green-200">
+                  {autoCatResult}
+                </div>
+              )}
+              {!autoCatLoading && suggestions.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{selectedSuggestions.size} of {suggestions.length} selected</span>
+                    <button
+                      onClick={() => setSelectedSuggestions(
+                        selectedSuggestions.size === suggestions.length
+                          ? new Set()
+                          : new Set(suggestions.map((_, i) => i))
+                      )}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {selectedSuggestions.size === suggestions.length ? 'Deselect all' : 'Select all'}
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {suggestions.map((s, i) => {
+                      const isNew = !s.existingCategoryId && !!s.suggestNewCategoryName
+                      const checked = selectedSuggestions.has(i)
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => setSelectedSuggestions(prev => {
+                            const next = new Set(prev)
+                            next.has(i) ? next.delete(i) : next.add(i)
+                            return next
+                          })}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                            checked
+                              ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center border-2 transition-colors ${checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                            {checked && <CheckIcon className="w-2.5 h-2.5 text-white" />}
+                          </div>
+                          <code className="text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded flex-shrink-0">
+                            {s.pattern}
+                          </code>
+                          <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                          <div className="flex-1 min-w-0" onClick={e => e.stopPropagation()}>
+                            <select
+                              value={overrideCategoryId[i] ?? s.existingCategoryId ?? ''}
+                              onChange={e => setOverrideCategoryId(prev => ({ ...prev, [i]: e.target.value }))}
+                              className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            >
+                              <option value="">-- pick a category --</option>
+                              {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {isNew && !overrideCategoryId[i] && (
+                            <span className="text-xs bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                              New: {s.suggestNewCategoryName}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+              {!autoCatLoading && !autoCatError && suggestions.length === 0 && !autoCatResult && (
+                <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                  No suggestions — try importing more transactions first.
+                </p>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!autoCatLoading && suggestions.length > 0 && !autoCatResult && (
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  New categories will be created automatically before rules are saved.
+                </p>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => setShowAutoCat(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={applyAutoCat}
+                    disabled={autoCatApplying || selectedSuggestions.size === 0}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {autoCatApplying ? 'Applying…' : `Apply ${selectedSuggestions.size} rules`}
+                  </button>
+                </div>
+              </div>
+            )}
+            {autoCatResult && (
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button onClick={() => setShowAutoCat(false)} className="px-4 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium rounded-lg">
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Floating bulk action bar */}
