@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Download, MessageSquare, Scissors } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
 import { getSplits, saveSplits } from '../api/splits'
@@ -14,7 +14,7 @@ import {
   getTransactions, updateCategory, toggleReviewed, updateNote, bulkUpdateCategory,
   type Transaction, type TransactionFilters,
 } from '../api/transactions'
-import { getCategories, type Category } from '../api/categories'
+import { getCategories, buildCategoryTree, type Category } from '../api/categories'
 import { getBankAccounts } from '../api/bankAccounts'
 import { listViews, addTransactionsToView, type ViewResponse } from '../api/views'
 import { useDebounce } from '../hooks/useDebounce'
@@ -28,6 +28,20 @@ function formatAmount(n: number) {
 function formatDate(s: string) {
   const [y, m, d] = s.split('-')
   return `${d}/${m}/${y}`
+}
+
+function renderCategoryOptions(nodes: ReturnType<typeof buildCategoryTree>, depth = 0): React.ReactNode[] {
+  const nbsp = '\u00a0\u00a0\u00a0\u00a0' // 4 non-breaking spaces per indent level
+  const items: React.ReactNode[] = []
+  for (const node of nodes) {
+    items.push(
+      <option key={node.id} value={node.id}>{nbsp.repeat(depth)}{node.name}</option>
+    )
+    if (node.children.length > 0) {
+      items.push(...renderCategoryOptions(node.children, depth + 1))
+    }
+  }
+  return items
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -217,9 +231,7 @@ export default function TransactionPage() {
           className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         >
           <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
+          {renderCategoryOptions(buildCategoryTree(categories))}
         </select>
 
         {/* Account */}
