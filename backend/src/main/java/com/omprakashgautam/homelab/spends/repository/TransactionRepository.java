@@ -235,6 +235,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> merchantMonthlyActivity(@Param("userId") UUID userId,
                                             @Param("from") LocalDate from);
 
+    // ── Net worth: monthly flow ───────────────────────────────────────────────
+
+    @Query("""
+        SELECT YEAR(t.valueDate) as yr, MONTH(t.valueDate) as mo,
+               SUM(t.depositAmount) as totalIn, SUM(t.withdrawalAmount) as totalOut
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from
+        GROUP BY YEAR(t.valueDate), MONTH(t.valueDate)
+        ORDER BY yr, mo
+        """)
+    List<Object[]> monthlyFlow(@Param("userId") UUID userId, @Param("from") LocalDate from);
+
     // ── Data health: aggregate counts ─────────────────────────────────────────
 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.bankAccount.user.id = :userId")
