@@ -195,6 +195,22 @@ spends/
 | GET | `/api/goals` | JWT | List user's savings goals with computed progress |
 | POST | `/api/goals` | JWT | Create a savings goal; returns 201 |
 | DELETE | `/api/goals/{id}` | JWT | Delete a savings goal; returns 204 |
+| PATCH | `/api/transactions/{id}/note` | JWT | Set or update transaction note (TEXT) |
+| PATCH | `/api/transactions/bulk-category` | JWT | Bulk update category for a list of transaction IDs |
+| GET | `/api/transactions/{id}/splits` | JWT | List splits for a transaction |
+| PUT | `/api/transactions/{id}/splits` | JWT | Replace all splits for a transaction (delete-then-insert) |
+| GET | `/api/net-worth` | JWT | Monthly net-worth time series; `?months=` (6/12/24) |
+| GET | `/api/annual-budgets` | JWT | List annual budgets for `?year=` |
+| PUT | `/api/annual-budgets` | JWT | Create or update an annual budget (upsert by user+category+year) |
+| DELETE | `/api/annual-budgets/{id}` | JWT | Delete an annual budget; returns 204 |
+| GET | `/api/merchant-aliases` | JWT | List user's merchant aliases |
+| POST | `/api/merchant-aliases` | JWT | Create or update a merchant alias (upsert by rawPattern) |
+| DELETE | `/api/merchant-aliases/{id}` | JWT | Delete a merchant alias; returns 204 |
+| GET | `/api/settlements` | JWT | List user's settlements (OPEN then SETTLED, desc) |
+| POST | `/api/settlements` | JWT | Create a settlement with line items; returns 201 |
+| PATCH | `/api/settlements/{id}/settle` | JWT | Mark a settlement as SETTLED |
+| DELETE | `/api/settlements/{id}` | JWT | Delete a settlement; returns 204 |
+| PUT | `/api/settings/notification-email` | JWT | Save or remove the daily digest notification email |
 
 ---
 
@@ -481,6 +497,23 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - **`useInstallPrompt` hook** — `frontend/src/hooks/useInstallPrompt.ts`; captures `beforeinstallprompt` event; exposes `canInstall`, `promptInstall` (clears deferred prompt unconditionally after OS dialog regardless of outcome), `dismiss` (persists to localStorage key `spends-install-dismissed`)
 - **`InstallBanner` component** — `frontend/src/components/InstallBanner.tsx`; `md:hidden` floating card above bottom nav; positions with `calc(4rem + env(safe-area-inset-bottom) + 0.5rem)`; Install + dismiss buttons; renders nothing when `!canInstall`
 - **`Layout.tsx` updates** — `pb-24 md:pb-0` on `<main>` to clear bottom nav; `BottomNav` + `InstallBanner` wired in; swipe-to-dismiss on backdrop AND sidebar `<aside>` (both have `onTouchStart`/`onTouchEnd`/`onTouchCancel` handlers — `onTouchCancel` resets the `touchStartX` ref to prevent phantom swipes after OS touch interrupts)
+
+### Phase 23 — Productivity Features (10 features) ✅ COMPLETE
+
+- **Migrations 011–017** — additive changes only; all nullable columns or new tables
+- **Transaction Notes (011)** — nullable TEXT `note` column on `financial_transaction`; `PATCH /api/transactions/{id}/note`; inline click-to-edit in TxRow with MessageSquare icon; ownership-guarded via `getOwnedTransaction`
+- **Import Confidence Score** — `ImportResultDto.FileSummary` extended with `categorized`, `misc`, `categorizationPct`; `CategorizationBadge` component on ImportPage (green ≥80%, yellow ≥50%, red <50%)
+- **Bulk Category Update** — `BulkCategoryRequest(ids, categoryId)`; `findAllByIdInAndBankAccountUser` repo query; `PATCH /api/transactions/bulk-category` returns `{updated: N}`; floating action bar with category dropdown appears when rows are checkbox-selected; "select all" header checkbox
+- **Net Worth Timeline** — `monthlyFlow` JPQL query (GROUP BY year/month); running cumulative sum in `NetWorthService`; `GET /api/net-worth?months=`; `NetWorthPage` with 6/12/24-month selector, 2 stat cards, Recharts LineChart (indigo cumulative, emerald monthly, red zero-reference)
+- **Budget Carry-Forward (012)** — `rollover BOOLEAN DEFAULT false` on `budget`; for rollover=true: previous month's unspent adds to `effectiveLimit`; rollover checkbox in budget edit form; "+₹X carried over" label displayed
+- **Annual Budgets (013)** — `annual_budget` table (unique on user+category+year); `AnnualBudgetService` get/set/delete; `GET/PUT/DELETE /api/annual-budgets`; BudgetPage gains Monthly/Annual tab switcher; progress bars with color thresholds (red ≥100%, amber ≥80%, blue <80%)
+- **Merchant Aliases (014)** — `merchant_alias` table (unique on user+raw_pattern); `MerchantAliasService` with upsert; `MerchantExtractor` checks alias map before regex; `GET/POST /api/merchant-aliases`, `DELETE /{id}`; `MerchantAliasesPage` with 2-column create form + list
+- **Split Transactions (015)** — `transaction_split` table (FK → `financial_transaction` ON DELETE CASCADE, `category_id` ON DELETE SET NULL); `TransactionSplitService` with delete-then-save replace semantics; `GET/PUT /api/transactions/{id}/splits`; `SplitModal` in TransactionPage (Scissors icon per row, editable splits, add/remove rows)
+- **Settlement Tracker (016)** — `settlement` + `settlement_item` tables; `SettlementStatus` enum (OPEN/SETTLED); one-to-many with `CascadeType.ALL orphanRemoval=true`; `GET/POST /api/settlements`, `PATCH /{id}/settle`, `DELETE /{id}`; `SettlementsPage` with `SettlementCard` (expandable items, amber=OPEN, green=SETTLED) + `CreateModal` with dynamic line items
+- **Anomaly Notification Digest (017)** — `spring-boot-starter-mail`; nullable `notification_email` on `app_user`; `@EnableScheduling` on main class; `NotificationService` runs daily at 08:00 via `@Scheduled(cron = "0 0 8 * * *")`; detects withdrawals > ₹10k in last 24h; feature-flagged via `NOTIFICATION_ENABLED` env var; `PUT /api/settings/notification-email`; Settings page Notifications tab
+
+**New entities:** `TransactionSplit`, `AnnualBudget`, `MerchantAlias`, `Settlement`, `SettlementItem`, `SettlementStatus` enum
+**Env vars added:** `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `NOTIFICATION_ENABLED`
 
 ### Phase 12 — Recurring Transaction Detection ✅ COMPLETE
 - `RecurringDto` — `RecurringPattern` (merchantName, categoryName/color, frequency, averageAmount, occurrences, lastMonth, nextExpected, activeThisMonth) · `RecurringSummary` (month, patterns[])
