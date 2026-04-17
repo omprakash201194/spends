@@ -21,6 +21,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     boolean existsByImportHash(String importHash);
     Optional<Transaction> findByImportHash(String importHash);
 
+    List<Transaction> findAllByBankAccountUserId(UUID userId);
+
     List<Transaction> findAllByIdInAndBankAccountUser(List<UUID> ids, User user);
 
     /**

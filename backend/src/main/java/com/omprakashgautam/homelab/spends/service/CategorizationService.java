@@ -2,14 +2,18 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.model.Category;
 import com.omprakashgautam.homelab.spends.model.CategoryRule;
+import com.omprakashgautam.homelab.spends.model.Transaction;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.CategoryRuleRepository;
+import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -29,8 +33,27 @@ public class CategorizationService {
 
     private final CategoryRuleRepository categoryRuleRepository;
     private final CategoryRepository categoryRepository;
+    private final TransactionRepository transactionRepository;
 
     private Category miscellaneous;
+
+    public record ReapplyResult(int updated) {}
+
+    @Transactional
+    public ReapplyResult reapplyRules(UUID userId) {
+        List<Transaction> transactions = transactionRepository.findAllByBankAccountUserId(userId);
+        int updated = 0;
+        for (Transaction t : transactions) {
+            Category newCategory = categorize(userId, t.getRawRemarks());
+            if (!Objects.equals(
+                    t.getCategory() != null ? t.getCategory().getId() : null,
+                    newCategory.getId())) {
+                t.setCategory(newCategory);
+                updated++;
+            }
+        }
+        return new ReapplyResult(updated);
+    }
 
     /**
      * Finds the best matching category for the given raw transaction remarks.

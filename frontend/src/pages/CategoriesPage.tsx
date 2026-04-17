@@ -8,6 +8,7 @@ import {
 } from '../api/categories'
 import {
   getCategoryRules, createCategoryRule, updateCategoryRule, deleteCategoryRule,
+  reapplyCategoryRules,
   type CategoryRule,
 } from '../api/categoryRules'
 
@@ -280,6 +281,20 @@ function RulesTab() {
   const [editCatId, setEditCatId]       = useState('')
   const [editPriority, setEditPriority] = useState(0)
 
+  const [showReapplyPrompt, setShowReapplyPrompt] = useState(false)
+  const [reapplyResult, setReapplyResult]         = useState<number | null>(null)
+
+  const reapplyMutation = useMutation({
+    mutationFn: reapplyCategoryRules,
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      setShowReapplyPrompt(false)
+      setReapplyResult(result.updated)
+      setTimeout(() => setReapplyResult(null), 5000)
+    },
+  })
+
   const createMutation = useMutation({
     mutationFn: () => createCategoryRule(newPattern.trim(), newCatId, newPriority),
     onSuccess: () => {
@@ -288,6 +303,7 @@ function RulesTab() {
       setNewCatId('')
       setNewPriority(0)
       setShowForm(false)
+      setShowReapplyPrompt(true)
     },
   })
 
@@ -300,6 +316,7 @@ function RulesTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['category-rules'] })
       setEditId(null)
+      setShowReapplyPrompt(true)
     },
   })
 
@@ -334,6 +351,39 @@ function RulesTab() {
           New Rule
         </button>
       </div>
+
+      {/* Reapply prompt */}
+      {showReapplyPrompt && (
+        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between gap-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Apply this rule to your existing transactions?
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => reapplyMutation.mutate()}
+              disabled={reapplyMutation.isPending}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              {reapplyMutation.isPending ? 'Applying…' : 'Yes, apply'}
+            </button>
+            <button
+              onClick={() => setShowReapplyPrompt(false)}
+              className="px-3 py-1.5 text-xs text-blue-700 dark:text-blue-300 hover:underline"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reapply result toast */}
+      {reapplyResult !== null && (
+        <div className="mb-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-800 dark:text-green-200">
+          {reapplyResult === 0
+            ? 'No transactions changed — they were already categorized correctly.'
+            : `${reapplyResult} transaction${reapplyResult === 1 ? '' : 's'} updated.`}
+        </div>
+      )}
 
       {/* Create form */}
       {showForm && (

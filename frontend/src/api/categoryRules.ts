@@ -34,3 +34,8 @@ export async function updateCategoryRule(
 export async function deleteCategoryRule(id: string): Promise<void> {
   await apiClient.delete(`/category-rules/${id}`)
 }
+
+export async function reapplyCategoryRules(): Promise<{ updated: number }> {
+  const { data } = await apiClient.post<{ updated: number }>('/category-rules/reapply')
+  return data
+}

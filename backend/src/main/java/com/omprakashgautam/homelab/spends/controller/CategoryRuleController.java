@@ -6,6 +6,7 @@ import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.CategoryRuleRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
+import com.omprakashgautam.homelab.spends.service.CategorizationService;
 import com.omprakashgautam.homelab.spends.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ public class CategoryRuleController {
     private final CategoryRuleRepository ruleRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final CategorizationService categorizationService;
 
     public record RuleResponse(UUID id, String pattern, UUID categoryId, String categoryName,
                                String categoryColor, int priority) {
@@ -111,6 +113,12 @@ public class CategoryRuleController {
         }
         ruleRepository.delete(rule);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reapply")
+    public ResponseEntity<CategorizationService.ReapplyResult> reapply(
+            @AuthenticationPrincipal UserDetailsImpl principal) {
+        return ResponseEntity.ok(categorizationService.reapplyRules(principal.getId()));
     }
 
     private User resolveUser(UserDetailsImpl principal) {
