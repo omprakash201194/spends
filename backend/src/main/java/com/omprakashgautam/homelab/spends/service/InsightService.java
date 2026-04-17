@@ -90,7 +90,7 @@ public class InsightService {
             return new InsightDto.AutoCategorizeResponse(List.of());
         }
         // Cap to avoid response truncation with very large merchant lists
-        if (merchants.size() > 80) merchants = merchants.subList(0, 80);
+        if (merchants.size() > 50) merchants = merchants.subList(0, 50);
 
         UUID householdId = user.getHousehold().getId();
         List<Category> categories = categoryRepository.findBySystemTrueOrHouseholdId(householdId);
