@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Download, MessageSquare } from 'lucide-react'
+import { Download, MessageSquare, Scissors } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
+import { getSplits, saveSplits } from '../api/splits'
 import InsightCard from '../components/InsightCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -135,6 +136,7 @@ export default function TransactionPage() {
   const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo
 
   const [exporting, setExporting] = useState(false)
+  const [splitTxId, setSplitTxId] = useState<string | null>(null)
 
   const handleExport = async () => {
     setExporting(true)
@@ -296,6 +298,7 @@ export default function TransactionPage() {
                   onToggle={() => toggleSelect(tx.id)}
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
                   onCategoryUpdated={() => qc.invalidateQueries({ queryKey: ['transactions'] })}
+                  onSplit={() => setSplitTxId(tx.id)}
                 />
               ))}
             </tbody>
@@ -332,6 +335,15 @@ export default function TransactionPage() {
         <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
       </div>
       </div>{/* end sidebar grid */}
+
+      {/* Split modal */}
+      {splitTxId && (
+        <SplitModal
+          txId={splitTxId}
+          categories={categories}
+          onClose={() => setSplitTxId(null)}
+        />
+      )}
 
       {/* Floating bulk action bar */}
       {selectedIds.size > 0 && (
@@ -439,13 +451,14 @@ function AddToViewPicker({
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 
-function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategoryUpdated }: {
+function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit }: {
   tx: Transaction
   categories: Category[]
   checked: boolean
   onToggle: () => void
   onToggleReviewed: () => void
   onCategoryUpdated: () => void
+  onSplit: () => void
 }) {
   const qc = useQueryClient()
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -593,15 +606,24 @@ function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategory
           )}
         </td>
 
-        {/* Add to view */}
+        {/* Actions: split + add to view */}
         <td className="px-2 py-3 text-center relative">
-          <button
-            onClick={() => setViewPickerOpen(v => !v)}
-            className="p-1 text-gray-300 dark:text-gray-600 hover:text-blue-500 rounded transition-colors"
-            title="Add to view"
-          >
-            <Bookmark className="w-4 h-4" />
-          </button>
+          <div className="flex items-center justify-center gap-1">
+            <button
+              onClick={onSplit}
+              className="p-1 text-gray-300 dark:text-gray-600 hover:text-purple-500 dark:hover:text-purple-400 rounded transition-colors"
+              title="Split transaction"
+            >
+              <Scissors className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewPickerOpen(v => !v)}
+              className="p-1 text-gray-300 dark:text-gray-600 hover:text-blue-500 rounded transition-colors"
+              title="Add to view"
+            >
+              <Bookmark className="w-4 h-4" />
+            </button>
+          </div>
           {viewPickerOpen && (
             <AddToViewPicker txId={tx.id} onClose={() => setViewPickerOpen(false)} />
           )}
@@ -638,5 +660,128 @@ function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategory
         </tr>
       )}
     </>
+  )
+}
+
+// ── Split Modal ───────────────────────────────────────────────────────────────
+
+function SplitModal({ txId, categories, onClose }: {
+  txId: string
+  categories: Category[]
+  onClose: () => void
+}) {
+  const qc = useQueryClient()
+
+  const { data: existingSplits = [] } = useQuery({
+    queryKey: ['splits', txId],
+    queryFn: () => getSplits(txId),
+  })
+
+  const [rows, setRows] = useState<{ categoryId: string; amount: string; note: string }[]>([
+    { categoryId: '', amount: '', note: '' },
+    { categoryId: '', amount: '', note: '' },
+  ])
+
+  useEffect(() => {
+    if (existingSplits.length > 0) {
+      setRows(existingSplits.map(s => ({
+        categoryId: s.categoryId ?? '',
+        amount: String(s.amount),
+        note: s.note ?? '',
+      })))
+    }
+  }, [existingSplits])
+
+  const saveMutation = useMutation({
+    mutationFn: () => saveSplits(txId, rows
+      .filter(r => r.amount && parseFloat(r.amount) > 0)
+      .map(r => ({
+        categoryId: r.categoryId || undefined,
+        amount: parseFloat(r.amount),
+        note: r.note || undefined,
+      }))
+    ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['splits', txId] })
+      onClose()
+    },
+  })
+
+  const updateRow = (i: number, field: string, value: string) =>
+    setRows(rows.map((r, j) => j === i ? { ...r, [field]: value } : r))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Split Transaction</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Divide this transaction across multiple categories
+          </p>
+        </div>
+
+        <div className="p-5 space-y-3 max-h-80 overflow-y-auto">
+          {rows.map((row, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <select
+                value={row.categoryId}
+                onChange={e => updateRow(i, 'categoryId', e.target.value)}
+                className="flex-1 text-xs border rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="">Uncategorized</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="Amount"
+                value={row.amount}
+                onChange={e => updateRow(i, 'amount', e.target.value)}
+                className="w-24 text-xs border rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+              <input
+                placeholder="Note"
+                value={row.note}
+                onChange={e => updateRow(i, 'note', e.target.value)}
+                className="flex-1 text-xs border rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+              {rows.length > 1 && (
+                <button
+                  onClick={() => setRows(rows.filter((_, j) => j !== i))}
+                  className="text-red-400 hover:text-red-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="p-5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <button
+            onClick={() => setRows([...rows, { categoryId: '', amount: '', note: '' }])}
+            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+          >
+            + Add row
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {saveMutation.isPending ? 'Saving...' : 'Save Splits'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
