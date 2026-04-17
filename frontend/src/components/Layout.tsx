@@ -41,6 +41,7 @@ const nav = [
   { to: '/net-worth',   label: 'Net Worth',    icon: TrendingUp },
   { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
   { to: '/merchant-aliases', label: 'Merchant Aliases', icon: Tag },
+  { to: '/settlements',  label: 'Settlements',  icon: Users },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 

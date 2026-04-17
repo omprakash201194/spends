@@ -17,6 +17,7 @@ import NetWorthPage from './pages/NetWorthPage'
 import DataHealthPage from './pages/DataHealthPage'
 import GoalsPage from './pages/GoalsPage'
 import MerchantAliasesPage from './pages/MerchantAliasesPage'
+import SettlementsPage from './pages/SettlementsPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="data-health" element={<DataHealthPage />} />
           <Route path="goals" element={<GoalsPage />} />
           <Route path="merchant-aliases" element={<MerchantAliasesPage />} />
+          <Route path="settlements" element={<SettlementsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
