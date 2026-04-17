@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -70,6 +71,14 @@ public class TransactionController {
             @PathVariable UUID id
     ) {
         return ResponseEntity.ok(transactionService.toggleReviewed(id, principal.getId()));
+    }
+
+    @PatchMapping("/bulk-category")
+    public Map<String, Integer> bulkUpdateCategory(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody @Valid TransactionDto.BulkCategoryRequest req) {
+        int updated = transactionService.bulkUpdateCategory(req.ids(), req.categoryId(), principal.getId());
+        return Map.of("updated", updated);
     }
 
     @PatchMapping("/{id}/note")

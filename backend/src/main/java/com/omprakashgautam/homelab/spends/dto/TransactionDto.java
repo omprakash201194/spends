@@ -2,11 +2,13 @@ package com.omprakashgautam.homelab.spends.dto;
 
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public class TransactionDto {
@@ -66,5 +68,10 @@ public class TransactionDto {
             int size,
             long totalElements,
             int totalPages
+    ) {}
+
+    public record BulkCategoryRequest(
+            @NotEmpty List<UUID> ids,
+            @NotNull UUID categoryId
     ) {}
 }

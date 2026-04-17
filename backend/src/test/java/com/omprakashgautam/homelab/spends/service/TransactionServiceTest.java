@@ -2,6 +2,7 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.TransactionDto;
 import com.omprakashgautam.homelab.spends.model.BankAccount;
+import com.omprakashgautam.homelab.spends.model.Category;
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
@@ -16,8 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -83,5 +86,32 @@ class TransactionServiceTest {
         assertThatThrownBy(() -> transactionService.updateNote(tx.getId(), attackerId, "hacked"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("403");
+    }
+
+    @Test
+    void bulkUpdateCategory_updatesAllAndReturnsCount() {
+        UUID catId = UUID.randomUUID();
+        Category cat = Category.builder().id(catId).name("Food").build();
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).build();
+
+        List<UUID> txIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        BankAccount account = BankAccount.builder().user(user).build();
+        List<Transaction> txs = txIds.stream()
+                .map(id -> Transaction.builder().id(id).rawRemarks("r")
+                        .bankAccount(account)
+                        .withdrawalAmount(BigDecimal.ZERO).depositAmount(BigDecimal.ZERO)
+                        .reviewed(false).build())
+                .collect(Collectors.toList());
+
+        when(userRepository.getReferenceById(userId)).thenReturn(user);
+        when(transactionRepository.findAllByIdInAndBankAccountUser(txIds, user)).thenReturn(txs);
+        when(categoryRepository.findById(catId)).thenReturn(Optional.of(cat));
+        when(transactionRepository.saveAll(any())).thenAnswer(i -> i.getArgument(0));
+
+        int count = transactionService.bulkUpdateCategory(txIds, catId, userId);
+
+        assertThat(count).isEqualTo(2);
+        txs.forEach(tx -> assertThat(tx.getCategory()).isEqualTo(cat));
     }
 }

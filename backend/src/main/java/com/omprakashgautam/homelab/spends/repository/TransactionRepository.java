@@ -1,6 +1,7 @@
 package com.omprakashgautam.homelab.spends.repository;
 
 import com.omprakashgautam.homelab.spends.model.Transaction;
+import com.omprakashgautam.homelab.spends.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,6 +20,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     boolean existsByImportHash(String importHash);
     Optional<Transaction> findByImportHash(String importHash);
+
+    List<Transaction> findAllByIdInAndBankAccountUser(List<UUID> ids, User user);
 
     /**
      * Bulk-deletes all transactions for the user across all their bank accounts.

@@ -228,6 +228,19 @@ public class TransactionService {
         return TransactionDto.Response.from(transactionRepository.save(tx));
     }
 
+    // ── Bulk category update ─────────────────────────────────────────────────
+
+    @Transactional
+    public int bulkUpdateCategory(List<UUID> ids, UUID categoryId, UUID userId) {
+        User user = userRepository.getReferenceById(userId);
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        List<Transaction> txs = transactionRepository.findAllByIdInAndBankAccountUser(ids, user);
+        txs.forEach(tx -> tx.setCategory(category));
+        transactionRepository.saveAll(txs);
+        return txs.size();
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private Transaction getOwnedTransaction(UUID txId, UUID userId) {
