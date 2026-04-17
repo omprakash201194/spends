@@ -416,7 +416,7 @@ function RulesTab() {
                       className="p-1 text-gray-400 hover:text-red-500 rounded disabled:opacity-50"
                       title="Delete"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -437,8 +437,9 @@ function ColourPicker({ value, onChange }: { value: string; onChange: (c: string
       {COLOUR_SWATCHES.map(c => (
         <button
           key={c}
+          type="button"
           onClick={() => onChange(c)}
-          className={`w-6 h-6 rounded-full transition-transform ${value === c ? 'scale-125 ring-2 ring-offset-1 ring-gray-400' : 'hover:scale-110'}`}
+          className={`w-6 h-6 rounded-full transition-transform ${value === c ? 'scale-125 ring-2 ring-offset-1 ring-gray-400 dark:ring-offset-gray-700' : 'hover:scale-110'}`}
           style={{ backgroundColor: c }}
           title={c}
         />
