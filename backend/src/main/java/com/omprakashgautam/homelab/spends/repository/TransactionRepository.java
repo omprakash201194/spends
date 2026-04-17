@@ -82,7 +82,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     // ── Dashboard: category breakdown ─────────────────────────────────────────
 
     @Query("""
-        SELECT t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
           AND t.valueDate >= :from AND t.valueDate <= :to

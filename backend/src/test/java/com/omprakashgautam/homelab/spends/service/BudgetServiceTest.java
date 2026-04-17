@@ -3,6 +3,8 @@ package com.omprakashgautam.homelab.spends.service;
 import com.omprakashgautam.homelab.spends.dto.BudgetDto;
 import com.omprakashgautam.homelab.spends.model.Budget;
 import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.Household;
+import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.BudgetRepository;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
@@ -17,9 +19,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -52,8 +56,13 @@ class BudgetServiceTest {
         foodCategory.setName("Food & Dining");
         foodCategory.setColor("#f59e0b");
 
+        UUID householdId = UUID.randomUUID();
+        Household hh = Household.builder().id(householdId).name("H").inviteCode("X").maxCategoryDepth(5).build();
+        User user = User.builder().id(USER_ID).household(hh).build();
+
         when(transactionRepository.latestTransactionDate(USER_ID)).thenReturn(ANCHOR);
-        when(categoryRepository.findAll()).thenReturn(List.of(foodCategory));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findBySystemTrueOrHouseholdId(any())).thenReturn(List.of(foodCategory));
         // Default: no spending this month, no spending prev month
         when(transactionRepository.categoryBreakdown(eq(USER_ID), eq(APR_FROM), eq(APR_TO)))
                 .thenReturn(List.of());

@@ -19,6 +19,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +36,8 @@ public class BudgetService {
 
     private static final DateTimeFormatter MONTH_HEADER = DateTimeFormatter.ofPattern("MMMM yyyy");
 
+    private record CategorySpendRow(UUID categoryId, String name, String color, BigDecimal spent) {}
+
     @Transactional(readOnly = true)
     public BudgetDto.MonthSummary getMonthSummary(UUID userId) {
         LocalDate anchor = resolveAnchorMonth(userId);
@@ -43,14 +46,16 @@ public class BudgetService {
         int year         = anchor.getYear();
         int month        = anchor.getMonthValue();
 
-        // Spending per category this month
-        Map<String, BigDecimal> spentByCategory = transactionRepository
-                .categoryBreakdown(userId, from, to)
+        // Spending per category this month (rolled up to root categories)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User not found"));
+        List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(user.getHousehold().getId());
+        List<CategorySpendRow> rawRows = transactionRepository.categoryBreakdown(userId, from, to)
                 .stream()
-                .collect(Collectors.toMap(
-                        row -> (String) row[0],
-                        row -> (BigDecimal) row[2]
-                ));
+                .map(row -> new CategorySpendRow((UUID) row[0], (String) row[1], (String) row[2], (BigDecimal) row[3]))
+                .toList();
+        Map<UUID, BigDecimal> spentById = rollupToRoots(rawRows, allCats).stream()
+                .collect(Collectors.toMap(CategorySpendRow::categoryId, CategorySpendRow::spent));
 
         // Existing budgets this month, keyed by category id
         Map<UUID, Budget> budgetByCategory = budgetRepository
@@ -63,10 +68,9 @@ public class BudgetService {
         LocalDate prevFrom = prevYearMonth.atDay(1);
         LocalDate prevTo   = prevYearMonth.atEndOfMonth();
 
-        List<Category> categories = categoryRepository.findAll();
-        List<BudgetDto.CategoryBudget> items = categories.stream()
+        List<BudgetDto.CategoryBudget> items = allCats.stream()
                 .map(cat -> {
-                    BigDecimal spent = spentByCategory.getOrDefault(cat.getName(), BigDecimal.ZERO);
+                    BigDecimal spent = spentById.getOrDefault(cat.getId(), BigDecimal.ZERO);
                     Budget budget = budgetByCategory.get(cat.getId());
                     BigDecimal limit = budget != null ? budget.getAmount() : null;
 
@@ -135,8 +139,8 @@ public class BudgetService {
         BigDecimal spent = transactionRepository
                 .categoryBreakdown(userId, from, to)
                 .stream()
-                .filter(row -> category.getName().equals(row[0]))
-                .map(row -> (BigDecimal) row[2])
+                .filter(row -> category.getId().equals(row[0]))
+                .map(row -> (BigDecimal) row[3])
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
 
@@ -171,6 +175,31 @@ public class BudgetService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         budgetRepository.delete(budget);
+    }
+
+    private static List<CategorySpendRow> rollupToRoots(List<CategorySpendRow> rows, List<Category> allCats) {
+        Map<UUID, BigDecimal> rolledUp = new LinkedHashMap<>();
+        for (CategorySpendRow row : rows) {
+            List<UUID> ancestors = CategoryTreeUtils.getAncestorIds(row.categoryId(), allCats);
+            if (ancestors.isEmpty()) {
+                rolledUp.merge(row.categoryId(), row.spent(), BigDecimal::add);
+            } else {
+                UUID rootId = ancestors.get(ancestors.size() - 1);
+                rolledUp.merge(rootId, row.spent(), BigDecimal::add);
+            }
+        }
+        Map<UUID, Category> catById = allCats.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c, (a, b) -> a));
+        return rolledUp.entrySet().stream()
+                .filter(e -> e.getValue().compareTo(BigDecimal.ZERO) > 0)
+                .map(e -> {
+                    Category cat = catById.get(e.getKey());
+                    String name = cat != null ? cat.getName() : "Unknown";
+                    String color = cat != null ? cat.getColor() : "#94a3b8";
+                    return new CategorySpendRow(e.getKey(), name, color, e.getValue());
+                })
+                .sorted(java.util.Comparator.comparing(CategorySpendRow::spent).reversed())
+                .toList();
     }
 
     private LocalDate resolveAnchorMonth(UUID userId) {

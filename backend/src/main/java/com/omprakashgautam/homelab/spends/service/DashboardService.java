@@ -1,26 +1,39 @@
 package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.DashboardDto;
+import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.User;
+import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
+import com.omprakashgautam.homelab.spends.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
 
     private final TransactionRepository transactionRepository;
+    private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     private static final DateTimeFormatter MONTH_LABEL  = DateTimeFormatter.ofPattern("MMM");
     private static final DateTimeFormatter MONTH_HEADER = DateTimeFormatter.ofPattern("MMMM yyyy");
+
+    private record CategorySpendRow(UUID categoryId, String name, String color, BigDecimal spent) {}
 
     @Transactional(readOnly = true)
     public DashboardDto.Summary getSummary(UUID userId) {
@@ -54,14 +67,18 @@ public class DashboardService {
                 transactionRepository.countInPeriod(userId, prevYearFrom, prevYearTo)
         );
 
-        List<DashboardDto.CategoryStat> categories = transactionRepository
-                .categoryBreakdown(userId, from, to)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User not found"));
+        List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(user.getHousehold().getId());
+
+        List<CategorySpendRow> rawRows = transactionRepository.categoryBreakdown(userId, from, to)
                 .stream()
-                .map(row -> new DashboardDto.CategoryStat(
-                        (String) row[0],
-                        (String) row[1],
-                        (BigDecimal) row[2]
-                ))
+                .map(row -> new CategorySpendRow((UUID) row[0], (String) row[1], (String) row[2], (BigDecimal) row[3]))
+                .toList();
+
+        List<DashboardDto.CategoryStat> categories = rollupToRoots(rawRows, allCats)
+                .stream()
+                .map(r -> new DashboardDto.CategoryStat(r.name(), r.color(), r.spent()))
                 .toList();
 
         List<DashboardDto.MonthlyTrend> trend = buildTrend(
@@ -123,5 +140,30 @@ public class DashboardService {
         }
 
         return result;
+    }
+
+    private static List<CategorySpendRow> rollupToRoots(List<CategorySpendRow> rows, List<Category> allCats) {
+        Map<UUID, BigDecimal> rolledUp = new LinkedHashMap<>();
+        for (CategorySpendRow row : rows) {
+            List<UUID> ancestors = CategoryTreeUtils.getAncestorIds(row.categoryId(), allCats);
+            if (ancestors.isEmpty()) {
+                rolledUp.merge(row.categoryId(), row.spent(), BigDecimal::add);
+            } else {
+                UUID rootId = ancestors.get(ancestors.size() - 1);
+                rolledUp.merge(rootId, row.spent(), BigDecimal::add);
+            }
+        }
+        Map<UUID, Category> catById = allCats.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c, (a, b) -> a));
+        return rolledUp.entrySet().stream()
+                .filter(e -> e.getValue().compareTo(BigDecimal.ZERO) > 0)
+                .map(e -> {
+                    Category cat = catById.get(e.getKey());
+                    String name = cat != null ? cat.getName() : "Unknown";
+                    String color = cat != null ? cat.getColor() : "#94a3b8";
+                    return new CategorySpendRow(e.getKey(), name, color, e.getValue());
+                })
+                .sorted(java.util.Comparator.comparing(CategorySpendRow::spent).reversed())
+                .toList();
     }
 }
