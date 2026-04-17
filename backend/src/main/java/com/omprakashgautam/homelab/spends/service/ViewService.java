@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -161,6 +163,44 @@ public class ViewService {
         return new ViewDto.SummaryResponse(
                 viewId, view.getName(), view.getTotalBudget(),
                 totalSpent != null ? totalSpent : BigDecimal.ZERO, count, categories, members);
+    }
+
+    // ── Create view from tag ──────────────────────────────────────────────────
+
+    @Transactional
+    public ViewDto.ViewResponse createViewFromTag(UUID userId, String tag) {
+        Household household = requireHousehold(userId);
+
+        List<Transaction> matches = transactionRepository
+                .findByUserIdAndRawRemarksContaining(userId, tag.trim().toLowerCase());
+        if (matches.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No transactions found matching tag: " + tag);
+        }
+
+        LocalDate startDate = matches.stream()
+                .map(Transaction::getValueDate)
+                .min(Comparator.naturalOrder())
+                .orElse(LocalDate.now());
+        LocalDate endDate = matches.stream()
+                .map(Transaction::getValueDate)
+                .max(Comparator.naturalOrder())
+                .orElse(LocalDate.now());
+
+        SpendView view = viewRepository.save(SpendView.builder()
+                .household(household)
+                .name(tag)
+                .type(ViewType.CUSTOM)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build());
+
+        List<ViewTransactionLink> links = matches.stream()
+                .map(tx -> ViewTransactionLink.builder().view(view).transaction(tx).build())
+                .toList();
+        linkRepository.saveAll(links);
+
+        return toViewResponse(view);
     }
 
     // ── Manually add transactions ─────────────────────────────────────────────

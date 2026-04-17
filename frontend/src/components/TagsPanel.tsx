@@ -1,0 +1,285 @@
+import React, { useState, useRef, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, Tag, ChevronRight, ChevronDown, Check, LayoutGrid, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { getTransactionTags } from '../api/tags'
+import { createViewFromTag } from '../api/views'
+import { createCategoryRule, reapplyCategoryRules } from '../api/categoryRules'
+import { buildCategoryTree, type Category, type CategoryNode } from '../api/categories'
+
+// ── Hierarchical category checkbox tree ──────────────────────────────────────
+
+function CategoryTreeNode({
+  node,
+  depth,
+  selected,
+  onToggle,
+}: {
+  node: CategoryNode
+  depth: number
+  selected: Set<string>
+  onToggle: (id: string) => void
+}) {
+  const [open, setOpen] = useState(depth === 0)
+  const hasChildren = node.children.length > 0
+
+  return (
+    <div>
+      <div
+        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        onClick={() => onToggle(node.id)}
+      >
+        <input
+          type="checkbox"
+          checked={selected.has(node.id)}
+          onChange={() => onToggle(node.id)}
+          onClick={e => e.stopPropagation()}
+          className="w-3.5 h-3.5 rounded text-blue-600 flex-shrink-0"
+        />
+        <span
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: node.color ?? '#94a3b8' }}
+        />
+        <span className="text-sm text-gray-700 dark:text-gray-200 flex-1 truncate">{node.name}</span>
+        {hasChildren && (
+          <button
+            onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+            className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+      {hasChildren && open && node.children.map(child => (
+        <CategoryTreeNode
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          selected={selected}
+          onToggle={onToggle}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ── Category picker popover ───────────────────────────────────────────────────
+
+function CategoryPicker({
+  tag,
+  categories,
+  onClose,
+  onApplied,
+}: {
+  tag: string
+  categories: Category[]
+  onClose: () => void
+  onApplied: () => void
+}) {
+  const qc = useQueryClient()
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [applying, setApplying] = useState(false)
+  const [done, setDone] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const tree = buildCategoryTree(categories)
+
+  const toggle = (id: string) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const apply = async () => {
+    if (selected.size === 0) return
+    setApplying(true)
+    try {
+      for (const catId of Array.from(selected)) {
+        await createCategoryRule(tag, catId, 0)
+      }
+      await reapplyCategoryRules()
+      qc.invalidateQueries({ queryKey: ['category-rules'] })
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      setDone(true)
+      setTimeout(onApplied, 800)
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  // close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-1 z-50 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col"
+      style={{ maxHeight: '320px' }}
+    >
+      <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          Assign <span className="font-mono text-gray-800 dark:text-gray-200">"{tag}"</span> to:
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto py-1">
+        {tree.map(node => (
+          <CategoryTreeNode key={node.id} node={node} depth={0} selected={selected} onToggle={toggle} />
+        ))}
+      </div>
+      <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <button
+          onClick={onClose}
+          className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={apply}
+          disabled={selected.size === 0 || applying || done}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+        >
+          {done ? (
+            <><Check className="w-3 h-3" /> Done</>
+          ) : applying ? (
+            <><Loader2 className="w-3 h-3 animate-spin" /> Applying…</>
+          ) : (
+            `Create ${selected.size} rule${selected.size !== 1 ? 's' : ''}`
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Main TagsPanel ────────────────────────────────────────────────────────────
+
+export default function TagsPanel({
+  onTagClick,
+  categories,
+}: {
+  onTagClick: (tag: string) => void
+  categories: Category[]
+}) {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [pickerTag, setPickerTag] = useState<string | null>(null)
+  const [creatingViewFor, setCreatingViewFor] = useState<string | null>(null)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['transaction-tags'],
+    queryFn: getTransactionTags,
+    staleTime: 5 * 60_000,
+  })
+
+  const createViewMut = useMutation({
+    mutationFn: createViewFromTag,
+    onSuccess: (view) => {
+      setCreatingViewFor(null)
+      navigate(`/views/${view.id}`)
+    },
+    onError: () => setCreatingViewFor(null),
+  })
+
+  const tags = (data?.tags ?? []).filter(t =>
+    !search || t.tag.includes(search.toLowerCase())
+  )
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Tag className="w-4 h-4 text-gray-400" />
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Tags</h3>
+        {data && (
+          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+            {data.tags.length} found
+          </span>
+        )}
+      </div>
+
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Filter tags…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="py-6 text-center">
+          <Loader2 className="w-4 h-4 animate-spin text-gray-400 mx-auto" />
+        </div>
+      ) : tags.length === 0 ? (
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">
+          {search ? 'No matching tags' : 'No tags extracted yet'}
+        </p>
+      ) : (
+        <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-1 px-1">
+          {tags.map(({ tag, count }) => (
+            <div key={tag} className="relative group flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+              {/* Tag + count — click to filter */}
+              <button
+                onClick={() => onTagClick(tag)}
+                className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
+                title={`Filter by "${tag}"`}
+              >
+                <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate">{tag}</span>
+                <span className="ml-auto flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+                  ×{count}
+                </span>
+              </button>
+
+              {/* Actions (visible on hover) */}
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                {/* Assign to category */}
+                <div className="relative">
+                  <button
+                    onClick={() => setPickerTag(pickerTag === tag ? null : tag)}
+                    title="Assign to category"
+                    className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                  </button>
+                  {pickerTag === tag && (
+                    <CategoryPicker
+                      tag={tag}
+                      categories={categories}
+                      onClose={() => setPickerTag(null)}
+                      onApplied={() => setPickerTag(null)}
+                    />
+                  )}
+                </div>
+
+                {/* Create view */}
+                <button
+                  onClick={() => { setCreatingViewFor(tag); createViewMut.mutate(tag) }}
+                  disabled={creatingViewFor === tag}
+                  title="Create view from this tag"
+                  className="p-1 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 rounded disabled:opacity-50"
+                >
+                  {creatingViewFor === tag
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <LayoutGrid className="w-3.5 h-3.5" />
+                  }
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+        Click tag to filter · <Tag className="w-3 h-3 inline" /> assign category · <LayoutGrid className="w-3 h-3 inline" /> create view
+      </p>
+    </div>
+  )
+}

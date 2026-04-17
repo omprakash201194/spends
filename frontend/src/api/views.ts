@@ -142,3 +142,8 @@ export async function addTransactionsToView(viewId: string, transactionIds: stri
 export async function removeTransactionFromView(viewId: string, txId: string): Promise<void> {
   await apiClient.delete(`/views/${viewId}/transactions/${txId}`)
 }
+
+export async function createViewFromTag(tag: string): Promise<ViewResponse> {
+  const { data } = await apiClient.post<ViewResponse>('/views/from-tag', null, { params: { tag } })
+  return data
+}

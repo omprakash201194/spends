@@ -3,6 +3,7 @@ import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as Check
 import { downloadTransactionsCsv } from '../api/export'
 import { getSplits, saveSplits } from '../api/splits'
 import InsightCard from '../components/InsightCard'
+import TagsPanel from '../components/TagsPanel'
 import { getAutoCategorizeSuggestions, type RuleSuggestion } from '../api/insights'
 import { createCategory } from '../api/categories'
 import { createCategoryRule, reapplyCategoryRules, getCategoryRules } from '../api/categoryRules'
@@ -442,7 +443,7 @@ export default function TransactionPage() {
         )}
       </div>{/* end table card */}
 
-      <div className="mt-4 lg:mt-0 lg:sticky lg:top-6 space-y-3">
+      <div className="mt-4 lg:mt-0 lg:sticky lg:top-6 space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto">
         <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
         <button
           onClick={openAutoCat}
@@ -451,6 +452,10 @@ export default function TransactionPage() {
           <Sparkles className="w-4 h-4" />
           Auto-categorize with AI
         </button>
+        <TagsPanel
+          onTagClick={(tag) => { setSearch(tag); setPage(0) }}
+          categories={categories}
+        />
       </div>
       </div>{/* end sidebar grid */}
 

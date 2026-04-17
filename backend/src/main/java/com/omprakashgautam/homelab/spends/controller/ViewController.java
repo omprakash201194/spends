@@ -72,6 +72,14 @@ public class ViewController {
         return ResponseEntity.ok(viewService.getSummary(principal.getId(), id));
     }
 
+    @PostMapping("/from-tag")
+    public ResponseEntity<ViewDto.ViewResponse> createViewFromTag(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam String tag) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(viewService.createViewFromTag(principal.getId(), tag));
+    }
+
     @PostMapping("/{id}/transactions")
     public ResponseEntity<Void> addTransactions(
             @AuthenticationPrincipal UserDetailsImpl principal,

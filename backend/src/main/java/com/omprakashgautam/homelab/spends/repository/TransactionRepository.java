@@ -35,6 +35,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     List<Transaction> findAllByIdInAndBankAccountUser(List<UUID> ids, User user);
 
+    @Query("""
+        SELECT DISTINCT t.rawRemarks
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.rawRemarks IS NOT NULL
+          AND t.rawRemarks <> ''
+        """)
+    List<String> findDistinctRawRemarks(@Param("userId") UUID userId);
+
+    @Query("""
+        SELECT t FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND LOWER(t.rawRemarks) LIKE LOWER(CONCAT('%', :tag, '%'))
+        ORDER BY t.valueDate DESC
+        """)
+    List<Transaction> findByUserIdAndRawRemarksContaining(
+            @Param("userId") UUID userId, @Param("tag") String tag);
+
     /**
      * Bulk-deletes all transactions for the user across all their bank accounts.
      * DB cascade (migration 007) automatically removes associated view_transaction rows.
