@@ -8,6 +8,9 @@ export interface FileSummary {
   imported: number
   duplicates: number
   errors: number
+  categorized: number
+  misc: number
+  categorizationPct: number
 }
 
 export interface ImportResult {

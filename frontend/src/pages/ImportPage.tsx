@@ -366,13 +366,37 @@ function BatchRow({
 
 // ── Import summary ────────────────────────────────────────────────────────────
 
+function CategorizationBadge({ pct }: { pct: number }) {
+  const colorClass =
+    pct >= 80
+      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+      : pct >= 50
+      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass}`}>
+      {pct}% categorized
+    </span>
+  )
+}
+
 function ImportSummary({ result }: { result: ImportResult }) {
+  // Aggregate categorization pct across all files
+  const totalCategorized = result.files.reduce((sum, f) => sum + f.categorized, 0)
+  const aggregatePct =
+    result.totalImported > 0
+      ? Math.round((totalCategorized * 100) / result.totalImported)
+      : 0
+
   return (
     <div className="mt-6 space-y-4">
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <CheckCircle className="w-5 h-5 text-green-500" />
-          <h2 className="font-semibold text-gray-900 dark:text-white">Import Complete</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">Import Complete</h2>
+          </div>
+          {result.totalImported > 0 && <CategorizationBadge pct={aggregatePct} />}
         </div>
         <div className="grid grid-cols-3 gap-4">
           <StatCard label="Imported"          value={result.totalImported}   color="text-green-600" bg="bg-green-50" />
@@ -396,10 +420,11 @@ function ImportSummary({ result }: { result: ImportResult }) {
                   {f.accountNumberMasked ? ` · ${f.accountNumberMasked}` : ''}
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-3 text-xs flex-shrink-0">
                 <span className="text-green-600 font-medium">{f.imported} new</span>
                 <span className="text-amber-600">{f.duplicates} dup</span>
                 {f.errors > 0 && <span className="text-red-600">{f.errors} err</span>}
+                {f.imported > 0 && <CategorizationBadge pct={f.categorizationPct} />}
               </div>
             </div>
           ))}

@@ -13,7 +13,10 @@ public class ImportResultDto {
             UUID bankAccountId,
             int imported,
             int duplicates,
-            int errors
+            int errors,
+            int categorized,
+            int misc,
+            int categorizationPct
     ) {}
 
     /** Aggregated result across all uploaded files. */

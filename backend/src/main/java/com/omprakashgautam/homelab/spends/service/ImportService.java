@@ -59,6 +59,7 @@ public class ImportService {
         int imported = 0;
         int duplicates = 0;
         int errors = 0;
+        int categorized = 0;
         BankAccount bankAccount = null;
         ImportBatch batch = null;
 
@@ -115,6 +116,9 @@ public class ImportService {
 
                     transactionRepository.save(transaction);
                     imported++;
+                    if (category != null && !"Miscellaneous".equals(category.getName())) {
+                        categorized++;
+                    }
                 } catch (Exception e) {
                     log.warn("Error saving transaction from file {}: {}", fileName, e.getMessage());
                     errors++;
@@ -131,6 +135,9 @@ public class ImportService {
             errors++;
         }
 
+        int misc = imported - categorized;
+        int pct = imported > 0 ? (categorized * 100 / imported) : 0;
+
         return new ImportResultDto.FileSummary(
                 fileName,
                 bankAccount != null ? bankAccount.getBankName() : "Unknown",
@@ -138,7 +145,10 @@ public class ImportService {
                 bankAccount != null ? bankAccount.getId() : null,
                 imported,
                 duplicates,
-                errors
+                errors,
+                categorized,
+                misc,
+                pct
         );
     }
 
