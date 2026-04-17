@@ -89,6 +89,8 @@ public class InsightService {
         if (merchants.isEmpty()) {
             return new InsightDto.AutoCategorizeResponse(List.of());
         }
+        // Cap to avoid response truncation with very large merchant lists
+        if (merchants.size() > 80) merchants = merchants.subList(0, 80);
 
         UUID householdId = user.getHousehold().getId();
         List<Category> categories = categoryRepository.findBySystemTrueOrHouseholdId(householdId);
@@ -130,7 +132,7 @@ public class InsightService {
             }
             """.formatted(catList, merchantList);
 
-        String raw = callClaude(apiKey, prompt, 2000);
+        String raw = callClaude(apiKey, prompt, 4096);
 
         try {
             // strip markdown fences if model wrapped it anyway
