@@ -124,6 +124,7 @@ jobs:
 
       - name: Roll out new images
         run: |
+          kubectl apply -f k8s/ -n homelab
           kubectl set image deployment/spends-backend \
             spends-backend=$REGISTRY/homelab/spends-backend:$IMAGE_TAG \
             -n homelab

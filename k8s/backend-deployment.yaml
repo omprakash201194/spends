@@ -7,6 +7,7 @@ metadata:
     app: spends-backend
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: spends-backend
@@ -15,8 +16,6 @@ spec:
       labels:
         app: spends-backend
     spec:
-      # Allow Spring Boot to finish draining in-flight requests before SIGKILL.
-      # Must be > server.shutdown timeout (20s) + a small buffer.
       terminationGracePeriodSeconds: 30
       containers:
         - name: spends-backend
@@ -40,18 +39,22 @@ spec:
                 secretKeyRef:
                   name: spends-secret
                   key: jwt-secret
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 45
             periodSeconds: 10
-            failureThreshold: 6
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 90
             periodSeconds: 20
             failureThreshold: 3
           resources:
