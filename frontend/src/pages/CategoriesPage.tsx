@@ -542,7 +542,9 @@ function RulesTab() {
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{rule.categoryName}</span>
                     {rule.aiGenerated && (
-                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-violet-500" title="AI-generated rule" />
+                      <span title="AI-generated rule">
+                        <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-violet-500" />
+                      </span>
                     )}
                   </div>
                   <span className="text-sm text-gray-400 dark:text-gray-500 text-right tabular-nums">{rule.priority}</span>
