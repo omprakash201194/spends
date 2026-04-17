@@ -37,7 +37,7 @@ public class CategoryController {
     }
 
     public record CreateRequest(String name, String color, UUID parentId) {}
-    public record UpdateRequest(String name, String color, UUID parentId) {}
+    public record UpdateRequest(String name, String color, UUID parentId, boolean clearParent) {}
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> list(@AuthenticationPrincipal UserDetailsImpl principal) {
@@ -67,9 +67,12 @@ public class CategoryController {
 
         Category parent = null;
         if (req.parentId() != null) {
-            parent = categoryRepository.findById(req.parentId())
+            List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(household.getId());
+            parent = allCats.stream()
+                    .filter(c -> c.getId().equals(req.parentId()))
+                    .findFirst()
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Parent category not found"));
-            validateDepth(parent, household, categoryRepository.findBySystemTrueOrHouseholdId(household.getId()));
+            validateDepth(parent, household, allCats);
         }
 
         Category saved = categoryRepository.save(Category.builder()
@@ -121,9 +124,10 @@ public class CategoryController {
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Parent category not found"));
             validateDepth(newParent, household, allCats);
             cat.setParent(newParent);
-        } else {
+        } else if (req.clearParent()) {
             cat.setParent(null);
         }
+        // else: null parentId + clearParent=false → leave parent unchanged
 
         return ResponseEntity.ok(CategoryResponse.from(categoryRepository.save(cat)));
     }

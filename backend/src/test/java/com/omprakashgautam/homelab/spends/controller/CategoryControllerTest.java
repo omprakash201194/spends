@@ -62,7 +62,6 @@ class CategoryControllerTest {
         when(categoryRepository.findBySystemTrueOrHouseholdId(householdId))
                 .thenReturn(List.of(parent));
         when(categoryRepository.existsByNameAndHouseholdId(anyString(), any())).thenReturn(false);
-        when(categoryRepository.findById(parent.getId())).thenReturn(Optional.of(parent));
         when(categoryRepository.save(any())).thenAnswer(inv -> {
             Category c = inv.getArgument(0);
             c.setId(UUID.randomUUID());
@@ -95,7 +94,6 @@ class CategoryControllerTest {
 
         Category parent = Category.builder().id(UUID.randomUUID()).name("Food").system(true).build();
         when(categoryRepository.findBySystemTrueOrHouseholdId(householdId)).thenReturn(List.of(parent));
-        when(categoryRepository.findById(parent.getId())).thenReturn(Optional.of(parent));
         when(categoryRepository.existsByNameAndHouseholdId(anyString(), any())).thenReturn(false);
 
         var req = new CategoryController.CreateRequest("Swiggy", "#00f", parent.getId());
@@ -103,5 +101,72 @@ class CategoryControllerTest {
                 () -> controller.create(principal, req));
         assertThat(ex.getStatusCode().value()).isEqualTo(400);
         assertThat(ex.getReason()).contains("depth");
+    }
+
+    @Test
+    void update_withNullParentId_doesNotClearParent() {
+        UUID catId = UUID.randomUUID();
+        Category existingParent = Category.builder().id(UUID.randomUUID()).name("Food").system(true).build();
+        Category cat = Category.builder().id(catId).name("Swiggy").color("#00f")
+                .household(household).system(false).parent(existingParent).build();
+        when(categoryRepository.findById(catId)).thenReturn(Optional.of(cat));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Send update with only name — no parentId, clearParent=false
+        var req = new CategoryController.UpdateRequest("Swiggy Renamed", null, null, false);
+        var response = controller.update(principal, catId, req);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().parentId()).isEqualTo(existingParent.getId());
+    }
+
+    @Test
+    void update_withClearParent_removesParent() {
+        UUID catId = UUID.randomUUID();
+        Category existingParent = Category.builder().id(UUID.randomUUID()).name("Food").system(true).build();
+        Category cat = Category.builder().id(catId).name("Swiggy").color("#00f")
+                .household(household).system(false).parent(existingParent).build();
+        when(categoryRepository.findById(catId)).thenReturn(Optional.of(cat));
+        when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new CategoryController.UpdateRequest(null, null, null, true);
+        var response = controller.update(principal, catId, req);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().parentId()).isNull();
+    }
+
+    @Test
+    void update_circularReference_throwsBadRequest() {
+        UUID catId = UUID.randomUUID();
+        UUID childId = UUID.randomUUID();
+        Category cat = Category.builder().id(catId).name("Food").household(household).system(false).build();
+        Category child = Category.builder().id(childId).name("Swiggy").household(household).system(false).parent(cat).build();
+        when(categoryRepository.findById(catId)).thenReturn(Optional.of(cat));
+        when(categoryRepository.findBySystemTrueOrHouseholdId(householdId))
+                .thenReturn(List.of(cat, child));
+
+        // Try to set Food's parent to its own child Swiggy — circular
+        var req = new CategoryController.UpdateRequest(null, null, childId, false);
+        var ex = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> controller.update(principal, catId, req));
+        assertThat(ex.getStatusCode().value()).isEqualTo(400);
+    }
+
+    @Test
+    void list_returnsParentIdInResponse() {
+        UUID parentId = UUID.randomUUID();
+        Category parent = Category.builder().id(parentId).name("Food").color("#f00").system(true).build();
+        Category child = Category.builder().id(UUID.randomUUID()).name("Swiggy").color("#00f")
+                .system(false).household(household).parent(parent).build();
+        when(categoryRepository.findBySystemTrueOrHouseholdId(householdId))
+                .thenReturn(List.of(parent, child));
+
+        var response = controller.list(principal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        var childResponse = response.getBody().stream()
+                .filter(r -> r.name().equals("Swiggy")).findFirst().orElseThrow();
+        assertThat(childResponse.parentId()).isEqualTo(parentId);
     }
 }

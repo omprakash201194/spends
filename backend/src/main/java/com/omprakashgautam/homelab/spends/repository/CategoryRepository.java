@@ -15,7 +15,8 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
     Optional<Category> findByName(String name);
     List<Category> findBySystemTrue();
     List<Category> findByHouseholdId(UUID householdId);
-    List<Category> findBySystemTrueOrHouseholdId(UUID householdId);
+    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.parent WHERE c.system = true OR c.household.id = :householdId")
+    List<Category> findBySystemTrueOrHouseholdId(@Param("householdId") UUID householdId);
     boolean existsByNameAndHouseholdId(String name, UUID householdId);
 
     @Modifying
