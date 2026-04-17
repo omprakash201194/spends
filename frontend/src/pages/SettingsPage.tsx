@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Key, Trash2, Check, ExternalLink, AlertTriangle, Bell } from 'lucide-react'
-import { getSettings, saveApiKey, deleteApiKey, saveNotificationEmail } from '../api/settings'
+import { Key, Trash2, Check, ExternalLink, AlertTriangle, Bell, Sliders } from 'lucide-react'
+import { getSettings, saveApiKey, deleteApiKey, saveNotificationEmail, getPreferences, savePreferences } from '../api/settings'
 import {
   deleteAllTransactions as apiDeleteTransactions,
   deleteAllRules as apiDeleteRules,
@@ -12,7 +12,7 @@ import {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'apikey' | 'notifications' | 'danger'
+type Tab = 'apikey' | 'notifications' | 'preferences' | 'danger'
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('apikey')
@@ -29,6 +29,7 @@ export default function SettingsPage() {
         {([
           { id: 'apikey',        label: 'API Key',       icon: Key           },
           { id: 'notifications', label: 'Notifications', icon: Bell          },
+          { id: 'preferences',  label: 'Preferences',   icon: Sliders       },
           { id: 'danger',       label: 'Danger Zone',   icon: AlertTriangle },
         ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
           <button
@@ -48,6 +49,7 @@ export default function SettingsPage() {
 
       {tab === 'apikey'        && <ApiKeyTab />}
       {tab === 'notifications' && <NotificationsTab />}
+      {tab === 'preferences'   && <PreferencesTab />}
       {tab === 'danger'        && <DangerZoneTab />}
     </div>
   )
@@ -218,6 +220,76 @@ function NotificationsTab() {
           Currently sending to <span className="font-medium text-gray-600 dark:text-gray-300">{data.notificationEmail}</span>
         </p>
       )}
+    </div>
+  )
+}
+
+// ── Tab: Preferences ─────────────────────────────────────────────────────────
+
+function PreferencesTab() {
+  const qc = useQueryClient()
+  const { data: prefs } = useQuery({
+    queryKey: ['preferences'],
+    queryFn: getPreferences,
+  })
+  const [depth, setDepth] = useState<number | ''>(prefs?.maxCategoryDepth ?? 5)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (prefs?.maxCategoryDepth !== undefined) setDepth(prefs.maxCategoryDepth)
+  }, [prefs?.maxCategoryDepth])
+
+  const saveMutation = useMutation({
+    mutationFn: () => savePreferences(Number(depth)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['preferences'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    },
+  })
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Sliders className="w-4 h-4 text-blue-500" />
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Category Preferences</h2>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        Configure how categories behave across your household.
+      </p>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Max Category Depth
+          </label>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+            Maximum levels of parent-child nesting allowed (1 = root only, 5 = up to 5 levels deep).
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={depth}
+              onChange={e => setDepth(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button
+              type="button"
+              onClick={() => saveMutation.mutate()}
+              disabled={depth === '' || (typeof depth === 'number' && (depth < 1 || depth > 10)) || saveMutation.isPending}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {saved ? <Check className="w-4 h-4" /> : 'Save'}
+            </button>
+          </div>
+          {saved && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> Preference saved
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
