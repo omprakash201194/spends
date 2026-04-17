@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PiggyBank, Pencil, Trash2, Check, X } from 'lucide-react'
 import { getBudgets, setBudget, deleteBudget, type CategoryBudget, type MonthSummary } from '../api/budget'
+import { getAnnualBudgets, setAnnualBudget, deleteAnnualBudget } from '../api/annualBudgets'
+import { getCategories } from '../api/categories'
 import InsightCard from '../components/InsightCard'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -20,29 +22,196 @@ function progressColor(pct: number, hasLimit: boolean) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BudgetPage() {
+  const [tab, setTab] = useState<'monthly' | 'annual'>('monthly')
+  const currentYear = new Date().getFullYear()
+
+  const qc = useQueryClient()
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['budgets'],
     queryFn: getBudgets,
     staleTime: 30_000,
   })
 
+  const { data: annualData = [], isLoading: annualLoading } = useQuery({
+    queryKey: ['annual-budgets', currentYear],
+    queryFn: () => getAnnualBudgets(currentYear),
+    enabled: tab === 'annual',
+  })
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
+    staleTime: 60_000,
+    enabled: tab === 'annual',
+  })
+
+  const setAnnualMutation = useMutation({
+    mutationFn: setAnnualBudget,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['annual-budgets'] }),
+  })
+
+  const deleteAnnualMutation = useMutation({
+    mutationFn: deleteAnnualBudget,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['annual-budgets'] }),
+  })
+
+  const [showAnnualForm, setShowAnnualForm] = useState(false)
+  const [annualCategoryId, setAnnualCategoryId] = useState('')
+  const [annualAmount, setAnnualAmount] = useState('')
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Budgets</h1>
-        {data && (
+        {tab === 'monthly' && data && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{data.month}</p>
+        )}
+        {tab === 'annual' && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{currentYear}</p>
         )}
       </div>
 
-      {isLoading && <LoadingSkeleton />}
-      {isError   && <ErrorState />}
-      {data      && (
-        <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6 lg:items-start">
-          <BudgetGrid summary={data} />
-          <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
-            <InsightCard type="BUDGET" label="Get Budget Advice" />
-          </div>
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTab('monthly')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'monthly'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setTab('annual')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'annual'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Annual
+        </button>
+      </div>
+
+      {/* Monthly tab */}
+      {tab === 'monthly' && (
+        <>
+          {isLoading && <LoadingSkeleton />}
+          {isError   && <ErrorState />}
+          {data      && (
+            <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6 lg:items-start">
+              <BudgetGrid summary={data} />
+              <div className="mt-6 lg:mt-0 lg:sticky lg:top-6">
+                <InsightCard type="BUDGET" label="Get Budget Advice" />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Annual tab */}
+      {tab === 'annual' && (
+        <div className="space-y-4">
+          {annualLoading ? (
+            <div className="text-gray-400 text-sm">Loading...</div>
+          ) : (
+            <>
+              {annualData.map(ab => {
+                const pct = ab.amount > 0 ? Math.min(100, (ab.spent / ab.amount) * 100) : 0
+                return (
+                  <div key={ab.id} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{ab.categoryIcon}</span>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-sm dark:text-white">{ab.categoryName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">
+                              ₹{ab.spent.toLocaleString('en-IN')} / ₹{ab.amount.toLocaleString('en-IN')}
+                            </span>
+                            <button
+                              onClick={() => deleteAnnualMutation.mutate(ab.id)}
+                              disabled={deleteAnnualMutation.isPending}
+                              className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className={`text-xs mt-1 ${pct >= 100 ? 'text-red-500 font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {Math.round(pct)}% used{pct >= 100 && ' — over budget'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {showAnnualForm ? (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 space-y-3">
+                  <h3 className="text-sm font-semibold dark:text-white">Set Annual Budget</h3>
+                  <select
+                    value={annualCategoryId}
+                    onChange={e => setAnnualCategoryId(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">Select category...</option>
+                    {categories?.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Annual budget amount"
+                    value={annualAmount}
+                    onChange={e => setAnnualAmount(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (!annualCategoryId || !annualAmount) return
+                        setAnnualMutation.mutate({
+                          categoryId: annualCategoryId,
+                          year: currentYear,
+                          amount: parseFloat(annualAmount),
+                        })
+                        setShowAnnualForm(false)
+                        setAnnualCategoryId('')
+                        setAnnualAmount('')
+                      }}
+                      disabled={!annualCategoryId || !annualAmount || setAnnualMutation.isPending}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-lg disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setShowAnnualForm(false)}
+                      className="flex-1 bg-gray-100 dark:bg-gray-700 text-sm py-2 rounded-lg dark:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAnnualForm(true)}
+                  className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-gray-400 hover:border-blue-400 hover:text-blue-500 text-sm transition-colors"
+                >
+                  + Set Annual Budget
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
