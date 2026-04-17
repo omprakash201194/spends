@@ -294,6 +294,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     long countDistinctBankAccounts(@Param("userId") UUID userId);
 
+    // ── Annual budgets: year-level withdrawal sum per category ────────────────
+
+    @Query("""
+        SELECT COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.category.id = :categoryId
+          AND YEAR(t.valueDate) = :year
+          AND t.withdrawalAmount > 0
+        """)
+    BigDecimal sumWithdrawalsForCategoryAndYear(@Param("userId") UUID userId,
+                                                @Param("categoryId") UUID categoryId,
+                                                @Param("year") int year);
+
     // ── Data health: near-duplicate candidates ────────────────────────────────
 
     /**

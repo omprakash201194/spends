@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-annual-budget
+      author: system
+      changes:
+        - createTable:
+            tableName: annual_budget
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_annual_budget_user
+                    references: app_user(id)
+              - column:
+                  name: category_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_annual_budget_category
+                    references: category(id)
+              - column:
+                  name: year
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(15,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: annual_budget
+            columnNames: user_id, category_id, year
+            constraintName: uq_annual_budget_user_category_year
