@@ -18,6 +18,7 @@ import DataHealthPage from './pages/DataHealthPage'
 import GoalsPage from './pages/GoalsPage'
 import MerchantAliasesPage from './pages/MerchantAliasesPage'
 import SettlementsPage from './pages/SettlementsPage'
+import CategoriesPage from './pages/CategoriesPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="transactions" element={<TransactionPage />} />
           <Route path="budgets" element={<BudgetPage />} />
           <Route path="household" element={<HouseholdPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="views" element={<ViewsPage />} />
           <Route path="views/:id" element={<ViewDetailPage />} />
