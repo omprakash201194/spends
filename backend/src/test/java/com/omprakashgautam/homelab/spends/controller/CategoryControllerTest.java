@@ -68,7 +68,7 @@ class CategoryControllerTest {
             return c;
         });
 
-        var req = new CategoryController.CreateRequest("Swiggy", "#00f", parent.getId());
+        var req = new CategoryController.CreateRequest("Swiggy", "#00f", null, parent.getId());
         var response = controller.create(principal, req);
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);
@@ -96,7 +96,7 @@ class CategoryControllerTest {
         when(categoryRepository.findBySystemTrueOrHouseholdId(householdId)).thenReturn(List.of(parent));
         when(categoryRepository.existsByNameAndHouseholdId(anyString(), any())).thenReturn(false);
 
-        var req = new CategoryController.CreateRequest("Swiggy", "#00f", parent.getId());
+        var req = new CategoryController.CreateRequest("Swiggy", "#00f", null, parent.getId());
         var ex = assertThrows(org.springframework.web.server.ResponseStatusException.class,
                 () -> controller.create(principal, req));
         assertThat(ex.getStatusCode().value()).isEqualTo(400);
@@ -113,7 +113,7 @@ class CategoryControllerTest {
         when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // Send update with only name — no parentId, clearParent=false
-        var req = new CategoryController.UpdateRequest("Swiggy Renamed", null, null, false);
+        var req = new CategoryController.UpdateRequest("Swiggy Renamed", null, null, null, false);
         var response = controller.update(principal, catId, req);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -129,7 +129,7 @@ class CategoryControllerTest {
         when(categoryRepository.findById(catId)).thenReturn(Optional.of(cat));
         when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var req = new CategoryController.UpdateRequest(null, null, null, true);
+        var req = new CategoryController.UpdateRequest(null, null, null, null, true);
         var response = controller.update(principal, catId, req);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -147,7 +147,7 @@ class CategoryControllerTest {
                 .thenReturn(List.of(cat, child));
 
         // Try to set Food's parent to its own child Swiggy — circular
-        var req = new CategoryController.UpdateRequest(null, null, childId, false);
+        var req = new CategoryController.UpdateRequest(null, null, null, childId, false);
         var ex = assertThrows(org.springframework.web.server.ResponseStatusException.class,
                 () -> controller.update(principal, catId, req));
         assertThat(ex.getStatusCode().value()).isEqualTo(400);

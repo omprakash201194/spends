@@ -18,8 +18,9 @@ export async function createCategory(
   name: string,
   color: string,
   parentId?: string | null,
+  icon?: string | null,
 ): Promise<Category> {
-  const { data } = await apiClient.post<Category>('/categories', { name, color, parentId: parentId ?? null })
+  const { data } = await apiClient.post<Category>('/categories', { name, color, icon: icon ?? null, parentId: parentId ?? null })
   return data
 }
 
@@ -29,10 +30,12 @@ export async function updateCategory(
   color: string,
   parentId?: string | null,
   clearParent?: boolean,
+  icon?: string | null,
 ): Promise<Category> {
   const { data } = await apiClient.put<Category>(`/categories/${id}`, {
     name,
     color,
+    icon: icon ?? null,
     parentId: parentId ?? null,
     clearParent: clearParent ?? false,
   })

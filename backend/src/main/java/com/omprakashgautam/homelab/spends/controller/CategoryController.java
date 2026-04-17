@@ -36,8 +36,8 @@ public class CategoryController {
         }
     }
 
-    public record CreateRequest(String name, String color, UUID parentId) {}
-    public record UpdateRequest(String name, String color, UUID parentId, boolean clearParent) {}
+    public record CreateRequest(String name, String color, String icon, UUID parentId) {}
+    public record UpdateRequest(String name, String color, String icon, UUID parentId, boolean clearParent) {}
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> list(@AuthenticationPrincipal UserDetailsImpl principal) {
@@ -78,6 +78,7 @@ public class CategoryController {
         Category saved = categoryRepository.save(Category.builder()
                 .name(req.name().trim())
                 .color(req.color() != null ? req.color().trim() : "#94a3b8")
+                .icon(req.icon() != null && !req.icon().isBlank() ? req.icon().trim() : null)
                 .household(household)
                 .system(false)
                 .parent(parent)
@@ -109,6 +110,9 @@ public class CategoryController {
         }
         if (req.color() != null && !req.color().isBlank()) {
             cat.setColor(req.color().trim());
+        }
+        if (req.icon() != null) {
+            cat.setIcon(req.icon().isBlank() ? null : req.icon().trim());
         }
 
         if (req.parentId() != null) {
