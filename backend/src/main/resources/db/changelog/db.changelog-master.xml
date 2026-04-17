@@ -22,5 +22,6 @@
     <include file="changes/015-transaction-split.yaml" relativeToChangelogFile="true"/>
     <include file="changes/016-settlement.yaml" relativeToChangelogFile="true"/>
     <include file="changes/017-notification-email.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/018-perf-indexes.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

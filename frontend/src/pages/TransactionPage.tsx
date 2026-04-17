@@ -69,6 +69,7 @@ export default function TransactionPage() {
     queryKey: ['transactions', filters],
     queryFn: () => getTransactions(filters),
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
   })
 
   const { data: categories = [] } = useQuery({

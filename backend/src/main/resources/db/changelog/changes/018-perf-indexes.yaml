@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 018-perf-indexes
+      author: system
+      changes:
+        - sql:
+            sql: >
+              CREATE INDEX IF NOT EXISTS idx_txn_value_date
+                ON financial_transaction (value_date DESC);
+
+              CREATE INDEX IF NOT EXISTS idx_txn_bank_account_value_date
+                ON financial_transaction (bank_account_id, value_date DESC);
