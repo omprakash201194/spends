@@ -20,6 +20,7 @@ import {
   Sun,
   ShieldCheck,
   Target,
+  Tag,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
@@ -39,6 +40,7 @@ const nav = [
   { to: '/reports',      label: 'Reports',      icon: FileText },
   { to: '/net-worth',   label: 'Net Worth',    icon: TrendingUp },
   { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
+  { to: '/merchant-aliases', label: 'Merchant Aliases', icon: Tag },
   { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
