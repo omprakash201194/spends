@@ -24,3 +24,17 @@ export async function saveNotificationEmail(notificationEmail: string): Promise<
   const { data } = await apiClient.put<Settings>('/settings/notification-email', { notificationEmail })
   return data
 }
+
+export interface Preferences {
+  maxCategoryDepth: number
+}
+
+export async function getPreferences(): Promise<Preferences> {
+  const { data } = await apiClient.get<Preferences>('/settings/preferences')
+  return data
+}
+
+export async function savePreferences(maxCategoryDepth: number): Promise<Preferences> {
+  const { data } = await apiClient.put<Preferences>('/settings/preferences', { maxCategoryDepth })
+  return data
+}
