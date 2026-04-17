@@ -81,3 +81,8 @@ export async function updateNote(id: string, note: string): Promise<Transaction>
   const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/note`, { note })
   return data
 }
+
+export async function bulkUpdateCategory(ids: string[], categoryId: string): Promise<{ updated: number }> {
+  const { data } = await apiClient.patch<{ updated: number }>('/transactions/bulk-category', { ids, categoryId })
+  return data
+}

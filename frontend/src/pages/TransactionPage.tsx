@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Download, MessageSquare } from 'lucide-react'
 import { downloadTransactionsCsv } from '../api/export'
 import InsightCard from '../components/InsightCard'
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
-  getTransactions, updateCategory, toggleReviewed, updateNote,
+  getTransactions, updateCategory, toggleReviewed, updateNote, bulkUpdateCategory,
   type Transaction, type TransactionFilters,
 } from '../api/transactions'
 import { getCategories, type Category } from '../api/categories'
@@ -85,6 +85,36 @@ export default function TransactionPage() {
   const toggleReviewedMut = useMutation({
     mutationFn: toggleReviewed,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+  })
+
+  // ── Bulk selection ────────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkCategoryId, setBulkCategoryId] = useState('')
+
+  useEffect(() => { setSelectedIds(new Set()) }, [page])
+
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const toggleAll = () => {
+    if (data?.content && selectedIds.size === data.content.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(data?.content.map(tx => tx.id) ?? []))
+    }
+  }
+
+  const bulkMutation = useMutation({
+    mutationFn: ({ ids, categoryId }: { ids: string[]; categoryId: string }) =>
+      bulkUpdateCategory(ids, categoryId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      setSelectedIds(new Set())
+      setBulkCategoryId('')
+    },
   })
 
   const handleSort = useCallback((col: string) => {
@@ -227,6 +257,14 @@ export default function TransactionPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
               <tr>
+                <th className="px-3 py-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={!!data?.content.length && selectedIds.size === data.content.length}
+                    onChange={toggleAll}
+                    className="rounded"
+                  />
+                </th>
                 <Th col="valueDate"   label="Date"       current={sortBy} dir={sortDir} onSort={handleSort} />
                 <Th col="merchant"    label="Merchant"   current={sortBy} dir={sortDir} onSort={handleSort} />
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -246,14 +284,16 @@ export default function TransactionPage() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {isLoading ? (
-                <tr><td colSpan={9} className="text-center py-16 text-gray-400 dark:text-gray-500">Loading…</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-gray-400 dark:text-gray-500">Loading…</td></tr>
               ) : !data || data.content.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-16 text-gray-400 dark:text-gray-500">No transactions found</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-gray-400 dark:text-gray-500">No transactions found</td></tr>
               ) : data.content.map((tx) => (
                 <TxRow
                   key={tx.id}
                   tx={tx}
                   categories={categories}
+                  checked={selectedIds.has(tx.id)}
+                  onToggle={() => toggleSelect(tx.id)}
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
                   onCategoryUpdated={() => qc.invalidateQueries({ queryKey: ['transactions'] })}
                 />
@@ -292,6 +332,36 @@ export default function TransactionPage() {
         <InsightCard type="TRANSACTIONS" label="Analyse My Spending" />
       </div>
       </div>{/* end sidebar grid */}
+
+      {/* Floating bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 shadow-xl rounded-xl px-6 py-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 z-50">
+          <span className="text-sm font-medium dark:text-white">{selectedIds.size} selected</span>
+          <select
+            value={bulkCategoryId}
+            onChange={e => setBulkCategoryId(e.target.value)}
+            className="text-sm border rounded px-2 py-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            <option value="">Select category…</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+            ))}
+          </select>
+          <button
+            disabled={!bulkCategoryId || bulkMutation.isPending}
+            onClick={() => bulkMutation.mutate({ ids: Array.from(selectedIds), categoryId: bulkCategoryId })}
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded disabled:opacity-50"
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => { setSelectedIds(new Set()); setBulkCategoryId('') }}
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -369,9 +439,11 @@ function AddToViewPicker({
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 
-function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
+function TxRow({ tx, categories, checked, onToggle, onToggleReviewed, onCategoryUpdated }: {
   tx: Transaction
   categories: Category[]
+  checked: boolean
+  onToggle: () => void
   onToggleReviewed: () => void
   onCategoryUpdated: () => void
 }) {
@@ -410,6 +482,16 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
   return (
     <>
       <tr className={clsx('hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', tx.reviewed && 'opacity-60')}>
+        {/* Checkbox */}
+        <td className="px-3 py-2">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onToggle}
+            className="rounded"
+          />
+        </td>
+
         {/* Date */}
         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
           {formatDate(tx.valueDate)}
@@ -529,7 +611,7 @@ function TxRow({ tx, categories, onToggleReviewed, onCategoryUpdated }: {
       {/* Rule creation prompt */}
       {rulePrompt && (
         <tr>
-          <td colSpan={9} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
+          <td colSpan={10} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-blue-800">
                 Create a rule to automatically categorize <strong>{tx.merchantName ?? 'this merchant'}</strong> as{' '}
