@@ -526,3 +526,23 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - `DashboardPage` — blue banner showing recurring pattern count with "View all" link
 - Recurring nav link (Repeat icon) in sidebar
 - **InsightCard improvements (all pages):** persistent localStorage cache (`spendstack-insight-{type}`); hydrated on mount via lazy `useState` initializer; stores `{insight, month, generatedAt}`; header shows relative age ("just now" / "5m ago" / "3h ago" / "yesterday" / "16 Apr"); inline `**bold**` markdown rendered as `<strong>`; card lives in a sticky 320px right sidebar on all four insight pages (Dashboard, Budget, Transactions, Recurring); all pages use `max-w-7xl` two-column layout (`lg:grid lg:grid-cols-[1fr_320px]`)
+
+### Plan A — Sidebar Redesign + CategoriesPage ✅ COMPLETE
+- **Sidebar grouping** — `NAV_GROUPS` constant: 5 collapsible sections (Spend · Plan · Insights · Manage · Social); `navStore.ts` Zustand persist store (`spends-nav` key) tracks open/closed per section; `ChevronDown` toggle on each section header
+- **CategoriesPage** — new route `/categories` (Spend group, after Transactions); contains Categories tab (tree view) + Rules tab (extracted verbatim from SettingsPage); SettingsPage cleaned to 3 tabs (API Key, Notifications, Danger Zone)
+- **Routes**: `App.tsx` — `/categories` added after `/transactions`; Layout groups: Spend (/, /transactions, /categories), Plan (/budgets, /goals, /net-worth), Insights (/recurring, /reports, /data-health), Manage (/import, /accounts, /merchant-aliases), Social (/views, /settlements, /household)
+- **Performance** — migration 018: composite index `idx_txn_bank_account_value_date (bank_account_id, value_date DESC)`; `staleTime: 30_000` on transactions query
+
+### Plan B — Category Hierarchy ✅ COMPLETE
+- **Migration 019** — `max_category_depth INT NOT NULL DEFAULT 5` on `household` table; `Household` entity gets `@Builder.Default private int maxCategoryDepth = 5`
+- **`CategoryTreeUtils`** — pure static utility (no Spring beans): `getDepth(category, allCats) → int`, `getDescendantIds(categoryId, allCats) → Set<UUID>` (BFS), `getAncestorIds(categoryId, allCats) → List<UUID>`; 7 unit tests
+- **`CategoryController`** — `CategoryResponse` adds `UUID parentId`; `CreateRequest`/`UpdateRequest` add `UUID parentId, boolean clearParent`; depth validation via `CategoryTreeUtils.getDepth` against `household.maxCategoryDepth`; circular reference prevention via `getDescendantIds`; `CategoryRepository.findBySystemTrueOrHouseholdId` updated with `LEFT JOIN FETCH c.parent` to avoid N+1
+- **`TransactionService`** — `categoryId` filter expands to include all descendant IDs via `CategoryTreeUtils.getDescendantIds`; `buildSpec` takes `Set<UUID> categoryIds` with `IN` predicate
+- **`categoryBreakdown` JPQL** — first column now `t.category.id` → rows are `[UUID, String name, String color, BigDecimal sum]`
+- **`DashboardService`** — injects `CategoryRepository` + `UserRepository`; `rollupToRoots` post-processes breakdown to merge child spending into root ancestors; `CategoryStat` list reflects rolled-up totals
+- **`BudgetService`** — same rollup logic; `spentByCategory` now UUID-keyed (was name-keyed); lookup uses `cat.getId()`
+- **Settings API** — `GET/PUT /api/settings/preferences` returns/accepts `{maxCategoryDepth: int}` (validated 1–10); `UserSettingsDto.Preferences` + `PreferencesRequest` records; `HouseholdRepository` injected into `UserSettingsController`
+- **Frontend API** — `Category` interface adds `parentId: string | null`; `createCategory` accepts optional `parentId`; `updateCategory` accepts optional `parentId, clearParent`; `buildCategoryTree(categories) → CategoryNode[]`; `flattenWithDepth(nodes) → FlatCategoryWithDepth[]`; `getPreferences`/`savePreferences` in settings API
+- **CategoriesPage tree view** — `CategoriesTab` replaced with tree renderer: expand/collapse per node, depth badges (L1, L2…), "Add child" button on hover (sets `createParentId`), inline edit; system categories also rendered as tree
+- **TransactionPage filter** — category `<select>` shows indented hierarchy via `renderCategoryOptions(buildCategoryTree(categories))` (4 × `\u00a0` per depth level)
+- **SettingsPage Preferences tab** — new tab between Notifications and Danger Zone; numeric input (1–10) for `maxCategoryDepth`; syncs on load via `useEffect`, saves via mutation, shows "Preference saved" feedback
