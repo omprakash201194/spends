@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +60,7 @@ class WidgetServiceTest {
                 .widgetType(WidgetType.PIE).filterType(FilterType.ALL)
                 .metric(Metric.SPEND).periodMonths(3).color("#6366f1").position(0).build();
         when(widgetRepo.findByIdAndUserId(widgetId, userId)).thenReturn(Optional.of(w));
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
         List<Object[]> breakdownRows = new ArrayList<>();
         breakdownRows.add(new Object[]{UUID.randomUUID(), "Food & Dining", "#f97316", BigDecimal.valueOf(5000)});
         when(txRepo.categoryBreakdownAll(eq(userId), any(), any())).thenReturn(breakdownRows);
@@ -88,6 +90,7 @@ class WidgetServiceTest {
                 .metric(Metric.SPEND).periodMonths(6).color("#f97316").position(0).build();
 
         when(widgetRepo.findByIdAndUserId(widgetId, userId)).thenReturn(Optional.of(w));
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
         when(categoryRepo.findAll()).thenReturn(List.of(root, child));
         List<Object[]> categoryRows = new ArrayList<>();
         categoryRows.add(new Object[]{rootCatId, "Food", "#f97316", BigDecimal.valueOf(2000)});
@@ -112,6 +115,7 @@ class WidgetServiceTest {
                 .widgetType(WidgetType.LINE).filterType(FilterType.ALL)
                 .metric(Metric.SPEND).periodMonths(3).color("#6366f1").position(0).build();
         when(widgetRepo.findByIdAndUserId(widgetId, userId)).thenReturn(Optional.of(w));
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
         List<Object[]> trendRows = new ArrayList<>();
         trendRows.add(new Object[]{"2026-01", BigDecimal.valueOf(10000), BigDecimal.valueOf(50000), 45L});
         trendRows.add(new Object[]{"2026-02", BigDecimal.valueOf(12000), BigDecimal.valueOf(50000), 50L});
@@ -133,6 +137,7 @@ class WidgetServiceTest {
                 .widgetType(WidgetType.STAT).filterType(FilterType.ALL)
                 .metric(Metric.SPEND).periodMonths(3).color("#6366f1").position(0).build();
         when(widgetRepo.findByIdAndUserId(widgetId, userId)).thenReturn(Optional.of(w));
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
         when(txRepo.sumWithdrawals(eq(userId), any(), any())).thenReturn(BigDecimal.valueOf(45000));
 
         WidgetDto.WidgetData data = widgetService.getWidgetData(widgetId, userId);
