@@ -40,7 +40,6 @@ public class TransactionController {
     public ResponseEntity<TransactionDto.PagedResponse> list(
             @AuthenticationPrincipal UserDetailsImpl principal,
             @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "AND") String searchMode,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) UUID accountId,
             @RequestParam(defaultValue = "ALL") String type,
@@ -52,7 +51,7 @@ public class TransactionController {
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
         return ResponseEntity.ok(transactionService.list(
-                principal.getId(), search, searchMode, categoryId, accountId,
+                principal.getId(), search, categoryId, accountId,
                 type, dateFrom, dateTo, page, size, sortBy, sortDir
         ));
     }
@@ -61,7 +60,6 @@ public class TransactionController {
     public ResponseEntity<TransactionDto.SummaryResponse> summary(
             @AuthenticationPrincipal UserDetailsImpl principal,
             @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "AND") String searchMode,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) UUID accountId,
             @RequestParam(defaultValue = "ALL") String type,
@@ -69,7 +67,7 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         return ResponseEntity.ok(transactionService.getSummary(
-                principal.getId(), search, searchMode, categoryId, accountId, type, dateFrom, dateTo
+                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo
         ));
     }
 

@@ -47,7 +47,6 @@ public class TransactionService {
     public TransactionDto.PagedResponse list(
             UUID userId,
             String search,
-            String searchMode,
             UUID categoryId,
             UUID accountId,
             String type,           // DEBIT | CREDIT | ALL
@@ -67,7 +66,7 @@ public class TransactionService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, searchMode, categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
         Page<Transaction> result = transactionRepository.findAll(spec, pageable);
 
         List<TransactionDto.Response> content = result.getContent()
@@ -99,13 +98,13 @@ public class TransactionService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, "AND", categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
         return transactionRepository.findAll(spec, Sort.by("valueDate").descending());
     }
 
     @Transactional(readOnly = true)
     public TransactionDto.SummaryResponse getSummary(
-            UUID userId, String search, String searchMode, UUID categoryId,
+            UUID userId, String search, UUID categoryId,
             UUID accountId, String type, LocalDate dateFrom, LocalDate dateTo
     ) {
         Set<UUID> categoryIds = null;
@@ -114,7 +113,7 @@ public class TransactionService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, searchMode, categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
 
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
@@ -139,7 +138,6 @@ public class TransactionService {
     private Specification<Transaction> buildSpec(
             UUID userId,
             String search,
-            String searchMode,
             Set<UUID> categoryIds,
             UUID accountId,
             String type,
@@ -152,14 +150,27 @@ public class TransactionService {
             // Only the user's own transactions (via bankAccount → user)
             predicates.add(cb.equal(root.get("bankAccount").get("user").get("id"), userId));
 
-            // Multi-term search: split on whitespace, '-'/'-' prefix = NOT
+            // Search: parse "term1 and term2" / "term1 or term2"; prefix '-'/'!' = NOT
             if (search != null && !search.isBlank()) {
-                String[] terms = search.trim().split("\\s+");
+                String raw = search.trim();
+                String[] terms;
+                boolean orMode;
+                if (raw.toLowerCase().contains(" or ")) {
+                    terms = raw.split("(?i)\\s+or\\s+");
+                    orMode = true;
+                } else if (raw.toLowerCase().contains(" and ")) {
+                    terms = raw.split("(?i)\\s+and\\s+");
+                    orMode = false;
+                } else {
+                    terms = new String[]{ raw };
+                    orMode = false;
+                }
                 List<Predicate> positiveTerms = new ArrayList<>();
                 for (String term : terms) {
-                    if (term.isBlank()) continue;
-                    boolean negate = term.startsWith("-") || term.startsWith("!");
-                    String word = negate ? term.substring(1) : term;
+                    String t = term.trim();
+                    if (t.isBlank()) continue;
+                    boolean negate = t.startsWith("-") || t.startsWith("!");
+                    String word = negate ? t.substring(1) : t;
                     if (word.isBlank()) continue;
                     String pattern = "%" + word.toLowerCase() + "%";
                     Predicate match = cb.or(
@@ -173,7 +184,6 @@ public class TransactionService {
                     }
                 }
                 if (!positiveTerms.isEmpty()) {
-                    boolean orMode = "OR".equalsIgnoreCase(searchMode);
                     predicates.add(orMode
                             ? cb.or(positiveTerms.toArray(new Predicate[0]))
                             : cb.and(positiveTerms.toArray(new Predicate[0])));
