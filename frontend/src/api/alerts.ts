@@ -14,7 +14,7 @@ export interface AlertSummary {
   alerts: Alert[]
 }
 
-export async function getAlerts(): Promise<AlertSummary> {
-  const { data } = await apiClient.get<AlertSummary>('/alerts')
+export async function getAlerts(month?: string): Promise<AlertSummary> {
+  const { data } = await apiClient.get<AlertSummary>('/alerts', { params: month ? { month } : undefined })
   return data
 }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -28,8 +29,10 @@ public class AlertService {
     private static final DateTimeFormatter DAY_MONTH    = DateTimeFormatter.ofPattern("d MMM");
 
     @Transactional(readOnly = true)
-    public AlertDto.AlertSummary getAlerts(UUID userId) {
-        LocalDate anchor      = resolveAnchorMonth(userId);
+    public AlertDto.AlertSummary getAlerts(UUID userId, YearMonth requestedMonth) {
+        LocalDate anchor      = requestedMonth != null
+                ? requestedMonth.atDay(1)
+                : resolveAnchorMonth(userId);
         LocalDate from        = anchor.withDayOfMonth(1);
         LocalDate to          = anchor.withDayOfMonth(anchor.lengthOfMonth());
         LocalDate historyFrom = anchor.minusMonths(HISTORY_MONTHS).withDayOfMonth(1);

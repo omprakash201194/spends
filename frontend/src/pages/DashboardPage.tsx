@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import {
   TrendingDown, TrendingUp, Wallet, BarChart3, ShoppingBag, ArrowRight,
-  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat, Target,
+  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat, Target, Bell,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -64,30 +64,63 @@ export default function DashboardPage() {
     staleTime: 60_000,
   })
 
+  const alertCount = alertData?.alerts.length ?? 0
+  const [alertPopoverOpen, setAlertPopoverOpen] = useState(false)
+  const alertRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!alertPopoverOpen) return
+    const handler = (e: MouseEvent) => {
+      if (alertRef.current && !alertRef.current.contains(e.target as Node)) setAlertPopoverOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [alertPopoverOpen])
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Welcome back, {user?.displayName}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {user?.householdName} · {data?.month ?? new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Welcome back, {user?.displayName}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {user?.householdName} · {data?.month ?? new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+
+        {/* Alert bell */}
+        {alertCount > 0 && (
+          <div className="relative" ref={alertRef}>
+            <button
+              onClick={() => setAlertPopoverOpen(o => !o)}
+              className="relative p-2 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors"
+              title="View alerts"
+            >
+              <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {alertCount}
+              </span>
+            </button>
+            {alertPopoverOpen && alertData && (
+              <AlertPopover data={alertData} onClose={() => setAlertPopoverOpen(false)} />
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading && <LoadingSkeleton />}
       {isError  && <ErrorState />}
-      {data     && <DashboardContent data={data} alertData={alertData} recurringData={recurringData} goalsData={goalsData} />}
+      {data     && <DashboardContent data={data} recurringData={recurringData} goalsData={goalsData} />}
     </div>
   )
 }
 
 // ── Content (loaded) ──────────────────────────────────────────────────────────
 
-function DashboardContent({ data, alertData, recurringData, goalsData }: {
+function DashboardContent({ data, recurringData, goalsData }: {
   data: DashboardSummary
-  alertData?: AlertSummary
   recurringData?: RecurringSummary
   goalsData?: GoalResponse[]
 }) {
@@ -98,11 +131,6 @@ function DashboardContent({ data, alertData, recurringData, goalsData }: {
 
   return (
     <>
-      {/* Alerts panel — only shown when there are alerts */}
-      {alertData && alertData.alerts.length > 0 && (
-        <AlertsPanel data={alertData} />
-      )}
-
       {/* Recurring patterns banner */}
       {recurringData && recurringData.patterns.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 flex items-center justify-between mb-6">
@@ -324,60 +352,23 @@ function DashboardContent({ data, alertData, recurringData, goalsData }: {
   )
 }
 
-// ── Alerts panel ──────────────────────────────────────────────────────────────
+// ── Alert popover + shared row ────────────────────────────────────────────────
 
-const ALERT_META: Record<AlertType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
+export const ALERT_META: Record<AlertType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   LARGE_TRANSACTION: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950',  label: 'Large transaction' },
   NEW_MERCHANT:      { icon: Sparkles,      color: 'text-blue-600',  bg: 'bg-blue-50 dark:bg-blue-950',   label: 'New merchant'      },
   CATEGORY_SPIKE:    { icon: TrendingUp,    color: 'text-red-600',   bg: 'bg-red-50 dark:bg-red-950',    label: 'Spending spike'    },
 }
 
-function inrFull2(n: number) {
+export function inrCompact(n: number) {
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function AlertsPanel({ data }: { data: AlertSummary }) {
-  const [expanded, setExpanded] = useState(true)
-  const count = data.alerts.length
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 mb-6 overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Alerts</span>
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
-            {count}
-          </span>
-        </div>
-        {expanded
-          ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-        }
-      </button>
-
-      {/* Alert rows */}
-      {expanded && (
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {data.alerts.map((alert, i) => (
-            <AlertRow key={i} alert={alert} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AlertRow({ alert }: { alert: Alert }) {
+export function AlertRow({ alert }: { alert: Alert }) {
   const meta = ALERT_META[alert.type]
   const Icon = meta.icon
-
   return (
-    <div className="flex items-center gap-3 px-4 sm:px-5 py-3">
+    <div className="flex items-center gap-3 px-4 py-3">
       <div className={`w-8 h-8 rounded-lg ${meta.bg} flex items-center justify-center flex-shrink-0`}>
         <Icon className={`w-4 h-4 ${meta.color}`} />
       </div>
@@ -386,8 +377,43 @@ function AlertRow({ alert }: { alert: Alert }) {
         <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{meta.label} · {alert.message}</p>
       </div>
       <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 ml-2">
-        {inrFull2(alert.amount)}
+        {inrCompact(alert.amount)}
       </span>
+    </div>
+  )
+}
+
+function AlertPopover({ data, onClose }: { data: AlertSummary; onClose: () => void }) {
+  const preview = data.alerts.slice(0, 5)
+  const hasMore = data.alerts.length > 5
+  return (
+    <div className="absolute right-0 top-full mt-2 z-50 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <Bell className="w-4 h-4 text-amber-500" />
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Alerts · {data.month}</span>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <ChevronUp className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-80 overflow-y-auto">
+        {preview.map((alert, i) => <AlertRow key={i} alert={alert} />)}
+      </div>
+      {hasMore && (
+        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 text-center">
+          <Link to="/alerts" onClick={onClose} className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center justify-center gap-1">
+            View all {data.alerts.length} alerts <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
+      {!hasMore && (
+        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 text-center">
+          <Link to="/alerts" onClick={onClose} className="text-xs text-gray-400 dark:text-gray-500 hover:underline flex items-center justify-center gap-1">
+            View alert history <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

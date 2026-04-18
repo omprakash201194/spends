@@ -23,6 +23,7 @@ import {
   Tag,
   ChevronDown,
   Wallet,
+  Bell,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
@@ -54,6 +55,7 @@ const NAV_GROUPS = [
     label: 'Insights',
     items: [
       { to: '/recurring',    label: 'Recurring',    icon: Repeat },
+      { to: '/alerts',       label: 'Alerts',       icon: Bell },
       { to: '/reports',      label: 'Reports',      icon: FileText },
       { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
     ],
