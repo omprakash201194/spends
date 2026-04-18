@@ -1100,6 +1100,13 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
                 >
                   Just this once
                 </button>
+                <button
+                  onClick={() => setRulePrompt(null)}
+                  disabled={updateCatMut.isPending}
+                  className="px-3 py-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </td>
