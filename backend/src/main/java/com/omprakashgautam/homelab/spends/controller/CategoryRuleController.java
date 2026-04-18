@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -114,6 +115,61 @@ public class CategoryRuleController {
         }
         ruleRepository.delete(rule);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Export / Import ───────────────────────────────────────────────────────
+
+    public record RuleExportEntry(String pattern, String categoryName, int priority) {}
+    public record ImportResult(int created, int skipped, List<String> errors) {}
+
+    @GetMapping("/export")
+    public ResponseEntity<List<RuleExportEntry>> export(@AuthenticationPrincipal UserDetailsImpl principal) {
+        List<RuleExportEntry> entries = ruleRepository.listRulesForUser(principal.getId())
+                .stream()
+                .map(r -> new RuleExportEntry(r.getPattern(), r.getCategory().getName(), r.getPriority()))
+                .toList();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"category-rules.json\"")
+                .body(entries);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ImportResult> importRules(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody List<RuleExportEntry> entries) {
+
+        User user = resolveUser(principal);
+        UUID userId = user.getId();
+        UUID householdId = user.getHousehold().getId();
+        List<CategoryRule> existing = ruleRepository.listRulesForUser(userId);
+        List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(householdId);
+        int created = 0, skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (RuleExportEntry entry : entries) {
+            if (entry.pattern() == null || entry.pattern().isBlank()) {
+                errors.add("Empty pattern — skipped");
+                continue;
+            }
+            String normalised = entry.pattern().trim().toLowerCase();
+            // Skip if same pattern already exists for user (regardless of category)
+            boolean dup = existing.stream().anyMatch(r -> r.getPattern().equals(normalised));
+            if (dup) { skipped++; continue; }
+
+            Category cat = allCats.stream()
+                    .filter(c -> c.getName().equalsIgnoreCase(entry.categoryName()))
+                    .findFirst().orElse(null);
+            if (cat == null) {
+                errors.add("Category '" + entry.categoryName() + "' not found for pattern '" + normalised + "' — skipped");
+                continue;
+            }
+            CategoryRule saved = ruleRepository.save(CategoryRule.builder()
+                    .user(user).pattern(normalised).category(cat)
+                    .priority(entry.priority()).global(false).build());
+            existing.add(saved);
+            created++;
+        }
+        return ResponseEntity.ok(new ImportResult(created, skipped, errors));
     }
 
     @PostMapping("/reapply")

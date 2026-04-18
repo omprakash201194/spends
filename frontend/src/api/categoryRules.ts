@@ -41,3 +41,25 @@ export async function reapplyCategoryRules(): Promise<{ updated: number }> {
   const { data } = await apiClient.post<{ updated: number }>('/category-rules/reapply')
   return data
 }
+
+export interface RuleExportEntry {
+  pattern: string
+  categoryName: string
+  priority: number
+}
+
+export interface RulesImportResult {
+  created: number
+  skipped: number
+  errors: string[]
+}
+
+export async function exportCategoryRules(): Promise<RuleExportEntry[]> {
+  const { data } = await apiClient.get<RuleExportEntry[]>('/category-rules/export')
+  return data
+}
+
+export async function importCategoryRules(entries: RuleExportEntry[]): Promise<RulesImportResult> {
+  const { data } = await apiClient.post<RulesImportResult>('/category-rules/import', entries)
+  return data
+}

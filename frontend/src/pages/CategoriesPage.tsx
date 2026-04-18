@@ -1,21 +1,23 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Pencil, X, Trash2, Tag, Sliders, Check, ChevronDown, ChevronRight, Sparkles,
   Briefcase, ShoppingCart, Utensils, Car, Home, Heart, Music, Zap,
   TrendingUp, DollarSign, Gift, Coffee, Plane, Book, Smartphone,
   Baby, Dumbbell, Dog, Wallet, Bus, Fuel, Pizza, Shirt,
+  Download, Upload,
   type LucideIcon,
 } from 'lucide-react'
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
+  exportCategories, importCategories,
   buildCategoryTree, flattenWithDepth,
-  type Category, type CategoryNode,
+  type Category, type CategoryNode, type CategoryExportEntry,
 } from '../api/categories'
 import {
   getCategoryRules, createCategoryRule, updateCategoryRule, deleteCategoryRule,
-  reapplyCategoryRules,
-  type CategoryRule,
+  reapplyCategoryRules, exportCategoryRules, importCategoryRules,
+  type CategoryRule, type RuleExportEntry,
 } from '../api/categoryRules'
 
 // ── Colour palette for custom categories ─────────────────────────────────────
@@ -193,6 +195,36 @@ function CategoriesTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   })
 
+  // ── Export / Import ──────────────────────────────────────────────────────
+  const importRef = useRef<HTMLInputElement>(null)
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  async function handleExport() {
+    const data = await exportCategories()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'categories.json'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    e.target.value = ''
+    try {
+      const text = await file.text()
+      const entries: CategoryExportEntry[] = JSON.parse(text)
+      setImporting(true)
+      const result = await importCategories(entries)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      setImportResult(result)
+    } catch {
+      setImportResult({ created: 0, skipped: 0, errors: ['Invalid file — make sure it is a categories.json exported from SpendStack'] })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const startEdit = (c: Category) => {
     setEditId(c.id)
     setEditName(c.name)
@@ -338,16 +370,40 @@ function CategoriesTab() {
             {customCount > 0 ? `${customCount} custom · ` : ''}System categories cannot be modified — hover any row to add a subcategory
           </p>
         </div>
-        {!showCreateForm && (
-          <button
-            type="button"
-            onClick={() => { setCreateParentId(null); setShowCreateForm(true) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> New Category
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
           </button>
-        )}
+          <button type="button" onClick={() => importRef.current?.click()} disabled={importing}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
+            <Upload className="w-3.5 h-3.5" /> {importing ? 'Importing…' : 'Import'}
+          </button>
+          <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+          {!showCreateForm && (
+            <button type="button" onClick={() => { setCreateParentId(null); setShowCreateForm(true) }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
+              <Plus className="w-3.5 h-3.5" /> New Category
+            </button>
+          )}
+        </div>
       </div>
+
+      {importResult && (
+        <div className={`mb-4 p-3 rounded-lg border text-xs flex items-start justify-between gap-3 ${
+          importResult.errors.length > 0
+            ? 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+            : 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+        }`}>
+          <div>
+            <p className="font-medium">{importResult.created} created, {importResult.skipped} skipped</p>
+            {importResult.errors.map((e, i) => <p key={i} className="mt-0.5 opacity-80">{e}</p>)}
+          </div>
+          <button onClick={() => setImportResult(null)} className="shrink-0 opacity-60 hover:opacity-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {showCreateForm && (
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -439,6 +495,36 @@ function RulesTab() {
     },
   })
 
+  // ── Export / Import ──────────────────────────────────────────────────────
+  const rulesImportRef = useRef<HTMLInputElement>(null)
+  const [rulesImportResult, setRulesImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null)
+  const [rulesImporting, setRulesImporting] = useState(false)
+
+  async function handleRulesExport() {
+    const data = await exportCategoryRules()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'category-rules.json'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleRulesImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    e.target.value = ''
+    try {
+      const text = await file.text()
+      const entries: RuleExportEntry[] = JSON.parse(text)
+      setRulesImporting(true)
+      const result = await importCategoryRules(entries)
+      qc.invalidateQueries({ queryKey: ['category-rules'] })
+      setRulesImportResult(result)
+    } catch {
+      setRulesImportResult({ created: 0, skipped: 0, errors: ['Invalid file — make sure it is a category-rules.json exported from SpendStack'] })
+    } finally {
+      setRulesImporting(false)
+    }
+  }
+
   const createMutation = useMutation({
     mutationFn: () => createCategoryRule(newPattern.trim(), newCatId, newPriority),
     onSuccess: () => {
@@ -487,14 +573,38 @@ function RulesTab() {
             Keywords matched against transaction remarks — higher priority wins
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          New Rule
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={handleRulesExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+          <button type="button" onClick={() => rulesImportRef.current?.click()} disabled={rulesImporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
+            <Upload className="w-3.5 h-3.5" /> {rulesImporting ? 'Importing…' : 'Import'}
+          </button>
+          <input ref={rulesImportRef} type="file" accept=".json" className="hidden" onChange={handleRulesImportFile} />
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
+            <Plus className="w-3.5 h-3.5" /> New Rule
+          </button>
+        </div>
       </div>
+
+      {rulesImportResult && (
+        <div className={`mb-4 p-3 rounded-lg border text-xs flex items-start justify-between gap-3 ${
+          rulesImportResult.errors.length > 0
+            ? 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+            : 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+        }`}>
+          <div>
+            <p className="font-medium">{rulesImportResult.created} created, {rulesImportResult.skipped} skipped</p>
+            {rulesImportResult.errors.map((e, i) => <p key={i} className="mt-0.5 opacity-80">{e}</p>)}
+          </div>
+          <button onClick={() => setRulesImportResult(null)} className="shrink-0 opacity-60 hover:opacity-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Reapply prompt */}
       {showReapplyPrompt && (

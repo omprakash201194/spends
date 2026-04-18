@@ -46,6 +46,29 @@ export async function deleteCategory(id: string): Promise<void> {
   await apiClient.delete(`/categories/${id}`)
 }
 
+export interface CategoryExportEntry {
+  name: string
+  color: string | null
+  icon: string | null
+  parentName: string | null
+}
+
+export interface ImportResult {
+  created: number
+  skipped: number
+  errors: string[]
+}
+
+export async function exportCategories(): Promise<CategoryExportEntry[]> {
+  const { data } = await apiClient.get<CategoryExportEntry[]>('/categories/export')
+  return data
+}
+
+export async function importCategories(entries: CategoryExportEntry[]): Promise<ImportResult> {
+  const { data } = await apiClient.post<ImportResult>('/categories/import', entries)
+  return data
+}
+
 export interface CategoryNode extends Category {
   children: CategoryNode[]
 }

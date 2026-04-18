@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -134,6 +135,74 @@ public class CategoryController {
         // else: null parentId + clearParent=false → leave parent unchanged
 
         return ResponseEntity.ok(CategoryResponse.from(categoryRepository.save(cat)));
+    }
+
+    // ── Export / Import ───────────────────────────────────────────────────────
+
+    public record ExportEntry(String name, String color, String icon, String parentName) {}
+    public record ImportResult(int created, int skipped, List<String> errors) {}
+
+    @GetMapping("/export")
+    public ResponseEntity<List<ExportEntry>> export(@AuthenticationPrincipal UserDetailsImpl principal) {
+        UUID householdId = resolveHouseholdId(principal);
+        List<Category> custom = categoryRepository.findByHouseholdId(householdId);
+        List<ExportEntry> entries = custom.stream()
+                .map(c -> new ExportEntry(
+                        c.getName(), c.getColor(), c.getIcon(),
+                        c.getParent() != null ? c.getParent().getName() : null))
+                .toList();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"categories.json\"")
+                .body(entries);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ImportResult> importCategories(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody List<ExportEntry> entries) {
+
+        User user = resolveUser(principal);
+        Household household = user.getHousehold();
+        int created = 0, skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        // Multi-pass: keep trying until no more progress (handles arbitrary parent depth)
+        List<ExportEntry> remaining = new ArrayList<>(entries);
+        boolean progress = true;
+        while (!remaining.isEmpty() && progress) {
+            progress = false;
+            List<ExportEntry> retry = new ArrayList<>();
+            List<Category> current = categoryRepository.findBySystemTrueOrHouseholdId(household.getId());
+            for (ExportEntry entry : remaining) {
+                // Skip duplicates (by name, case-insensitive, within household)
+                boolean exists = current.stream()
+                        .anyMatch(c -> c.getName().equalsIgnoreCase(entry.name()));
+                if (exists) { skipped++; progress = true; continue; }
+
+                Category parent = null;
+                if (entry.parentName() != null) {
+                    parent = current.stream()
+                            .filter(c -> c.getName().equalsIgnoreCase(entry.parentName()))
+                            .findFirst().orElse(null);
+                    if (parent == null) { retry.add(entry); continue; }
+                }
+                categoryRepository.save(Category.builder()
+                        .name(entry.name())
+                        .color(entry.color() != null ? entry.color() : "#94a3b8")
+                        .icon(entry.icon() != null && !entry.icon().isBlank() ? entry.icon() : null)
+                        .household(household)
+                        .system(false)
+                        .parent(parent)
+                        .build());
+                created++;
+                progress = true;
+            }
+            remaining = retry;
+        }
+        for (ExportEntry e : remaining) {
+            errors.add("Parent '" + e.parentName() + "' not found for '" + e.name() + "' — skipped");
+        }
+        return ResponseEntity.ok(new ImportResult(created, skipped, errors));
     }
 
     @DeleteMapping("/{id}")
