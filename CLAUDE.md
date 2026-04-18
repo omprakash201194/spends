@@ -588,3 +588,27 @@ Two bugs causing widgets to show blank content:
 - **`WidgetService`** — when `periodMonths == 0`, sets `from = LocalDate.of(2000, 1, 1)` (practical epoch for the app)
 - **`WidgetForm.tsx`** — replaced free-range slider with preset pill buttons: `3m / 6m / 12m / 24m / All`
 - **`CustomDashboardPage.tsx`** — widget card badge shows `"All time"` when `periodMonths === 0`
+
+### Feature — Multiple Dashboards + Widget Preview + Editable Chart Type ✅ COMPLETE
+Three UX improvements to the custom dashboard system:
+
+**Multiple Dashboards**
+- **Migration 022** — `dashboard` table (`id UUID PK`, `user_id FK` cascade delete, `name VARCHAR(100)`, `created_at TIMESTAMP`); `dashboard_widget` gains nullable `dashboard_id FK` (cascade delete); migration SQL seeds "My Dashboard" per existing user and migrates orphan widgets atomically
+- **`Dashboard` entity** — `@PrePersist` sets `createdAt`; `@ManyToOne(LAZY)` to `User`
+- **`DashboardRepository`** — `findByUserIdOrderByCreatedAtAsc`, `findByIdAndUserId`
+- **`CustomDashboardDto`** — separate from existing `DashboardDto`; records: `CreateRequest`, `RenameRequest`, `DashboardResponse`
+- **`CustomDashboardService`** — CRUD: list/create/rename/delete with 404 ownership guard
+- **`CustomDashboardController`** at `/api/dashboards` — `GET`, `POST` (201), `PATCH /{id}`, `DELETE /{id}` (204), `GET /{dashboardId}/widgets`, `POST /{dashboardId}/widgets` (201)
+- **`WidgetService`** — `getWidgets(dashboardId, userId)` verifies ownership via `DashboardRepository`; `createWidget(dashboardId, userId, req)` assigns widget to specific dashboard; `toResponse` includes `dashboardId`
+- **Frontend** — `api/dashboards.ts` (4 functions); `DashboardListPage.tsx` (card grid, inline rename, delete confirm, navigate to detail); `DashboardDetailPage.tsx` (per-dashboard widget grid, back button); `/custom-dashboard` route redirects to `/dashboards`; Layout nav updated to "My Dashboards" → `/dashboards`
+
+**Widget Preview Before Saving**
+- **Backend** — `POST /api/widgets/preview` in `WidgetController`; `WidgetService.previewWidget(userId, PreviewRequest)` builds a temporary `DashboardWidget` (never persisted) and calls the same `buildSliceData`/`buildLineData`/`buildStatData` helpers
+- **`WidgetDto.PreviewRequest`** — `(widgetType, filterType, filterValue, metric, periodMonths, color)`; all optional except `widgetType`
+- **Frontend** — `WidgetForm.tsx` has Configure/Preview tabs; switching to Preview calls `previewWidget()`; spinner/error/retry in preview area; chart type switcher in preview lets user try all 4 types without affecting the Configure selection
+
+**Editable Chart Type**
+- **`WidgetDto.UpdateRequest`** — now includes `@NotNull WidgetType widgetType` (was missing); `WidgetService.updateWidget` calls `widget.setWidgetType(req.widgetType())`
+- **`WidgetForm.tsx`** — chart type picker always shown (was hidden in edit mode)
+
+**Tests** — `WidgetServiceTest` updated: `getWidgets` now takes `(dashboardId, userId)`; `previewWidget_returnsDataWithoutSaving` added (verifies `widgetRepo.save` never called); `WidgetControllerTest` pruned to match current controller endpoints (removed old `getWidgets`/`createWidget` tests, added `previewWidget` test)
