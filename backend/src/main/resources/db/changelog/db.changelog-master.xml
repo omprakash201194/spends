@@ -25,5 +25,6 @@
     <include file="changes/018-perf-indexes.yaml" relativeToChangelogFile="true"/>
     <include file="changes/019-household-max-depth.yaml" relativeToChangelogFile="true"/>
     <include file="changes/020-ai-generated-rule.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/021-dashboard-widgets.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 021-dashboard-widgets
+      author: omprakash
+      changes:
+        - createTable:
+            tableName: dashboard_widget
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_widget_user
+                    references: app_user(id)
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: widget_type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: filter_type
+                  type: varchar(20)
+                  defaultValue: ALL
+                  constraints:
+                    nullable: false
+              - column:
+                  name: filter_value
+                  type: varchar(255)
+              - column:
+                  name: metric
+                  type: varchar(20)
+                  defaultValue: SPEND
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_months
+                  type: int
+                  defaultValue: 6
+                  constraints:
+                    nullable: false
+              - column:
+                  name: color
+                  type: varchar(20)
+                  defaultValue: '#6366f1'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: int
+                  defaultValue: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: dashboard_widget
+            indexName: idx_widget_user_position
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: position
