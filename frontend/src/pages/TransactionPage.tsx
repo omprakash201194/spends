@@ -478,7 +478,7 @@ export default function TransactionPage() {
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
                   onCategoryUpdated={() => qc.invalidateQueries({ queryKey: ['transactions'] })}
                   onSplit={() => setSplitTxId(tx.id)}
-                  onTagClick={(tag) => { setSearch(tag); setPage(0) }}
+                  onTagClick={(tag) => { setSearch(prev => { const terms = prev.trim().split(/\s+/).filter(Boolean); return terms.includes(tag) ? prev : terms.length ? `${prev} ${tag}` : tag }); setPage(0) }}
                 />
               ))}
             </tbody>
@@ -521,7 +521,7 @@ export default function TransactionPage() {
           Auto-categorize with AI
         </button>
         <TagsPanel
-          onTagClick={(tag) => { setSearch(tag); setPage(0) }}
+          onTagClick={(tag) => { setSearch(prev => { const terms = prev.trim().split(/\s+/).filter(Boolean); return terms.includes(tag) ? prev : terms.length ? `${prev} ${tag}` : tag }); setPage(0) }}
           categories={categories}
         />
       </div>
