@@ -582,3 +582,9 @@ Two bugs causing widgets to show blank content:
 
 - **Backend (`WidgetService.getWidgetData`)** — used `LocalDate.now()` as `to` date; replaced with `txRepo.latestTransactionDate(userId)` (the transaction anchor) to match the rest of the app's philosophy. Added `emptyData()` helper for users with no transactions.
 - **Frontend (`WidgetRenderer.tsx`)** — empty `slices: []` / `points: []` arrays are truthy in JS, so Recharts rendered a blank chart area with no feedback. Added `.length > 0` guard on all three `slices`/`points`/`stat` branches so empty responses fall through to "No data available".
+
+### Feature — Widget All-Time Period ✅ COMPLETE
+- **`WidgetDto`** — `@Min(0)` (was `@Min(1)`) on `periodMonths` in both `CreateRequest` and `UpdateRequest`; `0` = all time
+- **`WidgetService`** — when `periodMonths == 0`, sets `from = LocalDate.of(2000, 1, 1)` (practical epoch for the app)
+- **`WidgetForm.tsx`** — replaced free-range slider with preset pill buttons: `3m / 6m / 12m / 24m / All`
+- **`CustomDashboardPage.tsx`** — widget card badge shows `"All time"` when `periodMonths === 0`
