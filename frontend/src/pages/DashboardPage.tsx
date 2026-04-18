@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import {
   ResponsiveContainer,
-  PieChart, Pie, Cell, Tooltip as PieTooltip, Legend,
+  PieChart, Pie, Cell, Tooltip as PieTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip,
 } from 'recharts'
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
@@ -268,32 +268,37 @@ function DashboardContent({ data, recurringData, goalsData }: {
                 {data.categoryBreakdown.length === 0 ? (
                   <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No spending data</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={data.categoryBreakdown}
-                        dataKey="amount"
-                        nameKey="name"
-                        cx="50%" cy="50%"
-                        innerRadius={55}
-                        outerRadius={85}
-                        paddingAngle={2}
-                      >
-                        {data.categoryBreakdown.map((entry, i) => (
-                          <Cell key={i} fill={entry.color ?? '#94a3b8'} />
-                        ))}
-                      </Pie>
-                      <PieTooltip
-                        formatter={(val: number) => inrFull(val)}
-                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                      />
-                      <Legend
-                        iconType="circle"
-                        iconSize={8}
-                        formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie
+                          data={data.categoryBreakdown}
+                          dataKey="amount"
+                          nameKey="name"
+                          cx="50%" cy="50%"
+                          innerRadius={55}
+                          outerRadius={85}
+                          paddingAngle={2}
+                        >
+                          {data.categoryBreakdown.map((entry, i) => (
+                            <Cell key={i} fill={entry.color ?? '#94a3b8'} />
+                          ))}
+                        </Pie>
+                        <PieTooltip
+                          formatter={(val: number) => inrFull(val)}
+                          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-3">
+                      {data.categoryBreakdown.map((entry, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color ?? '#94a3b8' }} />
+                          <span className="text-xs text-gray-600 dark:text-gray-400">{entry.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
