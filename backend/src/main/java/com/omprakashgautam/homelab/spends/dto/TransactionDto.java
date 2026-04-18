@@ -74,4 +74,11 @@ public class TransactionDto {
             @NotEmpty List<UUID> ids,
             @NotNull UUID categoryId
     ) {}
+
+    public record SummaryResponse(
+            BigDecimal totalCredit,
+            BigDecimal totalDebit,
+            BigDecimal net,
+            long count
+    ) {}
 }

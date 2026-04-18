@@ -50,11 +50,26 @@ export interface TransactionFilters {
   sortDir?: 'asc' | 'desc'
 }
 
+export interface TransactionSummary {
+  totalCredit: number
+  totalDebit: number
+  net: number
+  count: number
+}
+
 export async function getTransactions(filters: TransactionFilters = {}): Promise<PagedTransactions> {
   const params = Object.fromEntries(
     Object.entries(filters).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL')
   )
   const { data } = await apiClient.get<PagedTransactions>('/transactions', { params })
+  return data
+}
+
+export async function getTransactionSummary(filters: Omit<TransactionFilters, 'page' | 'size' | 'sortBy' | 'sortDir'> = {}): Promise<TransactionSummary> {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL')
+  )
+  const { data } = await apiClient.get<TransactionSummary>('/transactions/summary', { params })
   return data
 }
 

@@ -56,6 +56,21 @@ public class TransactionController {
         ));
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<TransactionDto.SummaryResponse> summary(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(defaultValue = "ALL") String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+    ) {
+        return ResponseEntity.ok(transactionService.getSummary(
+                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo
+        ));
+    }
+
     @PatchMapping("/{id}/category")
     public ResponseEntity<TransactionDto.Response> updateCategory(
             @AuthenticationPrincipal UserDetailsImpl principal,

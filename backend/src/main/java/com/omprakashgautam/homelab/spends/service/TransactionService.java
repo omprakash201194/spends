@@ -9,7 +9,11 @@ import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.CategoryRuleRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +39,7 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final CategoryRuleRepository categoryRuleRepository;
     private final UserRepository userRepository;
+    private final EntityManager entityManager;
 
     // ── List with filters ────────────────────────────────────────────────────
 
@@ -94,6 +100,39 @@ public class TransactionService {
         }
         Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
         return transactionRepository.findAll(spec, Sort.by("valueDate").descending());
+    }
+
+    @Transactional(readOnly = true)
+    public TransactionDto.SummaryResponse getSummary(
+            UUID userId, String search, UUID categoryId,
+            UUID accountId, String type, LocalDate dateFrom, LocalDate dateTo
+    ) {
+        Set<UUID> categoryIds = null;
+        if (categoryId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+            categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
+        }
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
+        Root<Transaction> root = q.from(Transaction.class);
+
+        Predicate predicate = spec.toPredicate(root, q, cb);
+        if (predicate != null) q.where(predicate);
+
+        q.multiselect(
+                cb.coalesce(cb.sum(root.get("depositAmount")), BigDecimal.ZERO),
+                cb.coalesce(cb.sum(root.get("withdrawalAmount")), BigDecimal.ZERO),
+                cb.count(root)
+        );
+
+        Object[] row = entityManager.createQuery(q).getSingleResult();
+        BigDecimal credit = (BigDecimal) row[0];
+        BigDecimal debit  = (BigDecimal) row[1];
+        long count        = (Long) row[2];
+        return new TransactionDto.SummaryResponse(credit, debit, credit.subtract(debit), count);
     }
 
     private Specification<Transaction> buildSpec(

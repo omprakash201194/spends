@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
-  getTransactions, updateCategory, toggleReviewed, updateNote, bulkUpdateCategory,
+  getTransactions, getTransactionSummary, updateCategory, toggleReviewed, updateNote, bulkUpdateCategory,
   type Transaction, type TransactionFilters,
 } from '../api/transactions'
 import { getCategories, buildCategoryTree, type Category } from '../api/categories'
@@ -90,6 +90,15 @@ export default function TransactionPage() {
     queryFn: () => getTransactions(filters),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
+  })
+
+  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
+  const { data: summary } = useQuery({
+    queryKey: ['transactions-summary', summaryFilters],
+    queryFn: () => getTransactionSummary(summaryFilters),
+    enabled: !!(debouncedSearch || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   })
 
   const { data: categories = [] } = useQuery({
@@ -364,6 +373,26 @@ export default function TransactionPage() {
           title="To date"
         />
       </div>
+
+      {/* Filter summary cards */}
+      {summary && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Credit</p>
+            <p className="text-base font-semibold text-green-600">₹{summary.totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Debit</p>
+            <p className="text-base font-semibold text-red-600">₹{summary.totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Net</p>
+            <p className={`text-base font-semibold ${summary.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {summary.net < 0 ? '-' : ''}₹{Math.abs(summary.net).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Table + InsightCard sidebar */}
       <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 lg:items-start">
