@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { getAlerts } from '../api/alerts'
+import { getAlerts, type Alert, type AlertType } from '../api/alerts'
 import { ALERT_META, AlertRow, inrCompact } from './DashboardPage'
+
+function groupByType(alerts: Alert[]): Partial<Record<AlertType, Alert[]>> {
+  return alerts.reduce((acc, alert) => {
+    acc[alert.type] = [...(acc[alert.type] ?? []), alert]
+    return acc
+  }, {} as Partial<Record<AlertType, Alert[]>>)
+}
 
 function toYearMonth(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -29,9 +36,7 @@ export default function AlertsPage() {
     staleTime: 60_000,
   })
 
-  const byType = data
-    ? Object.groupBy(data.alerts, a => a.type)
-    : null
+  const byType = data ? groupByType(data.alerts) : null
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">

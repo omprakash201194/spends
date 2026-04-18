@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
 import {
   TrendingDown, TrendingUp, Wallet, BarChart3, ShoppingBag, ArrowRight,
-  AlertTriangle, Sparkles, ChevronDown, ChevronUp, Repeat, Target, Bell,
+  AlertTriangle, Sparkles, ChevronUp, Repeat, Target, Bell,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -46,9 +46,9 @@ export default function DashboardPage() {
     staleTime: 60_000,
   })
 
-  const { data: alertData } = useQuery({
+  const { data: alertData } = useQuery<AlertSummary>({
     queryKey: ['alerts'],
-    queryFn: getAlerts,
+    queryFn: () => getAlerts(),
     staleTime: 60_000,
   })
 
