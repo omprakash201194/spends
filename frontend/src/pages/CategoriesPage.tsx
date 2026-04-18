@@ -153,10 +153,11 @@ function CategoriesTab() {
   const [newName, setNewName]   = useState('')
   const [newColor, setNewColor] = useState(COLOUR_SWATCHES[5])
   const [newIcon, setNewIcon]   = useState<string | null>(null)
-  const [editId, setEditId]     = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editColor, setEditColor] = useState('')
-  const [editIcon, setEditIcon] = useState<string | null>(null)
+  const [editId, setEditId]           = useState<string | null>(null)
+  const [editName, setEditName]       = useState('')
+  const [editColor, setEditColor]     = useState('')
+  const [editIcon, setEditIcon]       = useState<string | null>(null)
+  const [editParentId, setEditParentId] = useState<string>('')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   const createMutation = useMutation({
@@ -174,8 +175,17 @@ function CategoriesTab() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: (id: string) => updateCategory(id, editName.trim(), editColor, undefined, false, editIcon),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setEditId(null) },
+    mutationFn: (id: string) => updateCategory(
+      id, editName.trim(), editColor,
+      editParentId || null,           // new parent (null = top-level)
+      editParentId === '',            // clearParent when explicitly set to top-level
+      editIcon,
+    ),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      setEditId(null)
+      if (updated.parentId) setExpandedIds(prev => new Set([...prev, updated.parentId!]))
+    },
   })
 
   const deleteMutation = useMutation({
@@ -188,6 +198,17 @@ function CategoriesTab() {
     setEditName(c.name)
     setEditColor(c.color ?? COLOUR_SWATCHES[5])
     setEditIcon(c.icon ?? null)
+    setEditParentId(c.parentId ?? '')
+  }
+
+  const getDescendantIds = (id: string): Set<string> => {
+    const result = new Set<string>()
+    const queue = [id]
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      cats.filter(c => c.parentId === cur).forEach(c => { result.add(c.id); queue.push(c.id) })
+    }
+    return result
   }
   const openCreateUnder = (parentId: string) => {
     setCreateParentId(parentId)
@@ -227,7 +248,7 @@ function CategoriesTab() {
           </div>
 
           {isEditing ? (
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-2">
               <div className="flex items-center gap-2">
                 <input
                   value={editName}
@@ -237,10 +258,33 @@ function CategoriesTab() {
                   autoFocus
                 />
                 <ColourPicker value={editColor} onChange={setEditColor} />
-                <button type="button" onClick={() => updateMutation.mutate(node.id)} className="text-blue-500 hover:text-blue-600"><Check className="w-4 h-4" /></button>
+                <button type="button" onClick={() => updateMutation.mutate(node.id)} disabled={updateMutation.isPending} className="text-blue-500 hover:text-blue-600 disabled:opacity-50"><Check className="w-4 h-4" /></button>
                 <button type="button" onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="w-4 h-4" /></button>
               </div>
               <IconPicker value={editIcon} onChange={setEditIcon} />
+              {/* Parent selector */}
+              {(() => {
+                const excluded = getDescendantIds(node.id)
+                excluded.add(node.id)
+                const eligible = flattenWithDepth(buildCategoryTree(cats)).filter(({ category: c }) => !excluded.has(c.id))
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Move under:</span>
+                    <select
+                      value={editParentId}
+                      onChange={e => setEditParentId(e.target.value)}
+                      className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    >
+                      <option value="">None (top-level)</option>
+                      {eligible.map(({ category: c, depth }) => (
+                        <option key={c.id} value={c.id}>
+                          {'\u00a0'.repeat(depth * 3)}{c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })()}
             </div>
           ) : (
             <>
