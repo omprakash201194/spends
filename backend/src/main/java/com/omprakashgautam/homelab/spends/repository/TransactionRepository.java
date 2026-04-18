@@ -395,6 +395,35 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                             @Param("to") LocalDate to,
                                             @Param("categoryIds") Collection<UUID> categoryIds);
 
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.depositAmount > 0
+          AND t.category.id IN :categoryIds
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.depositAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownForIdsIncome(@Param("userId") UUID userId,
+                                                  @Param("from") LocalDate from,
+                                                  @Param("to") LocalDate to,
+                                                  @Param("categoryIds") Collection<UUID> categoryIds);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category.id IN :categoryIds
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY COUNT(t) DESC
+        """)
+    List<Object[]> categoryBreakdownForIdsCount(@Param("userId") UUID userId,
+                                                 @Param("from") LocalDate from,
+                                                 @Param("to") LocalDate to,
+                                                 @Param("categoryIds") Collection<UUID> categoryIds);
+
     // ── Widget: monthly spend/income/count for a set of category IDs ──────────
 
     @Query("""
@@ -429,6 +458,33 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> categoryBreakdownAll(@Param("userId") UUID userId,
                                          @Param("from") LocalDate from,
                                          @Param("to") LocalDate to);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.depositAmount > 0
+          AND t.category IS NOT NULL
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.depositAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownAllIncome(@Param("userId") UUID userId,
+                                               @Param("from") LocalDate from,
+                                               @Param("to") LocalDate to);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category IS NOT NULL
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY COUNT(t) DESC
+        """)
+    List<Object[]> categoryBreakdownAllCount(@Param("userId") UUID userId,
+                                              @Param("from") LocalDate from,
+                                              @Param("to") LocalDate to);
 
     // ── Widget: monthly trend for ALL transactions ────────────────────────────
 

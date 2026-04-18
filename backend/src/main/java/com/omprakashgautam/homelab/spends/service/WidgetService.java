@@ -146,11 +146,17 @@ public class WidgetService {
     private WidgetDto.WidgetData buildSliceData(DashboardWidget w, UUID userId,
                                                  LocalDate from, LocalDate to) {
         List<Object[]> rows = fetchBreakdown(w, userId, from, to);
+        boolean isCount = w.getMetric() == DashboardWidget.Metric.COUNT;
         List<WidgetDto.DataSlice> slices = rows.stream()
-                .map(r -> new WidgetDto.DataSlice(
-                        (String) r[1],
-                        r[2] != null ? (String) r[2] : w.getColor(),
-                        (BigDecimal) r[3]))
+                .map(r -> {
+                    BigDecimal value = isCount
+                            ? BigDecimal.valueOf(((Number) r[3]).longValue())
+                            : (BigDecimal) r[3];
+                    return new WidgetDto.DataSlice(
+                            (String) r[1],
+                            r[2] != null ? (String) r[2] : w.getColor(),
+                            value);
+                })
                 .toList();
         return new WidgetDto.WidgetData(w.getWidgetType(), w.getMetric(), slices, null, null);
     }
@@ -184,11 +190,21 @@ public class WidgetService {
 
     private List<Object[]> fetchBreakdown(DashboardWidget w, UUID userId,
                                            LocalDate from, LocalDate to) {
+        DashboardWidget.Metric metric = w.getMetric() != null ? w.getMetric() : DashboardWidget.Metric.SPEND;
         return switch (w.getFilterType()) {
-            case ALL      -> txRepo.categoryBreakdownAll(userId, from, to);
+            case ALL -> switch (metric) {
+                case SPEND  -> txRepo.categoryBreakdownAll(userId, from, to);
+                case INCOME -> txRepo.categoryBreakdownAllIncome(userId, from, to);
+                case COUNT  -> txRepo.categoryBreakdownAllCount(userId, from, to);
+            };
             case CATEGORY -> {
                 Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
-                yield ids.isEmpty() ? List.of() : txRepo.categoryBreakdownForIds(userId, from, to, ids);
+                if (ids.isEmpty()) yield List.of();
+                yield switch (metric) {
+                    case SPEND  -> txRepo.categoryBreakdownForIds(userId, from, to, ids);
+                    case INCOME -> txRepo.categoryBreakdownForIdsIncome(userId, from, to, ids);
+                    case COUNT  -> txRepo.categoryBreakdownForIdsCount(userId, from, to, ids);
+                };
             }
             case TAG -> {
                 // TAG breakdown shows total spend as a single labelled slice — no per-tag aggregate query exists yet
