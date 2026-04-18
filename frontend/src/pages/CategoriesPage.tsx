@@ -161,12 +161,14 @@ function CategoriesTab() {
 
   const createMutation = useMutation({
     mutationFn: () => createCategory(newName.trim(), newColor, createParentId, newIcon),
-    onSuccess: () => {
+    onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['categories'] })
       setNewName('')
       setNewColor(COLOUR_SWATCHES[5])
       setNewIcon(null)
       setShowCreateForm(false)
+      // Auto-expand parent so user sees the new child
+      if (created.parentId) setExpandedIds(prev => new Set([...prev, created.parentId!]))
       setCreateParentId(null)
     },
   })
@@ -187,6 +189,11 @@ function CategoriesTab() {
     setEditColor(c.color ?? COLOUR_SWATCHES[5])
     setEditIcon(c.icon ?? null)
   }
+  const openCreateUnder = (parentId: string) => {
+    setCreateParentId(parentId)
+    setShowCreateForm(true)
+    setExpandedIds(prev => new Set([...prev, parentId]))
+  }
   const toggleExpand = (id: string) => setExpandedIds(prev => {
     const next = new Set(prev)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -194,8 +201,7 @@ function CategoriesTab() {
   })
 
   const allTree = buildCategoryTree(cats)
-  const systemRoots = allTree.filter(n => n.system)
-  const customRoots = allTree.filter(n => !n.system)
+  const customCount = cats.filter(c => !c.system).length
 
   const renderNode = (node: CategoryNode, depth: number): React.ReactNode => {
     const hasChildren = node.children.length > 0
@@ -238,28 +244,37 @@ function CategoriesTab() {
             </div>
           ) : (
             <>
-              <span className="flex-1 text-sm text-gray-700 dark:text-gray-200">{node.name}</span>
-              {depth > 0 && (
+              <span className={`flex-1 text-sm ${node.system ? 'text-gray-600 dark:text-gray-300' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>
+                {node.name}
+              </span>
+              {!node.system && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-medium mr-1 flex-shrink-0">
+                  custom
+                </span>
+              )}
+              {depth > 0 && node.system && (
                 <span className="text-xs text-gray-400 dark:text-gray-500 font-mono mr-1">L{depth + 1}</span>
               )}
-              {!node.system && (
-                <div className="hidden group-hover:flex items-center gap-1">
-                  <button
-                    type="button"
-                    title="Add child category"
-                    onClick={() => { setCreateParentId(node.id); setShowCreateForm(true); setExpandedIds(prev => new Set([...prev, node.id])) }}
-                    className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-0.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                  <button type="button" onClick={() => startEdit(node)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button type="button" onClick={() => deleteMutation.mutate(node.id)} className="text-red-400 hover:text-red-600 p-0.5">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
+              <div className="hidden group-hover:flex items-center gap-1">
+                <button
+                  type="button"
+                  title="Add child category"
+                  onClick={() => openCreateUnder(node.id)}
+                  className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-0.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                {!node.system && (
+                  <>
+                    <button type="button" onClick={() => startEdit(node)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => deleteMutation.mutate(node.id)} className="text-red-400 hover:text-red-600 p-0.5">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -271,89 +286,73 @@ function CategoriesTab() {
   if (isLoading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Custom Categories</h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Shared across your household</p>
-          </div>
-          {!showCreateForm && (
-            <button
-              type="button"
-              onClick={() => { setCreateParentId(null); setShowCreateForm(true) }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> New Category
-            </button>
-          )}
-        </div>
-
-        {showCreateForm && (
-          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-            <div className="flex gap-2 mb-2">
-              <input
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                placeholder="Category name…"
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) createMutation.mutate(); if (e.key === 'Escape') { setShowCreateForm(false); setCreateParentId(null) } }}
-                autoFocus
-              />
-              <div className="w-9 h-9 rounded-lg border-2 border-gray-300 dark:border-gray-500 flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: newColor }}>
-                {newIcon && <CategoryIcon name={newIcon} className="w-4 h-4 text-white" />}
-              </div>
-            </div>
-            <ColourPicker value={newColor} onChange={setNewColor} />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 mb-1">Icon</p>
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-            <div className="mt-3">
-              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Parent category (optional)</label>
-              <select
-                value={createParentId ?? ''}
-                onChange={e => setCreateParentId(e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="">None (top-level)</option>
-                {flattenWithDepth(buildCategoryTree(cats)).map(({ category: c, depth }) => (
-                  <option key={c.id} value={c.id}>
-                    {'\u00a0\u00a0\u00a0\u00a0'.repeat(depth)}{c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex gap-2 mt-3">
-              <button type="button" onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
-                Create
-              </button>
-              <button type="button" onClick={() => { setShowCreateForm(false); setCreateParentId(null) }}
-                className="px-3 py-1.5 text-gray-500 dark:text-gray-400 text-xs hover:text-gray-700 dark:hover:text-gray-200">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {customRoots.length === 0 && !showCreateForm ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">
-            No custom categories yet. Create one to get started.
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">All Categories</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            {customCount > 0 ? `${customCount} custom · ` : ''}System categories cannot be modified — hover any row to add a subcategory
           </p>
-        ) : (
-          <div className="space-y-0.5">
-            {customRoots.map(node => renderNode(node, 0))}
-          </div>
+        </div>
+        {!showCreateForm && (
+          <button
+            type="button"
+            onClick={() => { setCreateParentId(null); setShowCreateForm(true) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Category
+          </button>
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">System Categories</h2>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-          Built-in categories — cannot be modified, but custom sub-categories can be added beneath them
-        </p>
-        <div className="space-y-0.5">
-          {systemRoots.map(node => renderNode(node, 0))}
+      {showCreateForm && (
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex gap-2 mb-2">
+            <input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Category name…"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) createMutation.mutate(); if (e.key === 'Escape') { setShowCreateForm(false); setCreateParentId(null) } }}
+              autoFocus
+            />
+            <div className="w-9 h-9 rounded-lg border-2 border-gray-300 dark:border-gray-500 flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: newColor }}>
+              {newIcon && <CategoryIcon name={newIcon} className="w-4 h-4 text-white" />}
+            </div>
+          </div>
+          <ColourPicker value={newColor} onChange={setNewColor} />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 mb-1">Icon</p>
+          <IconPicker value={newIcon} onChange={setNewIcon} />
+          <div className="mt-3">
+            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Parent category (optional)</label>
+            <select
+              value={createParentId ?? ''}
+              onChange={e => setCreateParentId(e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">None (top-level)</option>
+              {flattenWithDepth(buildCategoryTree(cats)).map(({ category: c, depth }) => (
+                <option key={c.id} value={c.id}>
+                  {'\u00a0\u00a0\u00a0\u00a0'.repeat(depth)}{c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button type="button" onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
+              Create
+            </button>
+            <button type="button" onClick={() => { setShowCreateForm(false); setCreateParentId(null) }}
+              className="px-3 py-1.5 text-gray-500 dark:text-gray-400 text-xs hover:text-gray-700 dark:hover:text-gray-200">
+              Cancel
+            </button>
+          </div>
         </div>
+      )}
+
+      <div className="space-y-0.5">
+        {allTree.map(node => renderNode(node, 0))}
       </div>
     </div>
   )
