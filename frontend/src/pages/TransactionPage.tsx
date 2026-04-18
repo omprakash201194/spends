@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle } from 'lucide-react'
+import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus } from 'lucide-react'
+import { extractTags } from '../utils/tags'
+import CategoryRulePicker from '../components/CategoryRulePicker'
 import { downloadTransactionsCsv } from '../api/export'
 import { getSplits, saveSplits } from '../api/splits'
 import InsightCard from '../components/InsightCard'
@@ -411,6 +413,7 @@ export default function TransactionPage() {
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
                   onCategoryUpdated={() => qc.invalidateQueries({ queryKey: ['transactions'] })}
                   onSplit={() => setSplitTxId(tx.id)}
+                  onTagClick={(tag) => { setSearch(tag); setPage(0) }}
                 />
               ))}
             </tbody>
@@ -713,7 +716,7 @@ function AddToViewPicker({
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 
-function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit }: {
+function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit, onTagClick }: {
   tx: Transaction
   categories: Category[]
   aiRuleCategoryIds: Set<string>
@@ -722,6 +725,7 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
   onToggleReviewed: () => void
   onCategoryUpdated: () => void
   onSplit: () => void
+  onTagClick: (tag: string) => void
 }) {
   const qc = useQueryClient()
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -729,6 +733,7 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
   const [viewPickerOpen, setViewPickerOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [tagPickerTag, setTagPickerTag] = useState<string | null>(null)
 
   const noteMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note: string }) => updateNote(id, note),
@@ -773,7 +778,7 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
           {formatDate(tx.valueDate)}
         </td>
 
-        {/* Merchant + remarks */}
+        {/* Merchant + remarks + tag chips */}
         <td className="px-4 py-3 max-w-xs">
           <p className="font-medium text-gray-900 dark:text-white truncate">
             {tx.merchantName ?? tx.rawRemarks?.substring(0, 40)}
@@ -781,6 +786,39 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
           {tx.merchantName && (
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{tx.rawRemarks?.substring(0, 60)}</p>
           )}
+          {(() => {
+            const tags = extractTags(tx.rawRemarks).slice(0, 5)
+            if (tags.length === 0) return null
+            return (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {tags.map(tag => (
+                  <div key={tag} className="relative flex items-center">
+                    <button
+                      onClick={() => onTagClick(tag)}
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                    >
+                      {tag}
+                    </button>
+                    <button
+                      onClick={() => setTagPickerTag(tagPickerTag === tag ? null : tag)}
+                      className="ml-0.5 text-gray-300 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                      title={`Assign "${tag}" to category`}
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                    </button>
+                    {tagPickerTag === tag && (
+                      <CategoryRulePicker
+                        tag={tag}
+                        categories={categories}
+                        onClose={() => setTagPickerTag(null)}
+                        onApplied={() => setTagPickerTag(null)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </td>
 
         {/* Category picker */}
