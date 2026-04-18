@@ -89,10 +89,13 @@ export default function CustomDashboardPage() {
   })
 
   const updateMut = useMutation({
-    mutationFn: ({ id, req }: { id: string; req: CreateWidgetRequest }) =>
-      updateWidget(id, req),
-    onSuccess: () => {
+    mutationFn: ({ id, req }: { id: string; req: CreateWidgetRequest }) => {
+      const { widgetType: _wt, ...updateReq } = req
+      return updateWidget(id, updateReq)
+    },
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['widgets'] })
+      queryClient.invalidateQueries({ queryKey: ['widget-data', id] })
       setEditing(null)
     },
   })
