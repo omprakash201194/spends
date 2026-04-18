@@ -13,7 +13,7 @@ import java.util.UUID;
 
 public class TransactionDto {
 
-    public record CategoryResponse(UUID id, String name, String icon, String color) {}
+    public record CategoryResponse(UUID id, String name, String icon, String color, UUID parentId) {}
 
     public record AccountSummary(UUID id, String bankName, String accountNumberMasked) {}
 
@@ -37,7 +37,8 @@ public class TransactionDto {
                     t.getCategory().getId(),
                     t.getCategory().getName(),
                     t.getCategory().getIcon(),
-                    t.getCategory().getColor()
+                    t.getCategory().getColor(),
+                    t.getCategory().getParent() != null ? t.getCategory().getParent().getId() : null
             );
             AccountSummary acct = new AccountSummary(
                     t.getBankAccount().getId(),

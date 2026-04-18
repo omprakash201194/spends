@@ -5,6 +5,7 @@ export interface TxCategory {
   name: string
   icon: string
   color: string
+  parentId: string | null
 }
 
 export interface TxAccount {

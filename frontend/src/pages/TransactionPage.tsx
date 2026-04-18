@@ -966,7 +966,13 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
               color: tx.category?.color ?? '#6b7280',
             }}
           >
-            <CircleDot className="w-3 h-3" />
+            <CircleDot className="w-3 h-3 flex-shrink-0" />
+            {tx.category?.parentId && (
+              <span className="opacity-60">
+                {categories.find(c => c.id === tx.category!.parentId)?.name ?? ''}
+                {' ›'}
+              </span>
+            )}
             {tx.category?.name ?? 'Uncategorized'}
             {tx.category && !tx.reviewed && aiRuleCategoryIds.has(tx.category.id) && (
               <Sparkles className="w-3 h-3 opacity-80" />
