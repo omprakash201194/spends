@@ -16,7 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,11 +25,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WidgetControllerTest {
 
-    @Mock
-    WidgetService widgetService;
-
-    @InjectMocks
-    WidgetController controller;
+    @Mock WidgetService widgetService;
+    @InjectMocks WidgetController controller;
 
     private UserDetailsImpl principal;
     private UUID userId;
@@ -38,74 +35,23 @@ class WidgetControllerTest {
     void setUp() {
         userId = UUID.randomUUID();
         Household household = Household.builder()
-                .id(UUID.randomUUID())
-                .name("Test Household")
-                .inviteCode("TEST1234")
-                .maxCategoryDepth(5)
-                .build();
+                .id(UUID.randomUUID()).name("Test Household")
+                .inviteCode("TEST1234").maxCategoryDepth(5).build();
         User user = User.builder()
-                .id(userId)
-                .household(household)
-                .username("testuser")
-                .email("test@example.com")
-                .passwordHash("hash")
-                .displayName("Test User")
-                .role(Role.MEMBER)
-                .build();
+                .id(userId).household(household).username("testuser")
+                .email("test@example.com").passwordHash("hash")
+                .displayName("Test User").role(Role.MEMBER).build();
         principal = UserDetailsImpl.build(user);
-    }
-
-    @Test
-    void getWidgets_returnsListFromService() {
-        UUID widgetId = UUID.randomUUID();
-        WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
-                widgetId, "Monthly Spend", WidgetType.PIE,
-                FilterType.ALL, null, Metric.SPEND, 3, "#4287f5", 0);
-        when(widgetService.getWidgets(userId)).thenReturn(List.of(response));
-
-        List<WidgetDto.WidgetResponse> result = controller.getWidgets(principal);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).id()).isEqualTo(widgetId);
-        assertThat(result.get(0).title()).isEqualTo("Monthly Spend");
-        verify(widgetService).getWidgets(userId);
-    }
-
-    @Test
-    void getWidgets_emptyList_returnsEmptyList() {
-        when(widgetService.getWidgets(userId)).thenReturn(List.of());
-
-        List<WidgetDto.WidgetResponse> result = controller.getWidgets(principal);
-
-        assertThat(result).isEmpty();
-        verify(widgetService).getWidgets(userId);
-    }
-
-    @Test
-    void createWidget_delegatesToServiceAndReturnsResponse() {
-        WidgetDto.CreateRequest req = new WidgetDto.CreateRequest(
-                "Top Categories", WidgetType.BAR, FilterType.ALL,
-                null, Metric.SPEND, 6, "#ff6384");
-        UUID newId = UUID.randomUUID();
-        WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
-                newId, "Top Categories", WidgetType.BAR,
-                FilterType.ALL, null, Metric.SPEND, 6, "#ff6384", 0);
-        when(widgetService.createWidget(userId, req)).thenReturn(response);
-
-        WidgetDto.WidgetResponse result = controller.createWidget(principal, req);
-
-        assertThat(result.id()).isEqualTo(newId);
-        assertThat(result.widgetType()).isEqualTo(WidgetType.BAR);
-        verify(widgetService).createWidget(userId, req);
     }
 
     @Test
     void updateWidget_delegatesToService() {
         UUID widgetId = UUID.randomUUID();
+        UUID dashboardId = UUID.randomUUID();
         WidgetDto.UpdateRequest req = new WidgetDto.UpdateRequest(
-                "Updated Title", FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb");
+                "Updated Title", WidgetType.LINE, FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb");
         WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
-                widgetId, "Updated Title", WidgetType.LINE,
+                widgetId, dashboardId, "Updated Title", WidgetType.LINE,
                 FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb", 0);
         when(widgetService.updateWidget(widgetId, userId, req)).thenReturn(response);
 
@@ -139,7 +85,7 @@ class WidgetControllerTest {
         UUID widgetId = UUID.randomUUID();
         WidgetDto.WidgetData data = new WidgetDto.WidgetData(
                 WidgetType.STAT, Metric.SPEND, null, null,
-                new WidgetDto.StatData(java.math.BigDecimal.valueOf(1500), "spend"));
+                new WidgetDto.StatData(BigDecimal.valueOf(1500), "spend"));
         when(widgetService.getWidgetData(widgetId, userId)).thenReturn(data);
 
         WidgetDto.WidgetData result = controller.getWidgetData(widgetId, principal);
@@ -147,5 +93,19 @@ class WidgetControllerTest {
         assertThat(result.widgetType()).isEqualTo(WidgetType.STAT);
         assertThat(result.stat().label()).isEqualTo("spend");
         verify(widgetService).getWidgetData(widgetId, userId);
+    }
+
+    @Test
+    void previewWidget_delegatesToService() {
+        WidgetDto.PreviewRequest req = new WidgetDto.PreviewRequest(
+                WidgetType.PIE, FilterType.ALL, null, Metric.SPEND, 6, "#6366f1");
+        WidgetDto.WidgetData data = new WidgetDto.WidgetData(
+                WidgetType.PIE, Metric.SPEND, java.util.List.of(), null, null);
+        when(widgetService.previewWidget(userId, req)).thenReturn(data);
+
+        WidgetDto.WidgetData result = controller.previewWidget(principal, req);
+
+        assertThat(result.widgetType()).isEqualTo(WidgetType.PIE);
+        verify(widgetService).previewWidget(userId, req);
     }
 }

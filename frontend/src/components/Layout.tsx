@@ -37,7 +37,7 @@ const NAV_GROUPS = [
     label: 'Spend',
     items: [
       { to: '/',                 label: 'Dashboard',          icon: LayoutDashboard },
-      { to: '/custom-dashboard', label: 'My Dashboard',       icon: LayoutGrid },
+      { to: '/dashboards',        label: 'My Dashboards',      icon: LayoutGrid },
       { to: '/transactions',     label: 'Transactions',       icon: ArrowLeftRight },
       { to: '/categories',       label: 'Categories & Rules', icon: Tag },
     ],

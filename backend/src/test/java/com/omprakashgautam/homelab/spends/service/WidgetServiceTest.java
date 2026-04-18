@@ -2,11 +2,13 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.WidgetDto;
 import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.Dashboard;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget.FilterType;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget.Metric;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget.WidgetType;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
+import com.omprakashgautam.homelab.spends.repository.DashboardRepository;
 import com.omprakashgautam.homelab.spends.repository.DashboardWidgetRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
@@ -31,21 +33,25 @@ import static org.mockito.Mockito.*;
 class WidgetServiceTest {
 
     @Mock DashboardWidgetRepository widgetRepo;
+    @Mock DashboardRepository dashboardRepo;
     @Mock TransactionRepository txRepo;
     @Mock CategoryRepository categoryRepo;
     @Mock UserRepository userRepo;
     @InjectMocks WidgetService widgetService;
 
     @Test
-    void getWidgets_returnsUserWidgetsInOrder() {
+    void getWidgets_returnsWidgetsInDashboard() {
         UUID userId = UUID.randomUUID();
+        UUID dashboardId = UUID.randomUUID();
+        Dashboard dashboard = Dashboard.builder().id(dashboardId).build();
         DashboardWidget w = DashboardWidget.builder()
-                .id(UUID.randomUUID()).title("My Pie")
+                .id(UUID.randomUUID()).title("My Pie").dashboard(dashboard)
                 .widgetType(WidgetType.PIE).filterType(FilterType.ALL)
                 .metric(Metric.SPEND).periodMonths(3).color("#f00").position(0).build();
-        when(widgetRepo.findByUserIdOrderByPositionAsc(userId)).thenReturn(List.of(w));
+        when(dashboardRepo.findByIdAndUserId(dashboardId, userId)).thenReturn(Optional.of(dashboard));
+        when(widgetRepo.findByDashboardIdOrderByPositionAsc(dashboardId)).thenReturn(List.of(w));
 
-        List<WidgetDto.WidgetResponse> result = widgetService.getWidgets(userId);
+        List<WidgetDto.WidgetResponse> result = widgetService.getWidgets(dashboardId, userId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).title()).isEqualTo("My Pie");
@@ -156,10 +162,27 @@ class WidgetServiceTest {
                 .filterValue("not-a-valid-uuid")
                 .metric(Metric.SPEND).periodMonths(3).color("#6366f1").position(0).build();
         when(widgetRepo.findByIdAndUserId(widgetId, userId)).thenReturn(Optional.of(w));
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
 
         WidgetDto.WidgetData data = widgetService.getWidgetData(widgetId, userId);
 
         assertThat(data.slices()).isEmpty();
         verify(txRepo, never()).categoryBreakdownForIds(any(), any(), any(), any());
+    }
+
+    @Test
+    void previewWidget_returnsDataWithoutSaving() {
+        UUID userId = UUID.randomUUID();
+        when(txRepo.latestTransactionDate(userId)).thenReturn(LocalDate.of(2026, 1, 31));
+        List<Object[]> rows = new ArrayList<>();
+        rows.add(new Object[]{UUID.randomUUID(), "Food", "#f97316", BigDecimal.valueOf(3000)});
+        when(txRepo.categoryBreakdownAll(eq(userId), any(), any())).thenReturn(rows);
+
+        WidgetDto.PreviewRequest req = new WidgetDto.PreviewRequest(
+                WidgetType.PIE, FilterType.ALL, null, Metric.SPEND, 6, "#6366f1");
+        WidgetDto.WidgetData data = widgetService.previewWidget(userId, req);
+
+        assertThat(data.slices()).hasSize(1);
+        verify(widgetRepo, never()).save(any());
     }
 }

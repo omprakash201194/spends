@@ -26,5 +26,6 @@
     <include file="changes/019-household-max-depth.yaml" relativeToChangelogFile="true"/>
     <include file="changes/020-ai-generated-rule.yaml" relativeToChangelogFile="true"/>
     <include file="changes/021-dashboard-widgets.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/022-dashboards.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

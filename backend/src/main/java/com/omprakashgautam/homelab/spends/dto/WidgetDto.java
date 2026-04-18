@@ -26,6 +26,7 @@ public class WidgetDto {
 
     public record UpdateRequest(
             @NotBlank String title,
+            @NotNull WidgetType widgetType,
             @NotNull FilterType filterType,
             String filterValue,
             @NotNull Metric metric,
@@ -33,10 +34,20 @@ public class WidgetDto {
             @NotBlank String color
     ) {}
 
+    public record PreviewRequest(
+            @NotNull WidgetType widgetType,
+            @NotNull FilterType filterType,
+            String filterValue,
+            @NotNull Metric metric,
+            @Min(0) @Max(24) int periodMonths,
+            String color
+    ) {}
+
     public record MoveRequest(@Min(0) int position) {}
 
     public record WidgetResponse(
             UUID id,
+            UUID dashboardId,
             String title,
             WidgetType widgetType,
             FilterType filterType,

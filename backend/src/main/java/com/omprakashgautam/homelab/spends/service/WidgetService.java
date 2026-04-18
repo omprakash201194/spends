@@ -2,10 +2,12 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.WidgetDto;
 import com.omprakashgautam.homelab.spends.model.Category;
+import com.omprakashgautam.homelab.spends.model.Dashboard;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget.FilterType;
 import com.omprakashgautam.homelab.spends.model.User;
 import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
+import com.omprakashgautam.homelab.spends.repository.DashboardRepository;
 import com.omprakashgautam.homelab.spends.repository.DashboardWidgetRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
@@ -24,6 +26,7 @@ import java.util.*;
 public class WidgetService {
 
     private final DashboardWidgetRepository widgetRepo;
+    private final DashboardRepository dashboardRepo;
     private final TransactionRepository txRepo;
     private final CategoryRepository categoryRepo;
     private final UserRepository userRepo;
@@ -31,18 +34,21 @@ public class WidgetService {
     // ── CRUD ──────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<WidgetDto.WidgetResponse> getWidgets(UUID userId) {
-        return widgetRepo.findByUserIdOrderByPositionAsc(userId)
+    public List<WidgetDto.WidgetResponse> getWidgets(UUID dashboardId, UUID userId) {
+        verifyDashboardOwnership(dashboardId, userId);
+        return widgetRepo.findByDashboardIdOrderByPositionAsc(dashboardId)
                 .stream().map(this::toResponse).toList();
     }
 
     @Transactional
-    public WidgetDto.WidgetResponse createWidget(UUID userId, WidgetDto.CreateRequest req) {
+    public WidgetDto.WidgetResponse createWidget(UUID dashboardId, UUID userId, WidgetDto.CreateRequest req) {
+        Dashboard dashboard = verifyDashboardOwnership(dashboardId, userId);
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        int nextPos = Objects.requireNonNullElse(widgetRepo.findMaxPosition(userId), -1) + 1;
+        int nextPos = Objects.requireNonNullElse(widgetRepo.findMaxPositionInDashboard(dashboardId), -1) + 1;
         DashboardWidget widget = DashboardWidget.builder()
                 .user(user)
+                .dashboard(dashboard)
                 .title(req.title())
                 .widgetType(req.widgetType())
                 .filterType(req.filterType())
@@ -59,6 +65,7 @@ public class WidgetService {
     public WidgetDto.WidgetResponse updateWidget(UUID id, UUID userId, WidgetDto.UpdateRequest req) {
         DashboardWidget widget = getOwned(id, userId);
         widget.setTitle(req.title());
+        widget.setWidgetType(req.widgetType());
         widget.setFilterType(req.filterType());
         widget.setFilterValue(req.filterValue());
         widget.setMetric(req.metric());
@@ -97,6 +104,34 @@ public class WidgetService {
             case LINE     -> buildLineData(widget, userId, from, to);
             case STAT     -> buildStatData(widget, userId, from, to);
         };
+    }
+
+    @Transactional(readOnly = true)
+    public WidgetDto.WidgetData previewWidget(UUID userId, WidgetDto.PreviewRequest req) {
+        LocalDate anchor = txRepo.latestTransactionDate(userId);
+        DashboardWidget tmp = buildTempWidget(req);
+        if (anchor == null) return emptyData(tmp);
+        LocalDate to = anchor;
+        LocalDate from = req.periodMonths() == 0
+                ? LocalDate.of(2000, 1, 1)
+                : to.minusMonths(req.periodMonths()).withDayOfMonth(1);
+
+        return switch (req.widgetType()) {
+            case PIE, BAR -> buildSliceData(tmp, userId, from, to);
+            case LINE     -> buildLineData(tmp, userId, from, to);
+            case STAT     -> buildStatData(tmp, userId, from, to);
+        };
+    }
+
+    private DashboardWidget buildTempWidget(WidgetDto.PreviewRequest req) {
+        return DashboardWidget.builder()
+                .widgetType(req.widgetType())
+                .filterType(req.filterType() != null ? req.filterType() : FilterType.ALL)
+                .filterValue(req.filterValue())
+                .metric(req.metric() != null ? req.metric() : DashboardWidget.Metric.SPEND)
+                .periodMonths(req.periodMonths())
+                .color(req.color() != null ? req.color() : "#6366f1")
+                .build();
     }
 
     private WidgetDto.WidgetData emptyData(DashboardWidget w) {
@@ -200,6 +235,11 @@ public class WidgetService {
         return ids;
     }
 
+    private Dashboard verifyDashboardOwnership(UUID dashboardId, UUID userId) {
+        return dashboardRepo.findByIdAndUserId(dashboardId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dashboard not found"));
+    }
+
     private DashboardWidget getOwned(UUID id, UUID userId) {
         return widgetRepo.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Widget not found"));
@@ -207,7 +247,9 @@ public class WidgetService {
 
     private WidgetDto.WidgetResponse toResponse(DashboardWidget w) {
         return new WidgetDto.WidgetResponse(
-                w.getId(), w.getTitle(), w.getWidgetType(),
+                w.getId(),
+                w.getDashboard() != null ? w.getDashboard().getId() : null,
+                w.getTitle(), w.getWidgetType(),
                 w.getFilterType(), w.getFilterValue(), w.getMetric(),
                 w.getPeriodMonths(), w.getColor(), w.getPosition());
     }

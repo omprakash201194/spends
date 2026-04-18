@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -19,18 +18,11 @@ public class WidgetController {
 
     private final WidgetService widgetService;
 
-    @GetMapping
-    public List<WidgetDto.WidgetResponse> getWidgets(
-            @AuthenticationPrincipal UserDetailsImpl user) {
-        return widgetService.getWidgets(user.getId());
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public WidgetDto.WidgetResponse createWidget(
+    @PostMapping("/preview")
+    public WidgetDto.WidgetData previewWidget(
             @AuthenticationPrincipal UserDetailsImpl user,
-            @Valid @RequestBody WidgetDto.CreateRequest req) {
-        return widgetService.createWidget(user.getId(), req);
+            @RequestBody WidgetDto.PreviewRequest req) {
+        return widgetService.previewWidget(user.getId(), req);
     }
 
     @PutMapping("/{id}")

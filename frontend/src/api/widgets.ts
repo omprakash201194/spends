@@ -6,6 +6,7 @@ export type Metric = 'SPEND' | 'INCOME' | 'COUNT'
 
 export interface Widget {
   id: string
+  dashboardId: string
   title: string
   widgetType: WidgetType
   filterType: FilterType
@@ -28,6 +29,16 @@ export interface CreateWidgetRequest {
 
 export interface UpdateWidgetRequest {
   title: string
+  widgetType: WidgetType
+  filterType: FilterType
+  filterValue?: string
+  metric: Metric
+  periodMonths: number
+  color: string
+}
+
+export interface PreviewRequest {
+  widgetType: WidgetType
   filterType: FilterType
   filterValue?: string
   metric: Metric
@@ -61,13 +72,13 @@ export interface WidgetData {
   stat: StatData | null
 }
 
-export async function getWidgets(): Promise<Widget[]> {
-  const { data } = await apiClient.get<Widget[]>('/widgets')
+export async function getWidgets(dashboardId: string): Promise<Widget[]> {
+  const { data } = await apiClient.get<Widget[]>(`/dashboards/${dashboardId}/widgets`)
   return data
 }
 
-export async function createWidget(req: CreateWidgetRequest): Promise<Widget> {
-  const { data } = await apiClient.post<Widget>('/widgets', req)
+export async function createWidget(dashboardId: string, req: CreateWidgetRequest): Promise<Widget> {
+  const { data } = await apiClient.post<Widget>(`/dashboards/${dashboardId}/widgets`, req)
   return data
 }
 
@@ -86,5 +97,10 @@ export async function moveWidget(id: string, position: number): Promise<void> {
 
 export async function getWidgetData(id: string): Promise<WidgetData> {
   const { data } = await apiClient.get<WidgetData>(`/widgets/${id}/data`)
+  return data
+}
+
+export async function previewWidget(req: PreviewRequest): Promise<WidgetData> {
+  const { data } = await apiClient.post<WidgetData>('/widgets/preview', req)
   return data
 }

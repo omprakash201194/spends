@@ -11,12 +11,12 @@ import java.util.UUID;
 
 public interface DashboardWidgetRepository extends JpaRepository<DashboardWidget, UUID> {
 
-    List<DashboardWidget> findByUserIdOrderByPositionAsc(UUID userId);
+    List<DashboardWidget> findByDashboardIdOrderByPositionAsc(UUID dashboardId);
 
     Optional<DashboardWidget> findByIdAndUserId(UUID id, UUID userId);
 
-    @Query("SELECT COALESCE(MAX(w.position), -1) FROM DashboardWidget w WHERE w.user.id = :userId")
-    Integer findMaxPosition(@Param("userId") UUID userId);
+    @Query("SELECT COALESCE(MAX(w.position), -1) FROM DashboardWidget w WHERE w.dashboard.id = :dashboardId")
+    Integer findMaxPositionInDashboard(@Param("dashboardId") UUID dashboardId);
 
     void deleteByIdAndUserId(UUID id, UUID userId);
 }

@@ -1,0 +1,60 @@
+databaseChangeLog:
+  - changeSet:
+      id: 022-dashboards
+      author: omprakash
+      changes:
+        - createTable:
+            tableName: dashboard
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_dashboard_user
+                    references: app_user(id)
+                    deleteCascade: true
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_dashboard_user_id
+            tableName: dashboard
+            columns:
+              - column:
+                  name: user_id
+        - addColumn:
+            tableName: dashboard_widget
+            columns:
+              - column:
+                  name: dashboard_id
+                  type: UUID
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_widget_dashboard
+                    references: dashboard(id)
+                    deleteCascade: true
+        - sql:
+            sql: |
+              INSERT INTO dashboard (id, user_id, name, created_at)
+              SELECT gen_random_uuid(), id, 'My Dashboard', NOW()
+              FROM app_user;
+
+              UPDATE dashboard_widget
+              SET dashboard_id = (
+                SELECT d.id FROM dashboard d WHERE d.user_id = dashboard_widget.user_id
+              )
+              WHERE dashboard_id IS NULL;

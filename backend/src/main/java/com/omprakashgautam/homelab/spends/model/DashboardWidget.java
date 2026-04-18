@@ -32,6 +32,11 @@ public class DashboardWidget {
     @ToString.Exclude
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dashboard_id")
+    @ToString.Exclude
+    private Dashboard dashboard;
+
     @Column(nullable = false, length = 100)
     private String title;
 
