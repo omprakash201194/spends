@@ -33,7 +33,7 @@ public class WidgetDto {
             @NotBlank String color
     ) {}
 
-    public record MoveRequest(int position) {}
+    public record MoveRequest(@Min(0) int position) {}
 
     public record WidgetResponse(
             UUID id,
