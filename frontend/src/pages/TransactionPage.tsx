@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus } from 'lucide-react'
+import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus, BookmarkPlus } from 'lucide-react'
 import { extractTags } from '../utils/tags'
 import CategoryRulePicker from '../components/CategoryRulePicker'
 import { downloadTransactionsCsv } from '../api/export'
@@ -175,6 +175,7 @@ export default function TransactionPage() {
 
   const [exporting, setExporting] = useState(false)
   const [splitTxId, setSplitTxId] = useState<string | null>(null)
+  const [searchRulePickerOpen, setSearchRulePickerOpen] = useState(false)
 
   // ── Auto-categorize modal ─────────────────────────────────────────────────
   const [showAutoCat, setShowAutoCat]             = useState(false)
@@ -411,9 +412,30 @@ export default function TransactionPage() {
           {type !== 'ALL' && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{type.toLowerCase()}<button onClick={() => { setType('ALL'); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
           {dateFrom && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">from {dateFrom}<button onClick={() => { setDateFrom(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
           {dateTo && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">to {dateTo}<button onClick={() => { setDateTo(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
-          <button onClick={resetFilters} className="ml-auto text-xs text-red-500 dark:text-red-400 hover:underline flex items-center gap-1">
-            <X className="w-3 h-3" /> Clear all
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {debouncedSearch && (
+              <div className="relative">
+                <button
+                  onClick={() => setSearchRulePickerOpen(o => !o)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  title="Save search as category rule"
+                >
+                  <BookmarkPlus className="w-3 h-3" /> Save as rule
+                </button>
+                {searchRulePickerOpen && (
+                  <CategoryRulePicker
+                    tag={debouncedSearch}
+                    categories={categories}
+                    onClose={() => setSearchRulePickerOpen(false)}
+                    onApplied={() => setSearchRulePickerOpen(false)}
+                  />
+                )}
+              </div>
+            )}
+            <button onClick={resetFilters} className="text-xs text-red-500 dark:text-red-400 hover:underline flex items-center gap-1">
+              <X className="w-3 h-3" /> Clear all
+            </button>
+          </div>
         </div>
       )}
 

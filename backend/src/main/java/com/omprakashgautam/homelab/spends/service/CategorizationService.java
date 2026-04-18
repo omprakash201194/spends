@@ -71,12 +71,47 @@ public class CategorizationService {
         List<CategoryRule> rules = categoryRuleRepository.findAllApplicableRules(userId);
 
         for (CategoryRule rule : rules) {
-            if (lowerRemarks.contains(rule.getPattern().toLowerCase(Locale.ROOT))) {
+            if (matchesPattern(lowerRemarks, rule.getPattern())) {
                 return rule.getCategory();
             }
         }
 
         return getMiscellaneous();
+    }
+
+    /**
+     * Evaluates a rule pattern against lowercased remarks.
+     * Supports: "term1 and term2" (all must match), "term1 or term2" (any must match),
+     * "-term" / "!term" prefix (must NOT match). Simple patterns are plain contains.
+     */
+    private boolean matchesPattern(String lowerRemarks, String pattern) {
+        String raw = pattern.trim();
+        String[] terms;
+        boolean orMode;
+        if (raw.toLowerCase(Locale.ROOT).contains(" or ")) {
+            terms = raw.split("(?i)\\s+or\\s+");
+            orMode = true;
+        } else if (raw.toLowerCase(Locale.ROOT).contains(" and ")) {
+            terms = raw.split("(?i)\\s+and\\s+");
+            orMode = false;
+        } else {
+            return lowerRemarks.contains(raw.toLowerCase(Locale.ROOT));
+        }
+        boolean positiveResult = orMode ? false : true;
+        for (String term : terms) {
+            String t = term.trim();
+            boolean negate = t.startsWith("-") || t.startsWith("!");
+            String word = (negate ? t.substring(1) : t).toLowerCase(Locale.ROOT);
+            if (word.isBlank()) continue;
+            boolean found = lowerRemarks.contains(word);
+            if (negate) {
+                if (found) return false;
+            } else {
+                if (orMode) { if (found) positiveResult = true; }
+                else        { if (!found) positiveResult = false; }
+            }
+        }
+        return positiveResult;
     }
 
     private Category getMiscellaneous() {
