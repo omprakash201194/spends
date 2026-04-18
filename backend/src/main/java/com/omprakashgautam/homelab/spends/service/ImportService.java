@@ -57,11 +57,11 @@ public class ImportService {
     private ImportResultDto.FileSummary importSingleFile(UUID userId, MultipartFile file) {
         String fileName = file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename();
         int imported = 0;
-        int duplicates = 0;
-        int errors = 0;
         int categorized = 0;
         BankAccount bankAccount = null;
         ImportBatch batch = null;
+        List<ImportResultDto.DuplicateEntry> duplicateRows = new ArrayList<>();
+        List<ImportResultDto.ErrorEntry> errorRows = new ArrayList<>();
 
         try {
             IciciStatementParser.ParsedStatement statement = parser.parse(file);
@@ -92,7 +92,8 @@ public class ImportService {
                     );
 
                     if (transactionRepository.existsByImportHash(hash)) {
-                        duplicates++;
+                        duplicateRows.add(new ImportResultDto.DuplicateEntry(
+                                tx.valueDate(), tx.withdrawalAmount(), tx.depositAmount(), tx.rawRemarks()));
                         continue;
                     }
 
@@ -121,18 +122,18 @@ public class ImportService {
                     }
                 } catch (Exception e) {
                     log.warn("Error saving transaction from file {}: {}", fileName, e.getMessage());
-                    errors++;
+                    errorRows.add(new ImportResultDto.ErrorEntry(tx.rawRemarks(), e.getMessage()));
                 }
             }
 
             // Persist final counts on the batch record
             batch.setTransactionCount(imported);
-            batch.setDuplicateCount(duplicates);
+            batch.setDuplicateCount(duplicateRows.size());
             importBatchRepository.save(batch);
 
         } catch (Exception e) {
             log.error("Failed to parse file {}: {}", fileName, e.getMessage(), e);
-            errors++;
+            errorRows.add(new ImportResultDto.ErrorEntry(null, e.getMessage()));
         }
 
         int misc = imported - categorized;
@@ -144,11 +145,13 @@ public class ImportService {
                 bankAccount != null ? bankAccount.getAccountNumberMasked() : null,
                 bankAccount != null ? bankAccount.getId() : null,
                 imported,
-                duplicates,
-                errors,
+                duplicateRows.size(),
+                errorRows.size(),
                 categorized,
                 misc,
-                pct
+                pct,
+                duplicateRows,
+                errorRows
         );
     }
 

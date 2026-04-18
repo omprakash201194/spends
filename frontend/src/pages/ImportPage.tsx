@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, History, Clock } from 'lucide-react'
+import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, History, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   importIciciFiles,
   getImportHistory,
   deleteImportBatch,
   deleteAllTransactions,
   type ImportResult,
+  type FileSummary,
   type BatchEntry,
 } from '../api/importStatements'
 import { clsx } from 'clsx'
@@ -380,8 +381,70 @@ function CategorizationBadge({ pct }: { pct: number }) {
   )
 }
 
+function ReviewQueue({ file }: { file: FileSummary }) {
+  const [showDups, setShowDups] = useState(false)
+  const [showErrors, setShowErrors] = useState(false)
+  const hasDups = file.duplicateRows.length > 0
+  const hasErrors = file.errorRows.length > 0
+  if (!hasDups && !hasErrors) return null
+
+  return (
+    <div className="mt-3 space-y-2">
+      {hasDups && (
+        <div className="border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowDups(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-amber-50 dark:bg-amber-950 text-sm font-medium text-amber-800 dark:text-amber-300"
+          >
+            <span>{file.duplicateRows.length} duplicate{file.duplicateRows.length !== 1 ? 's' : ''} skipped</span>
+            {showDups ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          {showDups && (
+            <div className="divide-y divide-amber-100 dark:divide-amber-900 max-h-60 overflow-y-auto">
+              {file.duplicateRows.map((row, i) => (
+                <div key={i} className="px-4 py-2 bg-white dark:bg-gray-800 flex items-center gap-3 text-xs">
+                  <span className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{row.date}</span>
+                  <span className="font-mono text-gray-600 dark:text-gray-300 flex-shrink-0">
+                    {row.withdrawal > 0
+                      ? <span className="text-red-600">−₹{row.withdrawal.toLocaleString('en-IN')}</span>
+                      : <span className="text-green-600">+₹{row.deposit.toLocaleString('en-IN')}</span>}
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400 truncate">{row.remarks}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasErrors && (
+        <div className="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowErrors(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-red-50 dark:bg-red-950 text-sm font-medium text-red-800 dark:text-red-300"
+          >
+            <span>{file.errorRows.length} error{file.errorRows.length !== 1 ? 's' : ''}</span>
+            {showErrors ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          {showErrors && (
+            <div className="divide-y divide-red-100 dark:divide-red-900 max-h-60 overflow-y-auto">
+              {file.errorRows.map((row, i) => (
+                <div key={i} className="px-4 py-2.5 bg-white dark:bg-gray-800 space-y-0.5">
+                  {row.remarks && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{row.remarks}</p>
+                  )}
+                  <p className="text-xs text-red-600 dark:text-red-400">{row.reason ?? 'Unknown error'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ImportSummary({ result }: { result: ImportResult }) {
-  // Aggregate categorization pct across all files
   const totalCategorized = result.files.reduce((sum, f) => sum + f.categorized, 0)
   const aggregatePct =
     result.totalImported > 0
@@ -399,10 +462,15 @@ function ImportSummary({ result }: { result: ImportResult }) {
           {result.totalImported > 0 && <CategorizationBadge pct={aggregatePct} />}
         </div>
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Imported"          value={result.totalImported}   color="text-green-600" bg="bg-green-50" />
+          <StatCard label="Imported"           value={result.totalImported}   color="text-green-600" bg="bg-green-50" />
           <StatCard label="Duplicates skipped" value={result.totalDuplicates} color="text-amber-600" bg="bg-amber-50" />
           <StatCard label="Errors"             value={result.totalErrors}     color="text-red-600"   bg="bg-red-50" />
         </div>
+
+        {/* Per-file review queues */}
+        {result.files.map(f => (
+          <ReviewQueue key={f.fileName} file={f} />
+        ))}
       </div>
 
       {result.files.length > 1 && (

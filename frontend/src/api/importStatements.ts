@@ -1,5 +1,17 @@
 import apiClient from './client'
 
+export interface DuplicateEntry {
+  date: string       // ISO date
+  withdrawal: number
+  deposit: number
+  remarks: string
+}
+
+export interface ErrorEntry {
+  remarks: string | null
+  reason: string | null
+}
+
 export interface FileSummary {
   fileName: string
   bankName: string
@@ -11,6 +23,8 @@ export interface FileSummary {
   categorized: number
   misc: number
   categorizationPct: number
+  duplicateRows: DuplicateEntry[]
+  errorRows: ErrorEntry[]
 }
 
 export interface ImportResult {
