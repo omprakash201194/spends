@@ -871,13 +871,17 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
   })
 
   const updateCatMut = useMutation({
-    mutationFn: ({ catId, createRule, pattern }: { catId: string; createRule: boolean; pattern?: string }) =>
+    mutationFn: ({ catId, createRule, pattern }: { catId: string | null; createRule: boolean; pattern?: string }) =>
       updateCategory(tx.id, catId, createRule, pattern),
     onSuccess: () => { onCategoryUpdated(); setPickerOpen(false); setRulePrompt(null) },
   })
 
-  const handleSelectCategory = (cat: Category) => {
-    if (cat.id === tx.category?.id) { setPickerOpen(false); return }
+  const handleSelectCategory = (cat: Category | null) => {
+    if ((cat?.id ?? null) === (tx.category?.id ?? null)) { setPickerOpen(false); return }
+    if (cat === null) {
+      updateCatMut.mutate({ catId: null, createRule: false })
+      return
+    }
     setPickerOpen(false)
     setRulePrompt({ categoryId: cat.id, categoryName: cat.name })
   }
@@ -964,13 +968,21 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
           >
             <CircleDot className="w-3 h-3" />
             {tx.category?.name ?? 'Uncategorized'}
-            {tx.category && aiRuleCategoryIds.has(tx.category.id) && (
+            {tx.category && !tx.reviewed && aiRuleCategoryIds.has(tx.category.id) && (
               <Sparkles className="w-3 h-3 opacity-80" />
             )}
           </button>
 
           {pickerOpen && (
             <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 max-h-72 overflow-y-auto">
+              <button
+                onClick={() => handleSelectCategory(null)}
+                className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700"
+              >
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-500" />
+                Uncategorized
+                {!tx.category && <Check className="w-3.5 h-3.5 ml-auto text-blue-600" />}
+              </button>
               {categories.map((cat) => (
                 <button
                   key={cat.id}

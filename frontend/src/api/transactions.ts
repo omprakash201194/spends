@@ -75,12 +75,12 @@ export async function getTransactionSummary(filters: Omit<TransactionFilters, 'p
 
 export async function updateCategory(
   id: string,
-  categoryId: string,
+  categoryId: string | null,
   createRule: boolean,
   pattern?: string
 ): Promise<Transaction> {
   const { data } = await apiClient.patch<Transaction>(`/transactions/${id}/category`, {
-    categoryId,
+    categoryId: categoryId ?? null,
     createRule,
     pattern: pattern ?? null,
   })

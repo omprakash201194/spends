@@ -240,13 +240,16 @@ public class TransactionService {
     public TransactionDto.Response updateCategory(UUID txId, UUID userId, TransactionDto.CategoryUpdateRequest req) {
         Transaction tx = getOwnedTransaction(txId, userId);
 
-        Category category = categoryRepository.findById(req.categoryId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        Category category = null;
+        if (req.categoryId() != null) {
+            category = categoryRepository.findById(req.categoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        }
 
         tx.setCategory(category);
         transactionRepository.save(tx);
 
-        if (req.createRule()) {
+        if (req.createRule() && category != null) {
             createRuleForTransaction(tx, userId, category, req.pattern());
         }
 

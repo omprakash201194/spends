@@ -57,7 +57,7 @@ public class TransactionDto {
     public record NoteRequest(@NotBlank String note) {}
 
     public record CategoryUpdateRequest(
-            @NotNull UUID categoryId,
+            UUID categoryId,        // null = clear category (uncategorize)
             boolean createRule,
             String pattern          // null = auto-derive from merchant name
     ) {}

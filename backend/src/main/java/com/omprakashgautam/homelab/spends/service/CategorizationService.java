@@ -3,7 +3,6 @@ package com.omprakashgautam.homelab.spends.service;
 import com.omprakashgautam.homelab.spends.model.Category;
 import com.omprakashgautam.homelab.spends.model.CategoryRule;
 import com.omprakashgautam.homelab.spends.model.Transaction;
-import com.omprakashgautam.homelab.spends.repository.CategoryRepository;
 import com.omprakashgautam.homelab.spends.repository.CategoryRuleRepository;
 import com.omprakashgautam.homelab.spends.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +31,7 @@ import java.util.UUID;
 public class CategorizationService {
 
     private final CategoryRuleRepository categoryRuleRepository;
-    private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
-
-    private Category miscellaneous;
 
     public record ReapplyResult(int updated) {}
 
@@ -45,9 +41,9 @@ public class CategorizationService {
         int updated = 0;
         for (Transaction t : transactions) {
             Category newCategory = categorize(userId, t.getRawRemarks());
-            if (!Objects.equals(
-                    t.getCategory() != null ? t.getCategory().getId() : null,
-                    newCategory.getId())) {
+            UUID newId = newCategory != null ? newCategory.getId() : null;
+            UUID curId = t.getCategory() != null ? t.getCategory().getId() : null;
+            if (!Objects.equals(curId, newId)) {
                 t.setCategory(newCategory);
                 updated++;
             }
@@ -60,11 +56,11 @@ public class CategorizationService {
      *
      * @param userId     the user whose rules should be consulted
      * @param rawRemarks the raw transaction remarks from the bank statement
-     * @return the matched Category (never null — falls back to Miscellaneous)
+     * @return the matched Category, or null if no rule matches
      */
     public Category categorize(UUID userId, String rawRemarks) {
         if (rawRemarks == null || rawRemarks.isBlank()) {
-            return getMiscellaneous();
+            return null;
         }
 
         String lowerRemarks = rawRemarks.toLowerCase(Locale.ROOT);
@@ -76,7 +72,7 @@ public class CategorizationService {
             }
         }
 
-        return getMiscellaneous();
+        return null;
     }
 
     /**
@@ -114,12 +110,4 @@ public class CategorizationService {
         return positiveResult;
     }
 
-    private Category getMiscellaneous() {
-        if (miscellaneous == null) {
-            miscellaneous = categoryRepository.findByName("Miscellaneous")
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Miscellaneous category not seeded — check migration 002"));
-        }
-        return miscellaneous;
-    }
 }
