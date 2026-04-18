@@ -29,20 +29,11 @@ import java.util.List;
  *   6 – Withdrawal Amount (INR)
  *   7 – Deposit Amount (INR)
  *   8 – Balance (INR)
- *
- * Header rows (1-based):
- *   Row  1 : blank
- *   Row  2 : "DETAILED STATEMENT"
- *   Row  4 : "Account Number" | blank | "187501504556 ( INR ) - OMPRAKASH HARISH"
- *   Row 12 : "Transactions List - <NAME>"
- *   Row 13 : column headers
- *   Row 14+: transaction data
  */
 @Slf4j
 @Component
 public class IciciStatementParser {
 
-    // Column indices
     private static final int COL_VALUE_DATE = 2;
     private static final int COL_TX_DATE    = 3;
     private static final int COL_CHEQUE     = 4;
@@ -59,24 +50,6 @@ public class IciciStatementParser {
             DateTimeFormatter.ofPattern("dd-MM-yyyy"),
             DateTimeFormatter.ofPattern("yyyy-MM-dd")
     );
-
-    public record ParsedStatement(
-            String bankName,
-            String accountNumberMasked,
-            String accountHolderName,
-            String accountType,
-            List<ParsedTransaction> transactions
-    ) {}
-
-    public record ParsedTransaction(
-            LocalDate valueDate,
-            LocalDate transactionDate,
-            String chequeNumber,
-            String rawRemarks,
-            BigDecimal withdrawalAmount,
-            BigDecimal depositAmount,
-            BigDecimal balance
-    ) {}
 
     public ParsedStatement parse(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
@@ -95,8 +68,6 @@ public class IciciStatementParser {
         String accountNumber = null;
         String accountHolderName = null;
 
-        // Scan first 15 rows for account metadata.
-        // Account number row: col1="Account Number", col3="187501504556 ( INR ) - OMPRAKASH HARISH"
         for (int i = 0; i <= Math.min(15, sheet.getLastRowNum()); i++) {
             Row row = sheet.getRow(i);
             if (row == null) continue;
@@ -105,7 +76,6 @@ public class IciciStatementParser {
             String c3 = cellText(row, 3);
 
             if (c1.contains("Account Number") && !c3.isBlank()) {
-                // c3 looks like: "187501504556 ( INR )  - OMPRAKASH HARISH"
                 String[] parts = c3.split("-", 2);
                 String rawAccNo = parts[0].replaceAll("[^0-9]", "").trim();
                 accountNumber = maskAccountNumber(rawAccNo);
@@ -115,12 +85,11 @@ public class IciciStatementParser {
             }
         }
 
-        // Detect data start row: first row where col2 (Value Date) has a parseable date
         int dataStartRow = detectDataStartRow(sheet);
         log.info("ICICI parser: data starts at row {} (0-based), account={}, holder={}",
                 dataStartRow, accountNumber, accountHolderName);
 
-        List<ParsedTransaction> transactions = new ArrayList<>();
+        List<ParsedStatement.ParsedTransaction> transactions = new ArrayList<>();
 
         for (int i = dataStartRow; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
@@ -136,8 +105,7 @@ public class IciciStatementParser {
                 LocalDate transactionDate = parseDate(row, COL_TX_DATE);
 
                 if (valueDate == null || transactionDate == null) {
-                    log.debug("Skipping row {} — unparseable dates: valueDate='{}' txDate='{}'",
-                            i + 1, cellText(row, COL_VALUE_DATE), cellText(row, COL_TX_DATE));
+                    log.debug("Skipping row {} — unparseable dates", i + 1);
                     continue;
                 }
 
@@ -147,7 +115,7 @@ public class IciciStatementParser {
                 BigDecimal deposit    = parseMoney(row, COL_DEPOSIT);
                 BigDecimal balance    = parseMoney(row, COL_BALANCE);
 
-                transactions.add(new ParsedTransaction(
+                transactions.add(new ParsedStatement.ParsedTransaction(
                         valueDate, transactionDate,
                         chequeNumber.isBlank() ? null : chequeNumber,
                         rawRemarks,
@@ -168,10 +136,6 @@ public class IciciStatementParser {
         );
     }
 
-    /**
-     * Finds the first row where COL_VALUE_DATE contains a parseable date.
-     * Scans from row 10 onwards to skip obvious header rows.
-     */
     private int detectDataStartRow(Sheet sheet) {
         for (int i = 10; i <= Math.min(sheet.getLastRowNum(), 30); i++) {
             Row row = sheet.getRow(i);

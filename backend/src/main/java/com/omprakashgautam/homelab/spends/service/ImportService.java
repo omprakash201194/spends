@@ -64,7 +64,7 @@ public class ImportService {
         List<ImportResultDto.ErrorEntry> errorRows = new ArrayList<>();
 
         try {
-            IciciStatementParser.ParsedStatement statement = parser.parse(file);
+            ParsedStatement statement = parser.parse(file);
 
             bankAccount = bankAccountService.findOrCreate(
                     userId,
@@ -81,7 +81,7 @@ public class ImportService {
                     .duplicateCount(0)
                     .build());
 
-            for (IciciStatementParser.ParsedTransaction tx : statement.transactions()) {
+            for (ParsedStatement.ParsedTransaction tx : statement.transactions()) {
                 try {
                     String hash = computeImportHash(
                             bankAccount.getId(),
