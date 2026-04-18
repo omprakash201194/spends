@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -376,4 +377,73 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         LIMIT 10
         """)
     List<Object[]> findNearDuplicates(@Param("userId") UUID userId);
+
+    // ── Widget: category breakdown for a set of category IDs ─────────────────
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category.id IN :categoryIds
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownForIds(@Param("userId") UUID userId,
+                                            @Param("from") LocalDate from,
+                                            @Param("to") LocalDate to,
+                                            @Param("categoryIds") Collection<UUID> categoryIds);
+
+    // ── Widget: monthly spend/income/count for a set of category IDs ──────────
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category.id IN :categoryIds
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendForIds(@Param("userId") UUID userId,
+                                       @Param("from") LocalDate from,
+                                       @Param("to") LocalDate to,
+                                       @Param("categoryIds") Collection<UUID> categoryIds);
+
+    // ── Widget: category breakdown for ALL transactions ───────────────────────
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category IS NOT NULL
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownAll(@Param("userId") UUID userId,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
+
+    // ── Widget: monthly trend for ALL transactions ────────────────────────────
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendAll(@Param("userId") UUID userId,
+                                    @Param("from") LocalDate from,
+                                    @Param("to") LocalDate to);
 }
