@@ -85,13 +85,24 @@ public class WidgetService {
     @Transactional(readOnly = true)
     public WidgetDto.WidgetData getWidgetData(UUID id, UUID userId) {
         DashboardWidget widget = getOwned(id, userId);
-        LocalDate to = LocalDate.now();
+        LocalDate anchor = txRepo.latestTransactionDate(userId);
+        if (anchor == null) return emptyData(widget);
+        LocalDate to = anchor;
         LocalDate from = to.minusMonths(widget.getPeriodMonths()).withDayOfMonth(1);
 
         return switch (widget.getWidgetType()) {
             case PIE, BAR -> buildSliceData(widget, userId, from, to);
             case LINE     -> buildLineData(widget, userId, from, to);
             case STAT     -> buildStatData(widget, userId, from, to);
+        };
+    }
+
+    private WidgetDto.WidgetData emptyData(DashboardWidget w) {
+        return switch (w.getWidgetType()) {
+            case PIE, BAR -> new WidgetDto.WidgetData(w.getWidgetType(), w.getMetric(), List.of(), null, null);
+            case LINE     -> new WidgetDto.WidgetData(w.getWidgetType(), w.getMetric(), null, List.of(), null);
+            case STAT     -> new WidgetDto.WidgetData(w.getWidgetType(), w.getMetric(), null, null,
+                    new WidgetDto.StatData(BigDecimal.ZERO, w.getMetric().name().toLowerCase()));
         };
     }
 

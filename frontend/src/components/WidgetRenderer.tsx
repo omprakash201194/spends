@@ -19,7 +19,7 @@ function fmt(v: number) {
 interface Props { data: WidgetData; color: string }
 
 export default function WidgetRenderer({ data, color }: Props) {
-  if (data.widgetType === 'PIE' && data.slices) {
+  if (data.widgetType === 'PIE' && data.slices && data.slices.length > 0) {
     const items = data.slices.map((s, i) => ({
       name: s.label,
       value: Number(s.value),
@@ -38,7 +38,7 @@ export default function WidgetRenderer({ data, color }: Props) {
     )
   }
 
-  if (data.widgetType === 'BAR' && data.slices) {
+  if (data.widgetType === 'BAR' && data.slices && data.slices.length > 0) {
     const items = data.slices.map(s => ({ name: s.label, value: Number(s.value) }))
     return (
       <ResponsiveContainer width="100%" height={220}>
@@ -53,7 +53,7 @@ export default function WidgetRenderer({ data, color }: Props) {
     )
   }
 
-  if (data.widgetType === 'LINE' && data.points) {
+  if (data.widgetType === 'LINE' && data.points && data.points.length > 0) {
     const metricKey = data.metric === 'INCOME' ? 'income'
                     : data.metric === 'COUNT'  ? 'count'
                     : 'spend'

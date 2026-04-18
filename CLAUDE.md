@@ -546,3 +546,39 @@ kubectl run restore --rm -it --image=postgres:16-alpine -n homelab \
 - **CategoriesPage tree view** — `CategoriesTab` replaced with tree renderer: expand/collapse per node, depth badges (L1, L2…), "Add child" button on hover (sets `createParentId`), inline edit; system categories also rendered as tree
 - **TransactionPage filter** — category `<select>` shows indented hierarchy via `renderCategoryOptions(buildCategoryTree(categories))` (4 × `\u00a0` per depth level)
 - **SettingsPage Preferences tab** — new tab between Notifications and Danger Zone; numeric input (1–10) for `maxCategoryDepth`; syncs on load via `useEffect`, saves via mutation, shows "Preference saved" feedback
+
+### Session — UX Polish + Bug Fixes ✅ COMPLETE
+A batch of UX improvements and fixes across the app:
+
+- **CI fix** — replaced `Object.groupBy` (ES2024, unsupported in CI Node) with manual `groupByType()` helper in `AlertsPage`; fixed `queryFn: getAlerts` → `() => getAlerts()` with typed `useQuery<AlertSummary>` in `DashboardPage`; removed unused `ChevronDown` import
+- **CategoryRulePicker alignment** — added `align?: 'left' | 'right'` prop (default `'left'`); save-as-rule picker uses `align="right"` to prevent viewport clipping
+- **Inline category creation in CategoryRulePicker** — `NewCategoryForm` component inside picker: name input, 10-color palette, parent selector; on create: auto-selects new category, invalidates `categories` query; picker width `w-72`, maxHeight `380px`
+- **AI sparkle icon fix** — sparkle only shown when `tx.category && !tx.reviewed && aiRuleCategoryIds.has(tx.category.id)`; previously shown on all categorised transactions
+- **Remove Miscellaneous fallback** — `CategorizationService.categorize()` now returns `null` (not Miscellaneous) when no rule matches; `reapplyRules()` updated to handle null category; `getMiscellaneous()` helper removed
+- **Uncategorize a transaction** — "Uncategorized" option at top of category picker in `TransactionPage`; `updateCategory` accepts `categoryId: null`; `TransactionService.updateCategory` sets `category = null` when `req.categoryId() == null`; `CategoryUpdateRequest.categoryId` is now nullable
+- **Clear AI insights on transaction delete** — `clearAllInsights()` exported from `InsightCard.tsx`; called in `SettingsPage` DangerZoneTab `onSuccess` when action key is `transactions`
+- **Import review queue** — `ImportResultDto` gains `DuplicateEntry` and `ErrorEntry` records; `FileSummary` gets `duplicateRows` / `errorRows` lists; `ImportService` populates them; `ReviewQueue` component in `ImportPage` shows collapsible amber (duplicates) and red (errors) panels per file
+- **Cancel button in rule-creation prompt** — `<button onClick={() => setRulePrompt(null)}>Cancel</button>` added to the inline rule-creation dialog in `TransactionPage`
+- **Unified category tree in CategoriesPage** — replaced split-panel (system/custom) design with single `allTree`; system nodes show "+" on hover; custom nodes show "custom" pill + edit/delete; fixed invisible custom subcategories under system parents
+- **Move custom categories** — `editParentId` state in `CategoriesPage`; "Move under:" dropdown in edit form excludes current node and its descendants (BFS guard); `updateMutation` passes `editParentId || null` and `clearParent` flag; auto-expands new parent on success
+- **Parent breadcrumb in transaction badge** — `TransactionDto.CategoryResponse` adds `UUID parentId`; frontend `TxCategory` adds `parentId: string | null`; transaction category badge shows `{parentName} ›` prefix when `tx.category.parentId` is set
+
+**Key files changed:** `AlertsPage.tsx`, `DashboardPage.tsx`, `CategoryRulePicker.tsx`, `TransactionPage.tsx`, `CategoriesPage.tsx`, `ImportPage.tsx`, `InsightCard.tsx`, `SettingsPage.tsx`, `CategorizationService.java`, `TransactionService.java`, `TransactionDto.java`, `ImportResultDto.java`, `ImportService.java`, `transactions.ts` (frontend API)
+
+### Phase 24 — Custom Dashboard Widgets ✅ COMPLETE
+- **Migration 021** — `dashboard_widget` table: `id UUID PK`, `user_id FK` (cascade delete), `title VARCHAR(100)`, `widget_type VARCHAR(20)` (PIE/BAR/LINE/STAT), `filter_type VARCHAR(20)` (ALL/CATEGORY/TAG), `filter_value VARCHAR(255)` nullable, `metric VARCHAR(20)` (SPEND/INCOME/COUNT), `period_months INT` (1–24), `color VARCHAR(20)`, `position INT`, `created_at TIMESTAMP`; composite index on `(user_id, position)`
+- **`DashboardWidget` entity** — `@Getter @Setter @ToString @EqualsAndHashCode(onlyExplicitlyIncluded=true)` with `@EqualsAndHashCode.Include` on `id`; 3 nested enums (WidgetType, FilterType, Metric); `@Builder.Default` for all defaulted fields; `@ToString.Exclude` on lazy user association
+- **`DashboardWidgetRepository`** — `findByUserIdOrderByPositionAsc`, `findByIdAndUserId`, `findMaxPosition` (returns `Integer`, COALESCE to -1), `deleteByIdAndUserId` (Spring Data derived delete)
+- **New `TransactionRepository` queries** — `categoryBreakdownForIds(userId, from, to, Collection<UUID>)` and `categoryBreakdownAll(userId, from, to)` return `[id, name, color, sum]` 4-column rows; `monthlyTrendForIds` and `monthlyTrendAll` return `[month, withdrawal, deposit, count]` rows; all add `AND t.withdrawalAmount > 0` guard on breakdown variants
+- **`WidgetDto`** — 8 nested records: `CreateRequest` (with `@Valid` constraints), `UpdateRequest`, `MoveRequest(@Min(0) position)`, `WidgetResponse`, `DataSlice`, `DataPoint`, `StatData`, `WidgetData(widgetType, metric, slices, points, stat)` with nullable fields
+- **`WidgetService`** — CRUD using `getOwned()` 404 guard; `getWidgetData` dispatches to `buildSliceData` (PIE/BAR), `buildLineData` (LINE), `buildStatData` (STAT); `expandCategorySubtree` calls `CategoryTreeUtils.getDescendantIds` + adds rootId → passes `Set<UUID>` to filtered queries; empty-collection guard prevents `IN ()` SQL error; TAG filter documented as stub returning total spend
+- **`WidgetController`** — 6 endpoints: `GET /api/widgets`, `POST /api/widgets` (201), `PUT /api/widgets/{id}`, `DELETE /api/widgets/{id}` (204), `POST /api/widgets/{id}/move` (204), `GET /api/widgets/{id}/data`; all `@AuthenticationPrincipal UserDetailsImpl`
+- **13 unit tests** — 6 `WidgetServiceTest` (getWidgets, allFilter, categoryFilter subtree expansion, line points, stat total, empty subtree), 7 `WidgetControllerTest` (all endpoints)
+- **Frontend** — `frontend/src/api/widgets.ts` typed client (6 functions); `WidgetForm.tsx` modal (chart type picker hidden on edit, metric, filter type, conditional category/tag input, period range slider 1–24, 8 color swatches; filterValue resets on filterType change); `WidgetRenderer.tsx` (Recharts PIE with Cell per slice, BAR with angled labels, LINE using data.metric to pick field, STAT formatted amount/count); `CustomDashboardPage.tsx` (widget grid 1/2/3 cols, per-card data fetch, loading skeleton, empty state, edit/delete with confirm modal; updateMut invalidates both `['widgets']` and `['widget-data', id]`)
+- **Route + nav** — `/custom-dashboard` added to `App.tsx`; "My Dashboard" (LayoutGrid icon) added to Spend nav group in `Layout.tsx` between Dashboard and Transactions
+
+### Bug Fix — Widget Data Anchor + Empty State ✅ COMPLETE
+Two bugs causing widgets to show blank content:
+
+- **Backend (`WidgetService.getWidgetData`)** — used `LocalDate.now()` as `to` date; replaced with `txRepo.latestTransactionDate(userId)` (the transaction anchor) to match the rest of the app's philosophy. Added `emptyData()` helper for users with no transactions.
+- **Frontend (`WidgetRenderer.tsx`)** — empty `slices: []` / `points: []` arrays are truthy in JS, so Recharts rendered a blank chart area with no feedback. Added `.length > 0` guard on all three `slices`/`points`/`stat` branches so empty responses fall through to "No data available".
