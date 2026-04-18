@@ -20,6 +20,7 @@ import GoalsPage from './pages/GoalsPage'
 import MerchantAliasesPage from './pages/MerchantAliasesPage'
 import SettlementsPage from './pages/SettlementsPage'
 import AlertsPage from './pages/AlertsPage'
+import CustomDashboardPage from './pages/CustomDashboardPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="import" element={<ImportPage />} />
           <Route path="transactions" element={<TransactionPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="custom-dashboard" element={<CustomDashboardPage />} />
           <Route path="budgets" element={<BudgetPage />} />
           <Route path="household" element={<HouseholdPage />} />
           <Route path="settings" element={<SettingsPage />} />
