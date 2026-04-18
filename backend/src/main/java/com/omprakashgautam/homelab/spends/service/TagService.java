@@ -14,20 +14,6 @@ public class TagService {
 
     private final TransactionRepository transactionRepository;
 
-    private static final Set<String> NOISE = Set.of(
-            "upi", "ach", "nach", "neft", "rtgs", "imps", "ecs",
-            "payment", "payments", "pay", "paid", "transfer", "txn",
-            "fr", "to", "from", "the", "and", "for", "via",
-            "bank", "banks",
-            "mr", "mrs", "ms", "dr",
-            "ltd", "pvt", "inc", "llp",
-            "credit", "debit", "ref", "refno", "no",
-            "a/c", "ac", "acct",
-            "mob", "mobile",
-            "card", "cash", "atm",
-            "net", "online",
-            "hdfc", "icici", "sbi", "axis", "kotak", "pnb", "bob"
-    );
 
     @Transactional(readOnly = true)
     public List<TagDto.TagEntry> getTagsForUser(UUID userId) {
@@ -54,10 +40,10 @@ public class TagService {
     }
 
     private boolean isNoise(String tag) {
-        if (tag.length() < 3) return true;
-        if (tag.matches("\\d+")) return true;                 // pure numbers
-        if (tag.matches("[a-f0-9]{8,}")) return true;         // hex/UUID fragments
-        if (tag.matches(".*\\d{6,}.*")) return true;          // contains long number (account no, phone)
-        return NOISE.contains(tag);
+        if (tag.length() < 2) return true;
+        if (tag.matches("\\d+")) return true;
+        if (tag.matches("[a-f0-9]{8,}")) return true;
+        if (tag.matches(".*\\d{6,}.*")) return true;
+        return false;
     }
 }

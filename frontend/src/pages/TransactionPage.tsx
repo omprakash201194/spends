@@ -23,6 +23,7 @@ import {
 import { getCategories, buildCategoryTree, type Category } from '../api/categories'
 import { getBankAccounts } from '../api/bankAccounts'
 import { listViews, addTransactionsToView, type ViewResponse } from '../api/views'
+import { getAvailableYears } from '../api/reports'
 import { useDebounce } from '../hooks/useDebounce'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -119,6 +120,12 @@ export default function TransactionPage() {
     staleTime: 30_000,
   })
 
+  const { data: availableYears = [] } = useQuery({
+    queryKey: ['available-years'],
+    queryFn: getAvailableYears,
+    staleTime: Infinity,
+  })
+
   const aiRuleCategoryIds = new Set(rules.filter(r => r.aiGenerated).map(r => r.categoryId))
 
   const toggleReviewedMut = useMutation({
@@ -172,6 +179,19 @@ export default function TransactionPage() {
   }
 
   const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo
+
+  const activeYear = (() => {
+    if (!dateFrom || !dateTo) return null
+    const y = dateFrom.slice(0, 4)
+    if (dateTo === `${y}-12-31` && dateFrom === `${y}-01-01`) return Number(y)
+    return null
+  })()
+
+  const selectYear = (year: number) => {
+    setDateFrom(`${year}-01-01`)
+    setDateTo(`${year}-12-31`)
+    setPage(0)
+  }
 
   const [exporting, setExporting] = useState(false)
   const [splitTxId, setSplitTxId] = useState<string | null>(null)
@@ -374,6 +394,21 @@ export default function TransactionPage() {
           title="To date"
         />
       </div>
+
+      {/* Year quick-filter chips */}
+      {availableYears.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {availableYears.map(year => (
+            <button
+              key={year}
+              onClick={() => activeYear === year ? (setDateFrom(''), setDateTo(''), setPage(0)) : selectYear(year)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${activeYear === year ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'}`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Active filter chips + Clear all */}
       {hasFilters && (
