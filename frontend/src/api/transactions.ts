@@ -39,6 +39,7 @@ export interface PagedTransactions {
 
 export interface TransactionFilters {
   search?: string
+  searchMode?: 'AND' | 'OR'
   categoryId?: string
   accountId?: string
   type?: 'ALL' | 'DEBIT' | 'CREDIT'

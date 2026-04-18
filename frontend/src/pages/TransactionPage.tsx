@@ -56,12 +56,13 @@ export default function TransactionPage() {
   const qc = useQueryClient()
 
   // filters
-  const [search, setSearch]         = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [accountId, setAccountId]   = useState('')
-  const [type, setType]             = useState<'ALL' | 'DEBIT' | 'CREDIT'>('ALL')
-  const [dateFrom, setDateFrom]     = useState('')
-  const [dateTo, setDateTo]         = useState('')
+  const [search, setSearch]             = useState('')
+  const [searchMode, setSearchMode]     = useState<'AND' | 'OR'>('AND')
+  const [categoryId, setCategoryId]     = useState('')
+  const [accountId, setAccountId]       = useState('')
+  const [type, setType]                 = useState<'ALL' | 'DEBIT' | 'CREDIT'>('ALL')
+  const [dateFrom, setDateFrom]         = useState('')
+  const [dateTo, setDateTo]             = useState('')
 
   // sort
   const [sortBy, setSortBy]   = useState('valueDate')
@@ -74,6 +75,7 @@ export default function TransactionPage() {
 
   const filters: TransactionFilters = {
     search: debouncedSearch || undefined,
+    searchMode: debouncedSearch ? searchMode : undefined,
     categoryId: categoryId || undefined,
     accountId: accountId || undefined,
     type,
@@ -92,7 +94,7 @@ export default function TransactionPage() {
     staleTime: 30_000,
   })
 
-  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
+  const summaryFilters = { search: debouncedSearch || undefined, searchMode: debouncedSearch ? searchMode : undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
   const { data: summary } = useQuery({
     queryKey: ['transactions-summary', summaryFilters],
     queryFn: () => getTransactionSummary(summaryFilters),
@@ -167,7 +169,7 @@ export default function TransactionPage() {
   }, [sortBy])
 
   const resetFilters = () => {
-    setSearch(''); setCategoryId(''); setAccountId('')
+    setSearch(''); setSearchMode('AND'); setCategoryId(''); setAccountId('')
     setType('ALL'); setDateFrom(''); setDateTo(''); setPage(0)
   }
 
@@ -293,11 +295,6 @@ export default function TransactionPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {hasFilters && (
-            <button onClick={resetFilters} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1">
-              <X className="w-3.5 h-3.5" /> Clear filters
-            </button>
-          )}
           <button
             onClick={handleExport}
             disabled={exporting}
@@ -310,16 +307,30 @@ export default function TransactionPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+      <div className="flex flex-wrap gap-2 mb-2">
+        {/* Search with AND/OR toggle */}
+        <div className="relative flex-1 min-w-48 flex items-center">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-            placeholder="Search remarks or merchant…"
-            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+            placeholder="Search remarks or merchant… (use -word to exclude)"
+            className="w-full pl-8 pr-24 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           />
+          {search && (
+            <div className="absolute right-2 flex items-center gap-1">
+              <button
+                onClick={() => { setSearchMode(m => m === 'AND' ? 'OR' : 'AND'); setPage(0) }}
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${searchMode === 'OR' ? 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900 dark:border-amber-600 dark:text-amber-300' : 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900 dark:border-blue-600 dark:text-blue-300'}`}
+                title={searchMode === 'AND' ? 'All terms must match — click for OR' : 'Any term matches — click for AND'}
+              >
+                {searchMode}
+              </button>
+              <button onClick={() => { setSearch(''); setPage(0) }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Type */}
@@ -373,6 +384,31 @@ export default function TransactionPage() {
           title="To date"
         />
       </div>
+
+      {/* Active filter chips + Clear all */}
+      {hasFilters && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {search && search.trim().split(/\s+/).filter(Boolean).map(term => {
+            const isNot = term.startsWith('-') || term.startsWith('!')
+            const word = isNot ? term.slice(1) : term
+            return (
+              <span key={term} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-mono ${isNot ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'}`}>
+                {isNot && <span className="font-bold">NOT</span>}
+                {word}
+                <button onClick={() => { const next = search.trim().split(/\s+/).filter(t => t !== term).join(' '); setSearch(next); setPage(0) }} className="opacity-60 hover:opacity-100">×</button>
+              </span>
+            )
+          })}
+          {categoryId && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">category<button onClick={() => { setCategoryId(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          {accountId && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">account<button onClick={() => { setAccountId(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          {type !== 'ALL' && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{type.toLowerCase()}<button onClick={() => { setType('ALL'); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          {dateFrom && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">from {dateFrom}<button onClick={() => { setDateFrom(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          {dateTo && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">to {dateTo}<button onClick={() => { setDateTo(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          <button onClick={resetFilters} className="ml-auto text-xs text-red-500 dark:text-red-400 hover:underline flex items-center gap-1">
+            <X className="w-3 h-3" /> Clear all
+          </button>
+        </div>
+      )}
 
       {/* Filter summary cards */}
       {summary && (
