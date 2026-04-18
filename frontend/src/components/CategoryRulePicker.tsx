@@ -41,12 +41,13 @@ function CategoryTreeNode({
 }
 
 export default function CategoryRulePicker({
-  tag, categories, onClose, onApplied,
+  tag, categories, onClose, onApplied, align = 'left',
 }: {
   tag: string
   categories: Category[]
   onClose: () => void
   onApplied: () => void
+  align?: 'left' | 'right'
 }) {
   const qc = useQueryClient()
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -89,7 +90,7 @@ export default function CategoryRulePicker({
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-full mt-1 z-50 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col"
+      className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-1 z-50 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col`}
       style={{ maxHeight: '300px' }}
     >
       <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">

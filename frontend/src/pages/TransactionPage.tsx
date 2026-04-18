@@ -463,6 +463,7 @@ export default function TransactionPage() {
                     categories={categories}
                     onClose={() => setSearchRulePickerOpen(false)}
                     onApplied={() => setSearchRulePickerOpen(false)}
+                    align="right"
                   />
                 )}
               </div>
