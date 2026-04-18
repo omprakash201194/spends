@@ -41,6 +41,14 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
   const [filterValue, setFilterValue] = useState(existing?.filterValue ?? '')
   const [metric, setMetric] = useState<Metric>(existing?.metric ?? 'SPEND')
   const [periodMonths, setPeriodMonths] = useState(existing?.periodMonths ?? 6)
+
+  const PERIOD_PRESETS = [
+    { label: '3m',  value: 3 },
+    { label: '6m',  value: 6 },
+    { label: '12m', value: 12 },
+    { label: '24m', value: 24 },
+    { label: 'All', value: 0 },
+  ]
   const [color, setColor] = useState(existing?.color ?? '#6366f1')
 
   const { data: categories = [] } = useQuery({
@@ -166,18 +174,22 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
 
           {/* Period */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Period: last {periodMonths} month{periodMonths !== 1 ? 's' : ''}
-            </label>
-            <input
-              type="range"
-              min={1} max={24} step={1}
-              value={periodMonths}
-              onChange={e => setPeriodMonths(Number(e.target.value))}
-              className="w-full accent-indigo-500"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>1m</span><span>6m</span><span>12m</span><span>24m</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period</label>
+            <div className="flex gap-2">
+              {PERIOD_PRESETS.map(p => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPeriodMonths(p.value)}
+                  className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${
+                    periodMonths === p.value
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           </div>
 

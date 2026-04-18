@@ -88,7 +88,9 @@ public class WidgetService {
         LocalDate anchor = txRepo.latestTransactionDate(userId);
         if (anchor == null) return emptyData(widget);
         LocalDate to = anchor;
-        LocalDate from = to.minusMonths(widget.getPeriodMonths()).withDayOfMonth(1);
+        LocalDate from = widget.getPeriodMonths() == 0
+                ? LocalDate.of(2000, 1, 1)
+                : to.minusMonths(widget.getPeriodMonths()).withDayOfMonth(1);
 
         return switch (widget.getWidgetType()) {
             case PIE, BAR -> buildSliceData(widget, userId, from, to);

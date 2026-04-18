@@ -20,7 +20,7 @@ public class WidgetDto {
             @NotNull FilterType filterType,
             String filterValue,
             @NotNull Metric metric,
-            @Min(1) @Max(24) int periodMonths,
+            @Min(0) @Max(24) int periodMonths,   // 0 = all time
             @NotBlank String color
     ) {}
 
@@ -29,7 +29,7 @@ public class WidgetDto {
             @NotNull FilterType filterType,
             String filterValue,
             @NotNull Metric metric,
-            @Min(1) @Max(24) int periodMonths,
+            @Min(0) @Max(24) int periodMonths,   // 0 = all time
             @NotBlank String color
     ) {}
 

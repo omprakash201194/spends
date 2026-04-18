@@ -56,7 +56,7 @@ function WidgetCard({ widget, onEdit, onDelete }: {
           {widget.widgetType}
         </span>
         <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-          {widget.periodMonths}m
+          {widget.periodMonths === 0 ? 'All time' : `${widget.periodMonths}m`}
         </span>
         {widget.filterType !== 'ALL' && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300">
