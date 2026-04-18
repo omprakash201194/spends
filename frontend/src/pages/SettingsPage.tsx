@@ -9,6 +9,7 @@ import {
   deleteAllViews as apiDeleteViews,
   deleteAllCustomCategories as apiDeleteCustomCategories,
 } from '../api/dangerZone'
+import { clearAllInsights } from '../components/InsightCard'
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -360,7 +361,10 @@ function DangerZoneTab() {
         <DangerActionCard
           key={action.key}
           action={action}
-          onSuccess={() => action.invalidateKeys.forEach(k => qc.invalidateQueries({ queryKey: k }))}
+          onSuccess={() => {
+            action.invalidateKeys.forEach(k => qc.invalidateQueries({ queryKey: k }))
+            if (action.key === 'transactions') clearAllInsights()
+          }}
         />
       ))}
     </div>

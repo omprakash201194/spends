@@ -32,6 +32,11 @@ function saveStored(type: InsightType, data: StoredInsight) {
   } catch { /* storage full or unavailable */ }
 }
 
+export function clearAllInsights() {
+  const types: InsightType[] = ['DASHBOARD', 'BUDGET', 'TRANSACTIONS', 'RECURRING']
+  types.forEach(t => localStorage.removeItem(STORAGE_PREFIX + t))
+}
+
 /** Returns "just now", "5m ago", "3h ago", "yesterday", or "16 Apr" */
 function fmtAge(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
