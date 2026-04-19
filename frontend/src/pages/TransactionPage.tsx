@@ -953,6 +953,10 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
               </div>
             )
           })()}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+            {tx.account.bankName}
+            {tx.account.accountNumberMasked ? ` · ${tx.account.accountNumberMasked}` : ''}
+          </p>
         </td>
 
         {/* Category picker */}
