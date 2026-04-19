@@ -124,10 +124,15 @@ export async function deleteView(id: string): Promise<void> {
   await apiClient.delete(`/views/${id}`)
 }
 
-export async function getViewTransactions(id: string, page = 0, size = 25): Promise<ViewTransactionPage> {
-  const { data } = await apiClient.get<ViewTransactionPage>(`/views/${id}/transactions`, {
-    params: { page, size },
-  })
+export async function getViewTransactions(
+  id: string,
+  page = 0,
+  size = 25,
+  accountId?: string,
+): Promise<ViewTransactionPage> {
+  const params: Record<string, string | number> = { page, size }
+  if (accountId) params.accountId = accountId
+  const { data } = await apiClient.get<ViewTransactionPage>(`/views/${id}/transactions`, { params })
   return data
 }
 

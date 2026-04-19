@@ -9,6 +9,8 @@ import {
   type ViewResponse, type ViewTransactionItem, type ViewSummary,
   type CategoryBudgetItem,
 } from '../api/views'
+import { getBankAccounts } from '../api/bankAccounts'
+import type { BankAccount } from '../types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,10 +38,17 @@ function ListTab({ viewId }: { viewId: string }) {
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<string | undefined>(undefined)
+
+  const { data: accounts } = useQuery<BankAccount[]>({
+    queryKey: ['bank-accounts'],
+    queryFn: getBankAccounts,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const { data, isPending } = useQuery({
-    queryKey: ['view-transactions', viewId, page],
-    queryFn: () => getViewTransactions(viewId, page, 25),
+    queryKey: ['view-transactions', viewId, page, accountId],
+    queryFn: () => getViewTransactions(viewId, page, 25, accountId),
   })
 
   const removeMut = useMutation({
@@ -56,6 +65,22 @@ function ListTab({ viewId }: { viewId: string }) {
 
   return (
     <div>
+      {accounts && accounts.length > 1 && (
+        <div className="mb-3 flex items-center gap-2">
+          <select
+            value={accountId ?? ''}
+            onChange={e => { setAccountId(e.target.value || undefined); setPage(0) }}
+            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All accounts</option>
+            {accounts.map((a: BankAccount) => (
+              <option key={a.id} value={a.id}>
+                {a.bankName}{a.accountNumberMasked ? ` · ${a.accountNumberMasked}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
