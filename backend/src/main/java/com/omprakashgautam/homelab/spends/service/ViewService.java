@@ -2,6 +2,7 @@ package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.ViewDto;
 import com.omprakashgautam.homelab.spends.model.*;
+import com.omprakashgautam.homelab.spends.model.BankAccount;
 import com.omprakashgautam.homelab.spends.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -272,6 +273,7 @@ public class ViewService {
     }
 
     private ViewDto.TransactionItem toTransactionItem(Transaction tx) {
+        BankAccount account = tx.getBankAccount();
         return new ViewDto.TransactionItem(
                 tx.getId(),
                 tx.getMerchantName(),
@@ -281,7 +283,7 @@ public class ViewService {
                 tx.getDepositAmount(),
                 tx.getCategory() != null ? tx.getCategory().getName() : null,
                 tx.getCategory() != null ? tx.getCategory().getColor() : null,
-                tx.getBankAccount().getUser().getDisplayName(),
-                tx.getBankAccount().getBankName());
+                account != null ? account.getUser().getDisplayName() : null,
+                account != null ? account.getBankName() : "");
     }
 }
