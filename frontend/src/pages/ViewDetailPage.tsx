@@ -52,16 +52,13 @@ function ListTab({ viewId }: { viewId: string }) {
   })
 
   const removeMut = useMutation({
-    mutationFn: (txId: string) => {
-      setRemovingId(txId)
-      return removeTransactionFromView(viewId, txId)
-    },
+    onMutate: (txId: string) => setRemovingId(txId),
+    mutationFn: (txId: string) => removeTransactionFromView(viewId, txId),
     onSettled: () => setRemovingId(null),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['view-transactions', viewId] }),
   })
 
   if (isPending) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
-  if (!data || data.content.length === 0) return <p className="text-center text-gray-400 dark:text-gray-500 py-12">No transactions in this view.</p>
 
   return (
     <div>
@@ -81,72 +78,78 @@ function ListTab({ viewId }: { viewId: string }) {
           </select>
         </div>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">
-              <th className="pb-2 pr-4 pl-1">Date</th>
-              <th className="pb-2 pr-4">Merchant</th>
-              <th className="pb-2 pr-4">Category</th>
-              <th className="pb-2 pr-4">Member</th>
-              <th className="pb-2 pr-4 text-right">Amount</th>
-              <th className="pb-2 text-right"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {data.content.map((tx: ViewTransactionItem) => (
-              <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="py-2 pr-4 pl-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.valueDate)}</td>
-                <td className="py-2 pr-4 max-w-[180px]">
-                  <p className="truncate font-medium text-gray-800 dark:text-gray-100">{tx.merchantName ?? '—'}</p>
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{tx.rawRemarks}</p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{tx.bankName}</p>
-                </td>
-                <td className="py-2 pr-4">
-                  <div className="flex items-center gap-1.5">
-                    {tx.categoryColor && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tx.categoryColor }} />}
-                    <span className="text-gray-600 dark:text-gray-300">{tx.categoryName ?? '—'}</span>
-                  </div>
-                </td>
-                <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{tx.memberName}</td>
-                <td className="py-2 pr-4 text-right font-mono">
-                  {tx.withdrawalAmount > 0
-                    ? <span className="text-red-600">{fmtFull(tx.withdrawalAmount)}</span>
-                    : <span className="text-green-600">{fmtFull(tx.depositAmount)}</span>}
-                </td>
-                <td className="py-2 text-right">
-                  <button
-                    onClick={() => removeMut.mutate(tx.id)}
-                    disabled={removingId === tx.id}
-                    className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 rounded"
-                    aria-label={`Remove ${tx.merchantName ?? tx.rawRemarks} from view`}
-                    title="Remove from view"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {data.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-gray-400">
-          <span>{data.totalElements} transactions</span>
-          <div className="flex gap-2">
-            <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-              className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
-              Prev
-            </button>
-            <span className="px-3 py-1.5">{page + 1} / {data.totalPages}</span>
-            <button disabled={page >= data.totalPages - 1} onClick={() => setPage(p => p + 1)}
-              className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
-              Next
-            </button>
+      {(!data || data.content.length === 0) ? (
+        <p className="text-center text-gray-400 dark:text-gray-500 py-12">No transactions in this view.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  <th className="pb-2 pr-4 pl-1">Date</th>
+                  <th className="pb-2 pr-4">Merchant</th>
+                  <th className="pb-2 pr-4">Category</th>
+                  <th className="pb-2 pr-4">Member</th>
+                  <th className="pb-2 pr-4 text-right">Amount</th>
+                  <th className="pb-2 text-right"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {data.content.map((tx: ViewTransactionItem) => (
+                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="py-2 pr-4 pl-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.valueDate)}</td>
+                    <td className="py-2 pr-4 max-w-[180px]">
+                      <p className="truncate font-medium text-gray-800 dark:text-gray-100">{tx.merchantName ?? '—'}</p>
+                      <p className="truncate text-xs text-gray-400 dark:text-gray-500">{tx.rawRemarks}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{tx.bankName}</p>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-1.5">
+                        {tx.categoryColor && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tx.categoryColor }} />}
+                        <span className="text-gray-600 dark:text-gray-300">{tx.categoryName ?? '—'}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{tx.memberName}</td>
+                    <td className="py-2 pr-4 text-right font-mono">
+                      {tx.withdrawalAmount > 0
+                        ? <span className="text-red-600">{fmtFull(tx.withdrawalAmount)}</span>
+                        : <span className="text-green-600">{fmtFull(tx.depositAmount)}</span>}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button
+                        onClick={() => removeMut.mutate(tx.id)}
+                        disabled={removingId === tx.id}
+                        className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 rounded"
+                        aria-label={`Remove ${tx.merchantName ?? tx.rawRemarks} from view`}
+                        title="Remove from view"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {data.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-gray-400">
+              <span>{data.totalElements} transactions</span>
+              <div className="flex gap-2">
+                <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
+                  className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  Prev
+                </button>
+                <span className="px-3 py-1.5">{page + 1} / {data.totalPages}</span>
+                <button disabled={page >= data.totalPages - 1} onClick={() => setPage(p => p + 1)}
+                  className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
