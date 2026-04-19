@@ -113,7 +113,7 @@ export default function ImportPage() {
       return [...prev, ...accepted.filter((f) => !names.has(f.name))]
     })
     setResult(null)
-  }, [])
+  }, [selectedBank])
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -195,7 +195,7 @@ export default function ImportPage() {
         <p className="text-gray-700 dark:text-gray-200 font-medium">Drop {selectedBank === 'BOB' ? 'CSV' : 'XLS or XLSX'} files here</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-          Supports ICICI Bank statement exports · Multiple files at once
+          {selectedBank === 'BOB' ? 'Bank of Baroda CSV exports' : 'ICICI Bank XLS/XLSX exports'} · Multiple files at once
         </p>
       </div>
 
@@ -238,7 +238,9 @@ export default function ImportPage() {
         <div className="mt-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700">
-            Import failed. Please check that the files are valid ICICI XLS statements.
+            {selectedBank === 'ICICI'
+              ? 'Import failed. Please check that the files are valid ICICI XLS statements.'
+              : 'Import failed. Please check that the files are valid Bank of Baroda CSV statements.'}
           </p>
         </div>
       )}
