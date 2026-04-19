@@ -154,6 +154,7 @@ spends/
 | PUT | `/api/bank-accounts/{id}` | JWT | Update a bank account |
 | DELETE | `/api/bank-accounts/{id}` | JWT | Delete a bank account |
 | POST | `/api/import/icici` | JWT | Import ICICI XLS/XLSX files (multipart, field: `files`) |
+| POST | `/api/import/bob` | JWT | Import Bank of Baroda CSV files (multipart, field: `files`) |
 | GET | `/api/categories` | JWT | List all categories |
 | GET | `/api/transactions` | JWT | Paginated list (search, categoryId, accountId, type, dateFrom, dateTo, sortBy, sortDir, page, size) |
 | PATCH | `/api/transactions/{id}/category` | JWT | Update category; optionally create CategoryRule |
@@ -612,3 +613,15 @@ Three UX improvements to the custom dashboard system:
 - **`WidgetForm.tsx`** — chart type picker always shown (was hidden in edit mode)
 
 **Tests** — `WidgetServiceTest` updated: `getWidgets` now takes `(dashboardId, userId)`; `previewWidget_returnsDataWithoutSaving` added (verifies `widgetRepo.save` never called); `WidgetControllerTest` pruned to match current controller endpoints (removed old `getWidgets`/`createWidget` tests, added `previewWidget` test)
+
+### Feature — Bank of Baroda CSV Import ✅ COMPLETE
+Multi-bank statement import. Users select their bank from a dropdown before uploading; the UI filters accepted file types and dispatches to bank-specific endpoints.
+
+- **`ParsedStatement`** (NEW) — top-level shared record extracted from `IciciStatementParser`; holds `bankName`, `accountNumberMasked`, `accountHolderName`, `accountType`, `List<ParsedTransaction>`
+- **`BobStatementParser`** (NEW) — `@Component` CSV parser using Apache Commons CSV 1.11.0; detects metadata by content (holder name from col[1] with "Holder Name", account number from col[13] when col[10] contains "Account No"); data rows start after header row where col[0] equals "TRAN DATE"; stops at footer via `looksLikeDate()` check; `parseBalance` negates when suffix is "Dr"
+- **`ImportService`** — `StatementParserFn` private functional interface enables routing; `importIciciFiles` / `importBobFiles` both delegate to shared `importFilesWith`; adding a 3rd bank = new parser + 2-line method
+- **`ImportController`** — new `POST /api/import/bob` endpoint alongside existing `/icici`
+- **`frontend/src/api/importStatements.ts`** — `importBobFiles` function targeting `/import/bob`
+- **`ImportPage.tsx`** — `selectedBank` state (`'ICICI' | 'BOB'`); dropdown resets files+result on change; `addFiles` useCallback depends on `selectedBank` (drag-and-drop extension guard); `accept` attribute, drop zone hint, and error message all bank-conditional
+- **`pom.xml`** — `org.apache.commons:commons-csv:1.11.0` added
+- **Tests** — 7 `BobStatementParserTest` tests (metadata extraction, transaction parsing, footer detection); `ImportServiceTest` updated with `importBobFiles_routesToBobParser` and renamed ICICI confidence tests; 104 total tests pass
