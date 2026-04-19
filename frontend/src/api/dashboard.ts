@@ -38,7 +38,8 @@ export interface DashboardSummary {
   prevYear: Comparison | null
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const { data } = await apiClient.get<DashboardSummary>('/dashboard/summary')
+export async function getDashboardSummary(accountId?: string): Promise<DashboardSummary> {
+  const params = accountId ? { accountId } : {}
+  const { data } = await apiClient.get<DashboardSummary>('/dashboard/summary', { params })
   return data
 }

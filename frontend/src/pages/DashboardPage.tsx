@@ -11,6 +11,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip,
 } from 'recharts'
 import { getDashboardSummary, type DashboardSummary } from '../api/dashboard'
+import { getBankAccounts } from '../api/bankAccounts'
+import type { BankAccount } from '../types'
 import { getAlerts, type AlertSummary, type Alert, type AlertType } from '../api/alerts'
 import { getRecurring, type RecurringSummary } from '../api/recurring'
 import { getGoals, type GoalResponse } from '../api/savingsGoals'
@@ -39,10 +41,11 @@ function pctDelta(current: number, prev: number): number | null {
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
+  const [accountId, setAccountId] = useState<string | undefined>(undefined)
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: getDashboardSummary,
+    queryKey: ['dashboard', accountId],
+    queryFn: () => getDashboardSummary(accountId),
     staleTime: 60_000,
   })
 
@@ -62,6 +65,12 @@ export default function DashboardPage() {
     queryKey: ['goals'],
     queryFn: getGoals,
     staleTime: 60_000,
+  })
+
+  const { data: accounts } = useQuery<BankAccount[]>({
+    queryKey: ['bank-accounts'],
+    queryFn: getBankAccounts,
+    staleTime: 5 * 60_000,
   })
 
   const alertCount = alertData?.alerts.length ?? 0
@@ -109,6 +118,24 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Account filter */}
+      {accounts && accounts.length > 1 && (
+        <div className="mb-4">
+          <select
+            value={accountId ?? ''}
+            onChange={e => setAccountId(e.target.value || undefined)}
+            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All accounts</option>
+            {accounts.map(a => (
+              <option key={a.id} value={a.id}>
+                {a.bankName}{a.accountNumberMasked ? ` · ${a.accountNumberMasked}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {isLoading && <LoadingSkeleton />}
       {isError  && <ErrorState />}
