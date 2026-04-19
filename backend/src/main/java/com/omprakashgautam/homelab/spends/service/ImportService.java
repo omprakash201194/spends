@@ -29,7 +29,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ImportService {
 
-    private final IciciStatementParser parser;
+    @FunctionalInterface
+    interface StatementParserFn {
+        ParsedStatement parse(MultipartFile file) throws Exception;
+    }
+
+    private final IciciStatementParser iciciParser;
+    private final BobStatementParser bobParser;
     private final BankAccountService bankAccountService;
     private final CategorizationService categorizationService;
     private final MerchantExtractor merchantExtractor;
@@ -37,14 +43,24 @@ public class ImportService {
     private final ImportBatchRepository importBatchRepository;
 
     @Transactional
-    public ImportResultDto.Response importFiles(UUID userId, List<MultipartFile> files) {
+    public ImportResultDto.Response importIciciFiles(UUID userId, List<MultipartFile> files) {
+        return importFilesWith(userId, files, iciciParser::parse);
+    }
+
+    @Transactional
+    public ImportResultDto.Response importBobFiles(UUID userId, List<MultipartFile> files) {
+        return importFilesWith(userId, files, bobParser::parse);
+    }
+
+    private ImportResultDto.Response importFilesWith(UUID userId, List<MultipartFile> files,
+                                                     StatementParserFn parserFn) {
         List<ImportResultDto.FileSummary> summaries = new ArrayList<>();
         int totalImported = 0;
         int totalDuplicates = 0;
         int totalErrors = 0;
 
         for (MultipartFile file : files) {
-            ImportResultDto.FileSummary summary = importSingleFile(userId, file);
+            ImportResultDto.FileSummary summary = importSingleFile(userId, file, parserFn);
             summaries.add(summary);
             totalImported   += summary.imported();
             totalDuplicates += summary.duplicates();
@@ -54,7 +70,8 @@ public class ImportService {
         return new ImportResultDto.Response(totalImported, totalDuplicates, totalErrors, summaries);
     }
 
-    private ImportResultDto.FileSummary importSingleFile(UUID userId, MultipartFile file) {
+    private ImportResultDto.FileSummary importSingleFile(UUID userId, MultipartFile file,
+                                                          StatementParserFn parserFn) {
         String fileName = file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename();
         int imported = 0;
         int categorized = 0;
@@ -64,7 +81,7 @@ public class ImportService {
         List<ImportResultDto.ErrorEntry> errorRows = new ArrayList<>();
 
         try {
-            ParsedStatement statement = parser.parse(file);
+            ParsedStatement statement = parserFn.parse(file);
 
             bankAccount = bankAccountService.findOrCreate(
                     userId,
@@ -73,7 +90,6 @@ public class ImportService {
                     statement.accountType()
             );
 
-            // Create the batch record so every imported transaction is linked to it
             batch = importBatchRepository.save(ImportBatch.builder()
                     .bankAccount(bankAccount)
                     .originalFilename(fileName)
@@ -126,7 +142,6 @@ public class ImportService {
                 }
             }
 
-            // Persist final counts on the batch record
             batch.setTransactionCount(imported);
             batch.setDuplicateCount(duplicateRows.size());
             importBatchRepository.save(batch);
@@ -179,16 +194,12 @@ public class ImportService {
         if (!importBatchRepository.existsByIdAndUserId(batchId, userId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Import batch not found");
         }
-        // Deleting the batch cascades to financial_transaction (ON DELETE CASCADE in migration 008),
-        // which in turn cascades to view_transaction (ON DELETE CASCADE in migration 007).
         importBatchRepository.deleteById(batchId);
     }
 
     @Transactional
     public void deleteAll(UUID userId) {
-        // Delete transactions first — DB cascade removes view_transaction links (migration 007)
         transactionRepository.deleteAllByUserId(userId);
-        // Delete batch records — their transactions are already gone
         importBatchRepository.deleteAllByUserId(userId);
     }
 

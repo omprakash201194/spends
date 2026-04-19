@@ -34,7 +34,7 @@ public class ImportController {
             return ResponseEntity.badRequest().build();
         }
 
-        ImportResultDto.Response result = importService.importFiles(principal.getId(), files);
+        ImportResultDto.Response result = importService.importIciciFiles(principal.getId(), files);
         return ResponseEntity.ok(result);
     }
 

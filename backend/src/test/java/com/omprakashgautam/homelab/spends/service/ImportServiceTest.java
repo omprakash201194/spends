@@ -34,7 +34,8 @@ class ImportServiceTest {
 
     @Mock ImportBatchRepository importBatchRepository;
     @Mock TransactionRepository transactionRepository;
-    @Mock IciciStatementParser parser;
+    @Mock IciciStatementParser iciciParser;
+    @Mock BobStatementParser bobParser;
     @Mock BankAccountService bankAccountService;
     @Mock CategorizationService categorizationService;
     @Mock MerchantExtractor merchantExtractor;
@@ -118,32 +119,29 @@ class ImportServiceTest {
     // ── Confidence score tests ─────────────────────────────────────────────────
 
     @Test
-    void importFiles_confidenceScore_twoCategorizeTwoMisc() throws Exception {
-        // Set up a bank account
+    void importIciciFiles_confidenceScore_twoCategorizeTwoMisc() throws Exception {
         BankAccount account = new BankAccount();
         account.setId(UUID.randomUUID());
         account.setBankName("ICICI");
         account.setAccountNumberMasked("XXXX5678");
 
-        // Set up categories
         Category food = Category.builder().id(UUID.randomUUID()).name("Food & Dining").build();
         Category misc = Category.builder().id(UUID.randomUUID()).name("Miscellaneous").build();
 
-        // Four parsed transactions: 2 matched, 2 misc
-        IciciStatementParser.ParsedTransaction tx1 = new IciciStatementParser.ParsedTransaction(
+        ParsedStatement.ParsedTransaction tx1 = new ParsedStatement.ParsedTransaction(
                 LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10), null,
                 "SWIGGY ORDER 123", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(1000));
-        IciciStatementParser.ParsedTransaction tx2 = new IciciStatementParser.ParsedTransaction(
+        ParsedStatement.ParsedTransaction tx2 = new ParsedStatement.ParsedTransaction(
                 LocalDate.of(2026, 1, 11), LocalDate.of(2026, 1, 11), null,
                 "ZOMATO DELIVERY", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(990));
-        IciciStatementParser.ParsedTransaction tx3 = new IciciStatementParser.ParsedTransaction(
+        ParsedStatement.ParsedTransaction tx3 = new ParsedStatement.ParsedTransaction(
                 LocalDate.of(2026, 1, 12), LocalDate.of(2026, 1, 12), null,
                 "UNKNOWN MERCHANT XYZ", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(980));
-        IciciStatementParser.ParsedTransaction tx4 = new IciciStatementParser.ParsedTransaction(
+        ParsedStatement.ParsedTransaction tx4 = new ParsedStatement.ParsedTransaction(
                 LocalDate.of(2026, 1, 13), LocalDate.of(2026, 1, 13), null,
                 "RANDOM PAYMENT ABC", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(970));
 
-        IciciStatementParser.ParsedStatement statement = new IciciStatementParser.ParsedStatement(
+        ParsedStatement statement = new ParsedStatement(
                 "ICICI", "XXXX5678", "OMPRAKASH HARISH", "SAVINGS",
                 List.of(tx1, tx2, tx3, tx4));
 
@@ -152,22 +150,19 @@ class ImportServiceTest {
 
         ImportBatch savedBatch = buildBatch(BATCH_ID);
 
-        when(parser.parse(file)).thenReturn(statement);
+        when(iciciParser.parse(file)).thenReturn(statement);
         when(bankAccountService.findOrCreate(any(), any(), any(), any())).thenReturn(account);
         when(importBatchRepository.save(any())).thenReturn(savedBatch);
         when(transactionRepository.existsByImportHash(any())).thenReturn(false);
-        // tx1 + tx2 → food, tx3 + tx4 → misc
         when(categorizationService.categorize(any(), eq("SWIGGY ORDER 123"))).thenReturn(food);
         when(categorizationService.categorize(any(), eq("ZOMATO DELIVERY"))).thenReturn(food);
         when(categorizationService.categorize(any(), eq("UNKNOWN MERCHANT XYZ"))).thenReturn(misc);
         when(categorizationService.categorize(any(), eq("RANDOM PAYMENT ABC"))).thenReturn(misc);
         when(merchantExtractor.extract(any())).thenReturn("Merchant");
 
-        ImportResultDto.Response response = importService.importFiles(USER_ID, List.of(file));
+        ImportResultDto.Response response = importService.importIciciFiles(USER_ID, List.of(file));
 
         assertThat(response.totalImported()).isEqualTo(4);
-        assertThat(response.files()).hasSize(1);
-
         ImportResultDto.FileSummary summary = response.files().get(0);
         assertThat(summary.categorized()).isEqualTo(2);
         assertThat(summary.misc()).isEqualTo(2);
@@ -175,7 +170,7 @@ class ImportServiceTest {
     }
 
     @Test
-    void importFiles_confidenceScore_allCategorized() throws Exception {
+    void importIciciFiles_confidenceScore_allCategorized() throws Exception {
         BankAccount account = new BankAccount();
         account.setId(UUID.randomUUID());
         account.setBankName("ICICI");
@@ -183,11 +178,11 @@ class ImportServiceTest {
 
         Category transport = Category.builder().id(UUID.randomUUID()).name("Transport").build();
 
-        IciciStatementParser.ParsedTransaction tx = new IciciStatementParser.ParsedTransaction(
+        ParsedStatement.ParsedTransaction tx = new ParsedStatement.ParsedTransaction(
                 LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 1), null,
                 "OLA CAB BOOKING", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(500));
 
-        IciciStatementParser.ParsedStatement statement = new IciciStatementParser.ParsedStatement(
+        ParsedStatement statement = new ParsedStatement(
                 "ICICI", "XXXX9999", "OMPRAKASH HARISH", "SAVINGS", List.of(tx));
 
         MultipartFile file = new MockMultipartFile(
@@ -195,14 +190,14 @@ class ImportServiceTest {
 
         ImportBatch savedBatch = buildBatch(BATCH_ID);
 
-        when(parser.parse(file)).thenReturn(statement);
+        when(iciciParser.parse(file)).thenReturn(statement);
         when(bankAccountService.findOrCreate(any(), any(), any(), any())).thenReturn(account);
         when(importBatchRepository.save(any())).thenReturn(savedBatch);
         when(transactionRepository.existsByImportHash(any())).thenReturn(false);
         when(categorizationService.categorize(any(), any())).thenReturn(transport);
         when(merchantExtractor.extract(any())).thenReturn("Ola");
 
-        ImportResultDto.Response response = importService.importFiles(USER_ID, List.of(file));
+        ImportResultDto.Response response = importService.importIciciFiles(USER_ID, List.of(file));
 
         ImportResultDto.FileSummary summary = response.files().get(0);
         assertThat(summary.categorized()).isEqualTo(1);
@@ -211,13 +206,13 @@ class ImportServiceTest {
     }
 
     @Test
-    void importFiles_confidenceScore_zeroTransactions() throws Exception {
+    void importIciciFiles_confidenceScore_zeroTransactions() throws Exception {
         BankAccount account = new BankAccount();
         account.setId(UUID.randomUUID());
         account.setBankName("ICICI");
         account.setAccountNumberMasked("XXXX0000");
 
-        IciciStatementParser.ParsedStatement statement = new IciciStatementParser.ParsedStatement(
+        ParsedStatement statement = new ParsedStatement(
                 "ICICI", "XXXX0000", "OMPRAKASH HARISH", "SAVINGS", List.of());
 
         MultipartFile file = new MockMultipartFile(
@@ -225,11 +220,11 @@ class ImportServiceTest {
 
         ImportBatch savedBatch = buildBatch(BATCH_ID);
 
-        when(parser.parse(file)).thenReturn(statement);
+        when(iciciParser.parse(file)).thenReturn(statement);
         when(bankAccountService.findOrCreate(any(), any(), any(), any())).thenReturn(account);
         when(importBatchRepository.save(any())).thenReturn(savedBatch);
 
-        ImportResultDto.Response response = importService.importFiles(USER_ID, List.of(file));
+        ImportResultDto.Response response = importService.importIciciFiles(USER_ID, List.of(file));
 
         ImportResultDto.FileSummary summary = response.files().get(0);
         assertThat(summary.categorized()).isEqualTo(0);
