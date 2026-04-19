@@ -41,7 +41,7 @@ public interface ViewTransactionLinkRepository extends JpaRepository<ViewTransac
         """)
     Page<Transaction> findTransactionsByViewIdFiltered(
             @Param("viewId") UUID viewId,
-            @Param("accountId") UUID accountId,
+            @Param("accountId") String accountId,
             Pageable pageable);
 
     // ── Auto-tag on create ────────────────────────────────────────────────────

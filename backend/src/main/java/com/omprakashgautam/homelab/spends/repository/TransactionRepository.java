@@ -162,7 +162,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     BigDecimal sumWithdrawalsFiltered(@Param("userId") UUID userId,
                                       @Param("from") LocalDate from,
                                       @Param("to") LocalDate to,
-                                      @Param("accountId") UUID accountId);
+                                      @Param("accountId") String accountId);
 
     @Query("""
         SELECT COALESCE(SUM(t.depositAmount), 0)
@@ -174,7 +174,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     BigDecimal sumDepositsFiltered(@Param("userId") UUID userId,
                                    @Param("from") LocalDate from,
                                    @Param("to") LocalDate to,
-                                   @Param("accountId") UUID accountId);
+                                   @Param("accountId") String accountId);
 
     @Query("""
         SELECT COUNT(t)
@@ -186,7 +186,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     long countInPeriodFiltered(@Param("userId") UUID userId,
                                @Param("from") LocalDate from,
                                @Param("to") LocalDate to,
-                               @Param("accountId") UUID accountId);
+                               @Param("accountId") String accountId);
 
     @Query("""
         SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
@@ -202,7 +202,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> categoryBreakdownFiltered(@Param("userId") UUID userId,
                                               @Param("from") LocalDate from,
                                               @Param("to") LocalDate to,
-                                              @Param("accountId") UUID accountId);
+                                              @Param("accountId") String accountId);
 
     @Query("""
         SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
@@ -217,7 +217,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     List<Object[]> monthlyTrendFiltered(@Param("userId") UUID userId,
                                          @Param("from") LocalDate from,
-                                         @Param("accountId") UUID accountId);
+                                         @Param("accountId") String accountId);
 
     @Query("""
         SELECT t.merchantName, COALESCE(SUM(t.withdrawalAmount), 0), COUNT(t)
@@ -234,7 +234,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> topMerchantsFiltered(@Param("userId") UUID userId,
                                          @Param("from") LocalDate from,
                                          @Param("to") LocalDate to,
-                                         @Param("accountId") UUID accountId);
+                                         @Param("accountId") String accountId);
 
     @Query("""
         SELECT MAX(t.valueDate)
@@ -243,7 +243,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
           AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         """)
     LocalDate latestTransactionDateFiltered(@Param("userId") UUID userId,
-                                             @Param("accountId") UUID accountId);
+                                             @Param("accountId") String accountId);
 
     // ── Alerts: large single withdrawals ─────────────────────────────────────
 

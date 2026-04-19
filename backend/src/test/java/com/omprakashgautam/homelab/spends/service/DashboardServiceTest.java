@@ -131,19 +131,19 @@ class DashboardServiceTest {
     void getSummary_withAccountId_usesFilteredQueries() {
         UUID accountId = UUID.randomUUID();
 
-        when(transactionRepository.latestTransactionDateFiltered(USER_ID, accountId))
+        when(transactionRepository.latestTransactionDateFiltered(USER_ID, accountId.toString()))
                 .thenReturn(LocalDate.of(2026, 3, 15));
-        when(transactionRepository.sumWithdrawalsFiltered(eq(USER_ID), any(), any(), eq(accountId)))
+        when(transactionRepository.sumWithdrawalsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString())))
                 .thenReturn(BigDecimal.valueOf(5000));
-        when(transactionRepository.sumDepositsFiltered(eq(USER_ID), any(), any(), eq(accountId)))
+        when(transactionRepository.sumDepositsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString())))
                 .thenReturn(BigDecimal.valueOf(8000));
-        when(transactionRepository.countInPeriodFiltered(eq(USER_ID), any(), any(), eq(accountId)))
+        when(transactionRepository.countInPeriodFiltered(eq(USER_ID), any(), any(), eq(accountId.toString())))
                 .thenReturn(10L);
-        when(transactionRepository.categoryBreakdownFiltered(eq(USER_ID), any(), any(), eq(accountId)))
+        when(transactionRepository.categoryBreakdownFiltered(eq(USER_ID), any(), any(), eq(accountId.toString())))
                 .thenReturn(List.of());
-        when(transactionRepository.monthlyTrendFiltered(eq(USER_ID), any(), eq(accountId)))
+        when(transactionRepository.monthlyTrendFiltered(eq(USER_ID), any(), eq(accountId.toString())))
                 .thenReturn(List.of());
-        when(transactionRepository.topMerchantsFiltered(eq(USER_ID), any(), any(), eq(accountId)))
+        when(transactionRepository.topMerchantsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString())))
                 .thenReturn(List.of());
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(mockUser()));
         when(categoryRepository.findBySystemTrueOrHouseholdId(any())).thenReturn(List.of());
@@ -151,14 +151,14 @@ class DashboardServiceTest {
         DashboardDto.Summary summary = dashboardService.getSummary(USER_ID, accountId);
 
         assertThat(summary.totalSpent()).isEqualByComparingTo(BigDecimal.valueOf(5000));
-        verify(transactionRepository).latestTransactionDateFiltered(USER_ID, accountId);
+        verify(transactionRepository).latestTransactionDateFiltered(USER_ID, accountId.toString());
         verify(transactionRepository, never()).latestTransactionDate(any());
-        verify(transactionRepository, atLeastOnce()).sumWithdrawalsFiltered(eq(USER_ID), any(), any(), eq(accountId));
-        verify(transactionRepository, atLeastOnce()).sumDepositsFiltered(eq(USER_ID), any(), any(), eq(accountId));
-        verify(transactionRepository, atLeastOnce()).countInPeriodFiltered(eq(USER_ID), any(), any(), eq(accountId));
-        verify(transactionRepository).categoryBreakdownFiltered(eq(USER_ID), any(), any(), eq(accountId));
-        verify(transactionRepository).monthlyTrendFiltered(eq(USER_ID), any(), eq(accountId));
-        verify(transactionRepository).topMerchantsFiltered(eq(USER_ID), any(), any(), eq(accountId));
+        verify(transactionRepository, atLeastOnce()).sumWithdrawalsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString()));
+        verify(transactionRepository, atLeastOnce()).sumDepositsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString()));
+        verify(transactionRepository, atLeastOnce()).countInPeriodFiltered(eq(USER_ID), any(), any(), eq(accountId.toString()));
+        verify(transactionRepository).categoryBreakdownFiltered(eq(USER_ID), any(), any(), eq(accountId.toString()));
+        verify(transactionRepository).monthlyTrendFiltered(eq(USER_ID), any(), eq(accountId.toString()));
+        verify(transactionRepository).topMerchantsFiltered(eq(USER_ID), any(), any(), eq(accountId.toString()));
     }
 
     private User mockUser() {
