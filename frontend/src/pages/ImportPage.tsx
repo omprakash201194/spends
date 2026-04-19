@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, History, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
   importIciciFiles,
+  importBobFiles,
   getImportHistory,
   deleteImportBatch,
   deleteAllTransactions,
@@ -29,6 +30,7 @@ function fmtDateTime(iso: string): string {
 
 export default function ImportPage() {
   const [files, setFiles] = useState<File[]>([])
+  const [selectedBank, setSelectedBank] = useState<'ICICI' | 'BOB'>('ICICI')
   const [dragOver, setDragOver] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null)
@@ -48,7 +50,8 @@ export default function ImportPage() {
   // ── Import mutation ─────────────────────────────────────────────────────────
 
   const importMut = useMutation({
-    mutationFn: importIciciFiles,
+    mutationFn: (files: File[]) =>
+      selectedBank === 'ICICI' ? importIciciFiles(files) : importBobFiles(files),
     onSuccess: (data) => {
       setResult(data)
       setFiles([])
@@ -101,12 +104,13 @@ export default function ImportPage() {
   // ── File handling ───────────────────────────────────────────────────────────
 
   const addFiles = useCallback((incoming: File[]) => {
-    const xlsFiles = incoming.filter(
-      (f) => f.name.endsWith('.xls') || f.name.endsWith('.xlsx')
-    )
+    const accepted = incoming.filter((f) => {
+      if (selectedBank === 'BOB') return f.name.endsWith('.csv')
+      return f.name.endsWith('.xls') || f.name.endsWith('.xlsx')
+    })
     setFiles((prev) => {
       const names = new Set(prev.map((f) => f.name))
-      return [...prev, ...xlsFiles.filter((f) => !names.has(f.name))]
+      return [...prev, ...accepted.filter((f) => !names.has(f.name))]
     })
     setResult(null)
   }, [])
@@ -141,8 +145,29 @@ export default function ImportPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Statements</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Upload ICICI bank statement XLS/XLSX files. Duplicates are automatically skipped.
+          {selectedBank === 'ICICI'
+            ? 'Upload ICICI bank statement XLS/XLSX files. Duplicates are automatically skipped.'
+            : 'Upload Bank of Baroda account statement CSV files. Duplicates are automatically skipped.'}
         </p>
+      </div>
+
+      {/* Bank selector */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Bank
+        </label>
+        <select
+          value={selectedBank}
+          onChange={(e) => {
+            setSelectedBank(e.target.value as 'ICICI' | 'BOB')
+            setFiles([])
+            setResult(null)
+          }}
+          className="w-full sm:w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="ICICI">ICICI Bank</option>
+          <option value="BOB">Bank of Baroda</option>
+        </select>
       </div>
 
       {/* Drop zone */}
@@ -161,13 +186,13 @@ export default function ImportPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xls,.xlsx"
+          accept={selectedBank === 'BOB' ? '.csv' : '.xls,.xlsx'}
           multiple
           className="hidden"
           onChange={onFileInput}
         />
         <Upload className="mx-auto w-10 h-10 text-gray-400 dark:text-gray-500 mb-3" />
-        <p className="text-gray-700 dark:text-gray-200 font-medium">Drop XLS / XLSX files here</p>
+        <p className="text-gray-700 dark:text-gray-200 font-medium">Drop {selectedBank === 'BOB' ? 'CSV' : 'XLS or XLSX'} files here</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
           Supports ICICI Bank statement exports · Multiple files at once
