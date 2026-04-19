@@ -8,7 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -19,7 +22,8 @@ public class DashboardController {
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardDto.Summary> summary(
-            @AuthenticationPrincipal UserDetailsImpl principal) {
-        return ResponseEntity.ok(dashboardService.getSummary(principal.getId()));
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam(required = false) UUID accountId) {
+        return ResponseEntity.ok(dashboardService.getSummary(principal.getId(), accountId));
     }
 }

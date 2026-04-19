@@ -150,6 +150,101 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     LocalDate latestTransactionDate(@Param("userId") UUID userId);
 
+    // ── Dashboard: account-filtered variants ──────────────────────────────────
+
+    @Query("""
+        SELECT COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        """)
+    BigDecimal sumWithdrawalsFiltered(@Param("userId") UUID userId,
+                                      @Param("from") LocalDate from,
+                                      @Param("to") LocalDate to,
+                                      @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        """)
+    BigDecimal sumDepositsFiltered(@Param("userId") UUID userId,
+                                   @Param("from") LocalDate from,
+                                   @Param("to") LocalDate to,
+                                   @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        """)
+    long countInPeriodFiltered(@Param("userId") UUID userId,
+                               @Param("from") LocalDate from,
+                               @Param("to") LocalDate to,
+                               @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category IS NOT NULL
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownFiltered(@Param("userId") UUID userId,
+                                              @Param("from") LocalDate from,
+                                              @Param("to") LocalDate to,
+                                              @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendFiltered(@Param("userId") UUID userId,
+                                         @Param("from") LocalDate from,
+                                         @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.merchantName, COALESCE(SUM(t.withdrawalAmount), 0), COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.merchantName IS NOT NULL
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        GROUP BY t.merchantName
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        LIMIT 8
+        """)
+    List<Object[]> topMerchantsFiltered(@Param("userId") UUID userId,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to,
+                                         @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT MAX(t.valueDate)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+        """)
+    LocalDate latestTransactionDateFiltered(@Param("userId") UUID userId,
+                                             @Param("accountId") UUID accountId);
+
     // ── Alerts: large single withdrawals ─────────────────────────────────────
 
     @Query("""
