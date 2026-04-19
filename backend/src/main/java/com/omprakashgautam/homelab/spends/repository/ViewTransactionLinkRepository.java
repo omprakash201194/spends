@@ -39,6 +39,26 @@ public interface ViewTransactionLinkRepository extends JpaRepository<ViewTransac
         """)
     Page<Transaction> findTransactionsByViewId(@Param("viewId") UUID viewId, Pageable pageable);
 
+    @Query(value = """
+        SELECT vtl.transaction
+        FROM ViewTransactionLink vtl
+        JOIN FETCH vtl.transaction.bankAccount ba
+        JOIN FETCH ba.user
+        WHERE vtl.view.id = :viewId
+          AND (CAST(:accountId AS uuid) IS NULL OR vtl.transaction.bankAccount.id = CAST(:accountId AS uuid))
+        ORDER BY vtl.transaction.valueDate DESC
+        """,
+        countQuery = """
+        SELECT COUNT(vtl)
+        FROM ViewTransactionLink vtl
+        WHERE vtl.view.id = :viewId
+          AND (CAST(:accountId AS uuid) IS NULL OR vtl.transaction.bankAccount.id = CAST(:accountId AS uuid))
+        """)
+    Page<Transaction> findTransactionsByViewIdFiltered(
+            @Param("viewId") UUID viewId,
+            @Param("accountId") UUID accountId,
+            Pageable pageable);
+
     // ── Auto-tag on create ────────────────────────────────────────────────────
 
     @Query("""

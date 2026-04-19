@@ -61,8 +61,9 @@ public class ViewController {
             @AuthenticationPrincipal UserDetailsImpl principal,
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
-        return ResponseEntity.ok(viewService.getTransactions(principal.getId(), id, page, size));
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) UUID accountId) {
+        return ResponseEntity.ok(viewService.getTransactions(principal.getId(), id, page, size, accountId));
     }
 
     @GetMapping("/{id}/summary")

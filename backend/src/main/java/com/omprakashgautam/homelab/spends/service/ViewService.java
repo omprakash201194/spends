@@ -112,10 +112,10 @@ public class ViewService {
     // ── Paginated transactions (List tab) ─────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public ViewDto.TransactionPage getTransactions(UUID userId, UUID viewId, int page, int size) {
+    public ViewDto.TransactionPage getTransactions(UUID userId, UUID viewId, int page, int size, UUID accountId) {
         resolveView(userId, viewId);
         Page<Transaction> txPage = linkRepository
-                .findTransactionsByViewId(viewId, PageRequest.of(page, size));
+                .findTransactionsByViewIdFiltered(viewId, accountId, PageRequest.of(page, size));
         return new ViewDto.TransactionPage(
                 txPage.getContent().stream().map(this::toTransactionItem).toList(),
                 page, size,
