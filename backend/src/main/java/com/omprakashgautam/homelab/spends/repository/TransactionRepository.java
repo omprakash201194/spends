@@ -157,7 +157,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
           AND t.valueDate >= :from AND t.valueDate <= :to
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         """)
     BigDecimal sumWithdrawalsFiltered(@Param("userId") UUID userId,
                                       @Param("from") LocalDate from,
@@ -169,7 +169,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
           AND t.valueDate >= :from AND t.valueDate <= :to
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         """)
     BigDecimal sumDepositsFiltered(@Param("userId") UUID userId,
                                    @Param("from") LocalDate from,
@@ -181,7 +181,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
           AND t.valueDate >= :from AND t.valueDate <= :to
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         """)
     long countInPeriodFiltered(@Param("userId") UUID userId,
                                @Param("from") LocalDate from,
@@ -195,7 +195,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
           AND t.valueDate >= :from AND t.valueDate <= :to
           AND t.withdrawalAmount > 0
           AND t.category IS NOT NULL
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         GROUP BY t.category.id, t.category.name, t.category.color
         ORDER BY SUM(t.withdrawalAmount) DESC
         """)
@@ -211,7 +211,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
           AND t.valueDate >= :from
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
         ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
         """)
@@ -226,7 +226,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
           AND t.valueDate >= :from AND t.valueDate <= :to
           AND t.withdrawalAmount > 0
           AND t.merchantName IS NOT NULL
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         GROUP BY t.merchantName
         ORDER BY SUM(t.withdrawalAmount) DESC
         LIMIT 8
@@ -240,7 +240,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         SELECT MAX(t.valueDate)
         FROM Transaction t
         WHERE t.bankAccount.user.id = :userId
-          AND (:accountId IS NULL OR t.bankAccount.id = :accountId)
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
         """)
     LocalDate latestTransactionDateFiltered(@Param("userId") UUID userId,
                                              @Param("accountId") UUID accountId);

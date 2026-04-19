@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -152,6 +153,12 @@ class DashboardServiceTest {
         assertThat(summary.totalSpent()).isEqualByComparingTo(BigDecimal.valueOf(5000));
         verify(transactionRepository).latestTransactionDateFiltered(USER_ID, accountId);
         verify(transactionRepository, never()).latestTransactionDate(any());
+        verify(transactionRepository, atLeastOnce()).sumWithdrawalsFiltered(eq(USER_ID), any(), any(), eq(accountId));
+        verify(transactionRepository, atLeastOnce()).sumDepositsFiltered(eq(USER_ID), any(), any(), eq(accountId));
+        verify(transactionRepository, atLeastOnce()).countInPeriodFiltered(eq(USER_ID), any(), any(), eq(accountId));
+        verify(transactionRepository).categoryBreakdownFiltered(eq(USER_ID), any(), any(), eq(accountId));
+        verify(transactionRepository).monthlyTrendFiltered(eq(USER_ID), any(), eq(accountId));
+        verify(transactionRepository).topMerchantsFiltered(eq(USER_ID), any(), any(), eq(accountId));
     }
 
     private User mockUser() {
