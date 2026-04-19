@@ -114,9 +114,9 @@ public class ViewService {
     @Transactional(readOnly = true)
     public ViewDto.TransactionPage getTransactions(UUID userId, UUID viewId, int page, int size, UUID accountId) {
         resolveView(userId, viewId);
-        String accountIdStr = accountId != null ? accountId.toString() : null;
-        Page<Transaction> txPage = linkRepository
-                .findTransactionsByViewIdFiltered(viewId, accountIdStr, PageRequest.of(page, size));
+        Page<Transaction> txPage = accountId != null
+                ? linkRepository.findTransactionsByViewIdFiltered(viewId, accountId, PageRequest.of(page, size))
+                : linkRepository.findTransactionsByViewId(viewId, PageRequest.of(page, size));
         return new ViewDto.TransactionPage(
                 txPage.getContent().stream().map(this::toTransactionItem).toList(),
                 page, size,

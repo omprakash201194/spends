@@ -37,40 +37,59 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardDto.Summary getSummary(UUID userId, UUID accountId) {
-        String accountIdStr = accountId != null ? accountId.toString() : null;
-        LocalDate anchor  = resolveAnchorMonth(userId, accountIdStr);
+        LocalDate anchor  = resolveAnchorMonth(userId, accountId);
         LocalDate from    = anchor.withDayOfMonth(1);
         LocalDate to      = anchor.withDayOfMonth(anchor.lengthOfMonth());
         LocalDate trend12 = anchor.minusMonths(11).withDayOfMonth(1);
 
-        BigDecimal spent  = transactionRepository.sumWithdrawalsFiltered(userId, from, to, accountIdStr);
-        BigDecimal income = transactionRepository.sumDepositsFiltered(userId, from, to, accountIdStr);
-        long count        = transactionRepository.countInPeriodFiltered(userId, from, to, accountIdStr);
+        BigDecimal spent  = accountId != null
+                ? transactionRepository.sumWithdrawalsFiltered(userId, from, to, accountId)
+                : transactionRepository.sumWithdrawals(userId, from, to);
+        BigDecimal income = accountId != null
+                ? transactionRepository.sumDepositsFiltered(userId, from, to, accountId)
+                : transactionRepository.sumDeposits(userId, from, to);
+        long count        = accountId != null
+                ? transactionRepository.countInPeriodFiltered(userId, from, to, accountId)
+                : transactionRepository.countInPeriod(userId, from, to);
         BigDecimal net    = income.subtract(spent);
 
         LocalDate prevMonthDate = anchor.minusMonths(1);
         LocalDate prevMonthFrom = prevMonthDate.withDayOfMonth(1);
         LocalDate prevMonthTo   = prevMonthDate.withDayOfMonth(prevMonthDate.lengthOfMonth());
         DashboardDto.Comparison prevMonth = new DashboardDto.Comparison(
-                transactionRepository.sumWithdrawalsFiltered(userId, prevMonthFrom, prevMonthTo, accountIdStr),
-                transactionRepository.sumDepositsFiltered(userId, prevMonthFrom, prevMonthTo, accountIdStr),
-                transactionRepository.countInPeriodFiltered(userId, prevMonthFrom, prevMonthTo, accountIdStr)
+                accountId != null
+                        ? transactionRepository.sumWithdrawalsFiltered(userId, prevMonthFrom, prevMonthTo, accountId)
+                        : transactionRepository.sumWithdrawals(userId, prevMonthFrom, prevMonthTo),
+                accountId != null
+                        ? transactionRepository.sumDepositsFiltered(userId, prevMonthFrom, prevMonthTo, accountId)
+                        : transactionRepository.sumDeposits(userId, prevMonthFrom, prevMonthTo),
+                accountId != null
+                        ? transactionRepository.countInPeriodFiltered(userId, prevMonthFrom, prevMonthTo, accountId)
+                        : transactionRepository.countInPeriod(userId, prevMonthFrom, prevMonthTo)
         );
 
         LocalDate prevYearDate = anchor.minusYears(1);
         LocalDate prevYearFrom = prevYearDate.withDayOfMonth(1);
         LocalDate prevYearTo   = prevYearDate.withDayOfMonth(prevYearDate.lengthOfMonth());
         DashboardDto.Comparison prevYear = new DashboardDto.Comparison(
-                transactionRepository.sumWithdrawalsFiltered(userId, prevYearFrom, prevYearTo, accountIdStr),
-                transactionRepository.sumDepositsFiltered(userId, prevYearFrom, prevYearTo, accountIdStr),
-                transactionRepository.countInPeriodFiltered(userId, prevYearFrom, prevYearTo, accountIdStr)
+                accountId != null
+                        ? transactionRepository.sumWithdrawalsFiltered(userId, prevYearFrom, prevYearTo, accountId)
+                        : transactionRepository.sumWithdrawals(userId, prevYearFrom, prevYearTo),
+                accountId != null
+                        ? transactionRepository.sumDepositsFiltered(userId, prevYearFrom, prevYearTo, accountId)
+                        : transactionRepository.sumDeposits(userId, prevYearFrom, prevYearTo),
+                accountId != null
+                        ? transactionRepository.countInPeriodFiltered(userId, prevYearFrom, prevYearTo, accountId)
+                        : transactionRepository.countInPeriod(userId, prevYearFrom, prevYearTo)
         );
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User not found"));
         List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(user.getHousehold().getId());
 
-        List<CategorySpendRow> rawRows = transactionRepository.categoryBreakdownFiltered(userId, from, to, accountIdStr)
+        List<CategorySpendRow> rawRows = (accountId != null
+                ? transactionRepository.categoryBreakdownFiltered(userId, from, to, accountId)
+                : transactionRepository.categoryBreakdown(userId, from, to))
                 .stream()
                 .map(row -> new CategorySpendRow((UUID) row[0], (String) row[1], (String) row[2], (BigDecimal) row[3]))
                 .toList();
@@ -81,12 +100,15 @@ public class DashboardService {
                 .toList();
 
         List<DashboardDto.MonthlyTrend> trend = buildTrend(
-                transactionRepository.monthlyTrendFiltered(userId, trend12, accountIdStr),
+                accountId != null
+                        ? transactionRepository.monthlyTrendFiltered(userId, trend12, accountId)
+                        : transactionRepository.monthlyTrend(userId, trend12),
                 trend12, anchor
         );
 
-        List<DashboardDto.MerchantStat> merchants = transactionRepository
-                .topMerchantsFiltered(userId, from, to, accountIdStr)
+        List<DashboardDto.MerchantStat> merchants = (accountId != null
+                ? transactionRepository.topMerchantsFiltered(userId, from, to, accountId)
+                : transactionRepository.topMerchants(userId, from, to))
                 .stream()
                 .map(row -> new DashboardDto.MerchantStat(
                         (String) row[0],
@@ -107,8 +129,10 @@ public class DashboardService {
      * Returns the most recent month with data for this user (optionally scoped to one account).
      * Falls back to the current calendar month if no data exists yet.
      */
-    private LocalDate resolveAnchorMonth(UUID userId, String accountId) {
-        LocalDate latest = transactionRepository.latestTransactionDateFiltered(userId, accountId);
+    private LocalDate resolveAnchorMonth(UUID userId, UUID accountId) {
+        LocalDate latest = accountId != null
+                ? transactionRepository.latestTransactionDateFiltered(userId, accountId)
+                : transactionRepository.latestTransactionDate(userId);
         return latest != null ? latest : LocalDate.now();
     }
 
