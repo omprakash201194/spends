@@ -88,7 +88,8 @@ public class ViewDto {
             BigDecimal depositAmount,
             String categoryName,
             String categoryColor,
-            String memberName
+            String memberName,
+            String bankName
     ) {}
 
     /** Outbound: paginated transaction list */

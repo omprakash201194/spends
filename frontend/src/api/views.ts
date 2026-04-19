@@ -52,6 +52,7 @@ export interface ViewTransactionItem {
   categoryName: string | null
   categoryColor: string | null
   memberName: string
+  bankName: string
 }
 
 export interface ViewTransactionPage {

@@ -281,6 +281,7 @@ public class ViewService {
                 tx.getDepositAmount(),
                 tx.getCategory() != null ? tx.getCategory().getName() : null,
                 tx.getCategory() != null ? tx.getCategory().getColor() : null,
-                tx.getBankAccount().getUser().getDisplayName());
+                tx.getBankAccount().getUser().getDisplayName(),
+                tx.getBankAccount().getBankName());
     }
 }
