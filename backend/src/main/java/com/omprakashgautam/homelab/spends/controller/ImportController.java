@@ -38,6 +38,19 @@ public class ImportController {
         return ResponseEntity.ok(result);
     }
 
+    /** Upload one or more Bank of Baroda account statement CSV files. */
+    @PostMapping(value = "/bob", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultDto.Response> importBob(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestPart("files") List<MultipartFile> files) {
+
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(importService.importBobFiles(principal.getId(), files));
+    }
+
     /**
      * Returns all import batches for the current user, newest first.
      */
