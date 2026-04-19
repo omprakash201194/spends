@@ -179,10 +179,13 @@ public class BobStatementParser {
 
     private BigDecimal parseBalance(String text) {
         if (text == null || text.isBlank()) return BigDecimal.ZERO;
-        // Strip "Cr"/"Dr" suffix and any non-numeric characters except "."
-        String clean = text.trim().replaceAll("[^0-9.]", "");
+        String trimmed = text.trim();
+        boolean debit = trimmed.toUpperCase().endsWith("DR");
+        String clean = trimmed.replaceAll("[^0-9.]", "");
         if (clean.isBlank()) return BigDecimal.ZERO;
-        try { return new BigDecimal(clean); }
-        catch (NumberFormatException e) { return BigDecimal.ZERO; }
+        try {
+            BigDecimal value = new BigDecimal(clean);
+            return debit ? value.negate() : value;
+        } catch (NumberFormatException e) { return BigDecimal.ZERO; }
     }
 }

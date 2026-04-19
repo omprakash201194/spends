@@ -231,4 +231,39 @@ class ImportServiceTest {
         assertThat(summary.misc()).isEqualTo(0);
         assertThat(summary.categorizationPct()).isEqualTo(0);
     }
+
+    @Test
+    void importBobFiles_routesToBobParser() throws Exception {
+        BankAccount account = new BankAccount();
+        account.setId(UUID.randomUUID());
+        account.setBankName("Bank of Baroda");
+        account.setAccountNumberMasked("368XXXXXXXX803");
+
+        Category food = Category.builder().id(UUID.randomUUID()).name("Food & Dining").build();
+
+        ParsedStatement.ParsedTransaction tx = new ParsedStatement.ParsedTransaction(
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 1), null,
+                "SWIGGY ORDER", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.valueOf(990));
+
+        ParsedStatement statement = new ParsedStatement(
+                "Bank of Baroda", "368XXXXXXXX803", "OMPRAKASH GAUTAM", "Savings", List.of(tx));
+
+        MultipartFile file = new MockMultipartFile(
+                "files", "statement.csv", "text/csv", new byte[]{1, 2, 3});
+
+        ImportBatch savedBatch = buildBatch(BATCH_ID);
+
+        when(bobParser.parse(file)).thenReturn(statement);
+        when(bankAccountService.findOrCreate(any(), any(), any(), any())).thenReturn(account);
+        when(importBatchRepository.save(any())).thenReturn(savedBatch);
+        when(transactionRepository.existsByImportHash(any())).thenReturn(false);
+        when(categorizationService.categorize(any(), any())).thenReturn(food);
+        when(merchantExtractor.extract(any())).thenReturn("Swiggy");
+
+        ImportResultDto.Response response = importService.importBobFiles(USER_ID, List.of(file));
+
+        assertThat(response.totalImported()).isEqualTo(1);
+        verify(bobParser).parse(file);
+        verify(iciciParser, never()).parse(any());
+    }
 }
