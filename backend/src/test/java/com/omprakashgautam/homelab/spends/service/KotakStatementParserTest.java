@@ -98,6 +98,19 @@ class KotakStatementParserTest {
         assertThat(tx.chequeNumber()).isNull();
     }
 
+    @Test
+    void parse_mergesContinuationRow() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+
+        // Row "2" + continuation row -> "UPI/OMPRAKASH HARIS/600318766885/Early Jan spend"
+        ParsedStatement.ParsedTransaction tx = result.transactions().stream()
+                .filter(t -> t.withdrawalAmount().compareTo(new BigDecimal("4000")) == 0)
+                .findFirst().orElseThrow();
+        assertThat(tx.rawRemarks())
+                .isEqualTo("UPI/OMPRAKASH HARIS/600318766885/Early Jan spend");
+    }
+
     private MockMultipartFile csv(String filename, String content) {
         return new MockMultipartFile("files", filename, "text/csv",
                 content.getBytes(StandardCharsets.UTF_8));

@@ -97,7 +97,6 @@ public class KotakStatementParser {
             CSVRecord rec = records.get(i);
             String col0 = get(rec, 0).trim();
 
-            // Numeric seq → start of a new transaction row
             if (isNumeric(col0)) {
                 try {
                     LocalDate date = LocalDate.parse(get(rec, COL_DATE).trim(), DATE_FMT);
@@ -116,9 +115,16 @@ public class KotakStatementParser {
                 } catch (Exception e) {
                     log.warn("Kotak parser: skipping row {}: {}", i, e.getMessage());
                 }
+            } else if (isContinuationRow(rec) && !transactions.isEmpty()) {
+                ParsedStatement.ParsedTransaction last = transactions.get(transactions.size() - 1);
+                String fragment = get(rec, COL_DESCRIPTION).trim();
+                String merged = last.rawRemarks() + " " + fragment;
+                transactions.set(transactions.size() - 1, new ParsedStatement.ParsedTransaction(
+                        last.valueDate(), last.transactionDate(),
+                        last.chequeNumber(), merged,
+                        last.withdrawalAmount(), last.depositAmount(), last.balance()
+                ));
             }
-            // Non-numeric col[0] (opening balance "-", page footers, account summary) → skipped for now;
-            // multi-line continuation handling and termination logic added in subsequent tasks.
         }
 
         log.info("Kotak parser: parsed {} transactions", transactions.size());
@@ -148,6 +154,13 @@ public class KotakStatementParser {
             if (!Character.isDigit(s.charAt(i))) return false;
         }
         return true;
+    }
+
+    /** Continuation row: blank seq AND blank date AND non-blank description. */
+    private boolean isContinuationRow(CSVRecord rec) {
+        return get(rec, COL_SEQ).trim().isEmpty()
+            && get(rec, COL_DATE).trim().isEmpty()
+            && !get(rec, COL_DESCRIPTION).trim().isEmpty();
     }
 
     private BigDecimal parseMoney(String text) {
