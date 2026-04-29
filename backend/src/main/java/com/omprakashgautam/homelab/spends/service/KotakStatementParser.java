@@ -9,9 +9,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -89,12 +91,43 @@ public class KotakStatementParser {
         log.info("Kotak parser: data starts at index {}, account={}, holder={}",
                 dataStartIdx, accountNumberMasked, accountHolderName);
 
+        List<ParsedStatement.ParsedTransaction> transactions = new ArrayList<>();
+
+        for (int i = dataStartIdx; i < records.size(); i++) {
+            CSVRecord rec = records.get(i);
+            String col0 = get(rec, 0).trim();
+
+            // Numeric seq → start of a new transaction row
+            if (isNumeric(col0)) {
+                try {
+                    LocalDate date = LocalDate.parse(get(rec, COL_DATE).trim(), DATE_FMT);
+                    String description = get(rec, COL_DESCRIPTION).trim();
+                    String chequeRef   = get(rec, COL_CHEQ_REF).trim();
+                    BigDecimal withdrawal = parseMoney(get(rec, COL_WITHDRAWAL));
+                    BigDecimal deposit    = parseMoney(get(rec, COL_DEPOSIT));
+                    BigDecimal balance    = parseMoney(get(rec, COL_BALANCE));
+
+                    transactions.add(new ParsedStatement.ParsedTransaction(
+                            date, date,
+                            chequeRef.isBlank() ? null : chequeRef,
+                            description,
+                            withdrawal, deposit, balance
+                    ));
+                } catch (Exception e) {
+                    log.warn("Kotak parser: skipping row {}: {}", i, e.getMessage());
+                }
+            }
+            // Non-numeric col[0] (opening balance "-", page footers, account summary) → skipped for now;
+            // multi-line continuation handling and termination logic added in subsequent tasks.
+        }
+
+        log.info("Kotak parser: parsed {} transactions", transactions.size());
         return new ParsedStatement(
                 "Kotak Mahindra Bank",
                 accountNumberMasked,
                 accountHolderName,
                 "Savings",
-                java.util.Collections.emptyList()
+                transactions
         );
     }
 
@@ -107,5 +140,21 @@ public class KotakStatementParser {
         if (digits == null || digits.length() < 6) return digits;
         int xs = digits.length() - 6;
         return digits.substring(0, 3) + "X".repeat(xs) + digits.substring(digits.length() - 3);
+    }
+
+    private boolean isNumeric(String s) {
+        if (s == null || s.isEmpty()) return false;
+        for (int i = 0; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    private BigDecimal parseMoney(String text) {
+        if (text == null || text.isBlank()) return BigDecimal.ZERO;
+        String clean = text.trim().replace(",", "");
+        if (clean.isBlank()) return BigDecimal.ZERO;
+        try { return new BigDecimal(clean); }
+        catch (NumberFormatException e) { return BigDecimal.ZERO; }
     }
 }
