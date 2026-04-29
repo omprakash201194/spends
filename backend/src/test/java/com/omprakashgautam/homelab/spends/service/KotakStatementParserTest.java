@@ -6,6 +6,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class KotakStatementParserTest {
 
@@ -34,6 +35,30 @@ class KotakStatementParserTest {
         MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
         ParsedStatement result = parser.parse(file);
         assertThat(result.accountHolderName()).isEqualTo("Omprakash Harishchandra Gautam");
+    }
+
+    @Test
+    void parse_masksAccountNumber() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+        assertThat(result.accountNumberMasked()).isEqualTo("455XXXX349");
+    }
+
+    @Test
+    void parse_setsBankNameAndAccountType() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+        assertThat(result.bankName()).isEqualTo("Kotak Mahindra Bank");
+        assertThat(result.accountType()).isEqualTo("Savings");
+    }
+
+    @Test
+    void parse_throwsWhenNoHeaderRowFound() {
+        String badCsv = "some,random,data\nno,header,here\n";
+        MockMultipartFile file = csv("bad.csv", badCsv);
+        assertThatThrownBy(() -> parser.parse(file))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Could not find transaction header row");
     }
 
     private MockMultipartFile csv(String filename, String content) {
