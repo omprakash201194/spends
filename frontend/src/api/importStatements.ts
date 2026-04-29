@@ -52,6 +52,15 @@ export async function importBobFiles(files: File[]): Promise<ImportResult> {
   return data
 }
 
+export async function importKotakFiles(files: File[]): Promise<ImportResult> {
+  const form = new FormData()
+  files.forEach((f) => form.append('files', f))
+  const { data } = await apiClient.post<ImportResult>('/import/kotak', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
 export interface BatchEntry {
   id: string
   filename: string
