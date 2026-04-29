@@ -36,6 +36,7 @@ public class ImportService {
 
     private final IciciStatementParser iciciParser;
     private final BobStatementParser bobParser;
+    private final KotakStatementParser kotakParser;
     private final BankAccountService bankAccountService;
     private final CategorizationService categorizationService;
     private final MerchantExtractor merchantExtractor;
@@ -50,6 +51,11 @@ public class ImportService {
     @Transactional
     public ImportResultDto.Response importBobFiles(UUID userId, List<MultipartFile> files) {
         return importFilesWith(userId, files, bobParser::parse);
+    }
+
+    @Transactional
+    public ImportResultDto.Response importKotakFiles(UUID userId, List<MultipartFile> files) {
+        return importFilesWith(userId, files, kotakParser::parse);
     }
 
     private ImportResultDto.Response importFilesWith(UUID userId, List<MultipartFile> files,

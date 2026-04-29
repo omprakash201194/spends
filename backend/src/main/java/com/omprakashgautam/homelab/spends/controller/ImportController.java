@@ -51,6 +51,19 @@ public class ImportController {
         return ResponseEntity.ok(importService.importBobFiles(principal.getId(), files));
     }
 
+    /** Upload one or more Kotak Mahindra Bank account statement CSV files. */
+    @PostMapping(value = "/kotak", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultDto.Response> importKotak(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestPart("files") List<MultipartFile> files) {
+
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(importService.importKotakFiles(principal.getId(), files));
+    }
+
     /**
      * Returns all import batches for the current user, newest first.
      */
