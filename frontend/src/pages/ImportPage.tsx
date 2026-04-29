@@ -4,6 +4,7 @@ import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, His
 import {
   importIciciFiles,
   importBobFiles,
+  importKotakFiles,
   getImportHistory,
   deleteImportBatch,
   deleteAllTransactions,
@@ -26,11 +27,58 @@ function fmtDateTime(iso: string): string {
   })
 }
 
+// ── Bank config ───────────────────────────────────────────────────────────────
+
+type Bank = 'ICICI' | 'BOB' | 'KOTAK'
+
+const BANK_CONFIG: Record<Bank, {
+  label: string
+  accept: string
+  shortLabel: string
+  exportLabel: string
+  description: string
+  errorMessage: string
+  isAccepted: (file: File) => boolean
+  importFn: (files: File[]) => Promise<ImportResult>
+}> = {
+  ICICI: {
+    label: 'ICICI Bank',
+    accept: '.xls,.xlsx',
+    shortLabel: 'XLS or XLSX',
+    exportLabel: 'ICICI Bank XLS/XLSX exports',
+    description: 'Upload ICICI bank statement XLS/XLSX files. Duplicates are automatically skipped.',
+    errorMessage: 'Import failed. Please check that the files are valid ICICI XLS statements.',
+    isAccepted: (f) => f.name.endsWith('.xls') || f.name.endsWith('.xlsx'),
+    importFn: importIciciFiles,
+  },
+  BOB: {
+    label: 'Bank of Baroda',
+    accept: '.csv',
+    shortLabel: 'CSV',
+    exportLabel: 'Bank of Baroda CSV exports',
+    description: 'Upload Bank of Baroda account statement CSV files. Duplicates are automatically skipped.',
+    errorMessage: 'Import failed. Please check that the files are valid Bank of Baroda CSV statements.',
+    isAccepted: (f) => f.name.endsWith('.csv'),
+    importFn: importBobFiles,
+  },
+  KOTAK: {
+    label: 'Kotak Mahindra Bank',
+    accept: '.csv',
+    shortLabel: 'CSV',
+    exportLabel: 'Kotak Mahindra Bank CSV exports',
+    description: 'Upload Kotak Mahindra Bank Net Banking CSV files. Duplicates are automatically skipped.',
+    errorMessage: 'Import failed. Please check that the files are valid Kotak Mahindra Bank CSV statements.',
+    isAccepted: (f) => f.name.endsWith('.csv'),
+    importFn: importKotakFiles,
+  },
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ImportPage() {
   const [files, setFiles] = useState<File[]>([])
-  const [selectedBank, setSelectedBank] = useState<'ICICI' | 'BOB'>('ICICI')
+  const [selectedBank, setSelectedBank] = useState<Bank>('ICICI')
+  const bankConfig = BANK_CONFIG[selectedBank]
   const [dragOver, setDragOver] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null)
@@ -50,8 +98,7 @@ export default function ImportPage() {
   // ── Import mutation ─────────────────────────────────────────────────────────
 
   const importMut = useMutation({
-    mutationFn: (files: File[]) =>
-      selectedBank === 'ICICI' ? importIciciFiles(files) : importBobFiles(files),
+    mutationFn: (files: File[]) => bankConfig.importFn(files),
     onSuccess: (data) => {
       setResult(data)
       setFiles([])
@@ -104,10 +151,7 @@ export default function ImportPage() {
   // ── File handling ───────────────────────────────────────────────────────────
 
   const addFiles = useCallback((incoming: File[]) => {
-    const accepted = incoming.filter((f) => {
-      if (selectedBank === 'BOB') return f.name.endsWith('.csv')
-      return f.name.endsWith('.xls') || f.name.endsWith('.xlsx')
-    })
+    const accepted = incoming.filter(bankConfig.isAccepted)
     setFiles((prev) => {
       const names = new Set(prev.map((f) => f.name))
       return [...prev, ...accepted.filter((f) => !names.has(f.name))]
@@ -145,9 +189,7 @@ export default function ImportPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Statements</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {selectedBank === 'ICICI'
-            ? 'Upload ICICI bank statement XLS/XLSX files. Duplicates are automatically skipped.'
-            : 'Upload Bank of Baroda account statement CSV files. Duplicates are automatically skipped.'}
+          {bankConfig.description}
         </p>
       </div>
 
@@ -159,7 +201,7 @@ export default function ImportPage() {
         <select
           value={selectedBank}
           onChange={(e) => {
-            setSelectedBank(e.target.value as 'ICICI' | 'BOB')
+            setSelectedBank(e.target.value as Bank)
             setFiles([])
             setResult(null)
           }}
@@ -167,6 +209,7 @@ export default function ImportPage() {
         >
           <option value="ICICI">ICICI Bank</option>
           <option value="BOB">Bank of Baroda</option>
+          <option value="KOTAK">Kotak Mahindra Bank</option>
         </select>
       </div>
 
@@ -186,16 +229,16 @@ export default function ImportPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept={selectedBank === 'BOB' ? '.csv' : '.xls,.xlsx'}
+          accept={bankConfig.accept}
           multiple
           className="hidden"
           onChange={onFileInput}
         />
         <Upload className="mx-auto w-10 h-10 text-gray-400 dark:text-gray-500 mb-3" />
-        <p className="text-gray-700 dark:text-gray-200 font-medium">Drop {selectedBank === 'BOB' ? 'CSV' : 'XLS or XLSX'} files here</p>
+        <p className="text-gray-700 dark:text-gray-200 font-medium">Drop {bankConfig.shortLabel} files here</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-          {selectedBank === 'BOB' ? 'Bank of Baroda CSV exports' : 'ICICI Bank XLS/XLSX exports'} · Multiple files at once
+          {bankConfig.exportLabel} · Multiple files at once
         </p>
       </div>
 
@@ -238,9 +281,7 @@ export default function ImportPage() {
         <div className="mt-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700">
-            {selectedBank === 'ICICI'
-              ? 'Import failed. Please check that the files are valid ICICI XLS statements.'
-              : 'Import failed. Please check that the files are valid Bank of Baroda CSV statements.'}
+            {bankConfig.errorMessage}
           </p>
         </div>
       )}
