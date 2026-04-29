@@ -98,6 +98,8 @@ export default function ImportPage() {
   // ── Import mutation ─────────────────────────────────────────────────────────
 
   const importMut = useMutation({
+    // TanStack Query v5 calls observer.setOptions(options) on every render, then reads
+    // this.options.mutationFn fresh inside mutate() — bankConfig is always current, no stale closure.
     mutationFn: (files: File[]) => bankConfig.importFn(files),
     onSuccess: (data) => {
       setResult(data)
@@ -207,9 +209,9 @@ export default function ImportPage() {
           }}
           className="w-full sm:w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="ICICI">ICICI Bank</option>
-          <option value="BOB">Bank of Baroda</option>
-          <option value="KOTAK">Kotak Mahindra Bank</option>
+          {(Object.keys(BANK_CONFIG) as Bank[]).map((key) => (
+            <option key={key} value={key}>{BANK_CONFIG[key].label}</option>
+          ))}
         </select>
       </div>
 
