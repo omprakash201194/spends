@@ -111,6 +111,41 @@ class KotakStatementParserTest {
                 .isEqualTo("UPI/OMPRAKASH HARIS/600318766885/Early Jan spend");
     }
 
+    @Test
+    void parse_skipsOpeningBalance() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+
+        // Opening balance row has col[0]="-", balance 0 - it must NOT appear as a transaction.
+        boolean hasZeroBalanceRow = result.transactions().stream()
+                .anyMatch(t -> t.balance().compareTo(BigDecimal.ZERO) == 0
+                            && t.rawRemarks().equalsIgnoreCase("Opening Balance"));
+        assertThat(hasZeroBalanceRow).isFalse();
+    }
+
+    @Test
+    void parse_skipsPageFooter() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+
+        // The page footer "Statement Generated on..." must not produce a transaction.
+        boolean hasFooterTx = result.transactions().stream()
+                .anyMatch(t -> t.rawRemarks() != null
+                            && t.rawRemarks().contains("Statement Generated on"));
+        assertThat(hasFooterTx).isFalse();
+    }
+
+    @Test
+    void parse_yieldsExactlyThreeTransactionsFromFixture() throws Exception {
+        MockMultipartFile file = csv("statement.csv", SAMPLE_CSV);
+        ParsedStatement result = parser.parse(file);
+
+        // Fixture has rows numbered 1, 2, 3 (deposit / withdrawal / reversal-credit).
+        // Opening balance, page footer, Account Summary boilerplate, and continuation
+        // rows must NOT be counted as transactions.
+        assertThat(result.transactions()).hasSize(3);
+    }
+
     private MockMultipartFile csv(String filename, String content) {
         return new MockMultipartFile("files", filename, "text/csv",
                 content.getBytes(StandardCharsets.UTF_8));
