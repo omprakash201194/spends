@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 023-widget-account-and-date-range
+      author: omprakash
+      changes:
+        - addColumn:
+            tableName: dashboard_widget
+            columns:
+              - column:
+                  name: account_id
+                  type: UUID
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_widget_account
+                    references: bank_account(id)
+                    deleteSetNull: true
+              - column:
+                  name: custom_from
+                  type: DATE
+                  constraints:
+                    nullable: true
+              - column:
+                  name: custom_to
+                  type: DATE
+                  constraints:
+                    nullable: true
+        - sql:
+            sql: |
+              ALTER TABLE dashboard_widget
+                ADD CONSTRAINT dashboard_widget_custom_range_chk CHECK (
+                  (custom_from IS NULL AND custom_to IS NULL)
+                  OR (custom_from IS NOT NULL AND (custom_to IS NULL OR custom_from <= custom_to))
+                );
+            rollback: |
+              ALTER TABLE dashboard_widget DROP CONSTRAINT IF EXISTS dashboard_widget_custom_range_chk;
