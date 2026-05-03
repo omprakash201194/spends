@@ -21,9 +21,10 @@ public class ExportService {
      */
     public String exportTransactionsCsv(UUID userId, String search, UUID categoryId,
                                         UUID accountId, String type,
-                                        LocalDate dateFrom, LocalDate dateTo) {
+                                        LocalDate dateFrom, LocalDate dateTo,
+                                        boolean uncategorizedOnly) {
         List<Transaction> transactions = transactionService.listAll(
-                userId, search, categoryId, accountId, type, dateFrom, dateTo);
+                userId, search, categoryId, accountId, type, dateFrom, dateTo, uncategorizedOnly);
 
         StringBuilder sb = new StringBuilder(
                 "Date,Transaction Date,Merchant,Category,Withdrawal (INR),Deposit (INR),Balance (INR),Remarks,Account\n");

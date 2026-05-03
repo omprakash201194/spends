@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
@@ -64,11 +65,11 @@ class ExportServiceTest {
 
     @Test
     void csv_headerRow_isPresent() {
-        when(transactionService.listAll(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(transactionService.listAll(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyBoolean()))
                 .thenReturn(List.of());
 
         String csv = exportService.exportTransactionsCsv(
-                UUID.randomUUID(), null, null, null, null, null, null);
+                UUID.randomUUID(), null, null, null, null, null, null, false);
 
         String header = csv.split("\n")[0];
         assertThat(header).isEqualTo(
@@ -77,11 +78,11 @@ class ExportServiceTest {
 
     @Test
     void csv_emptyList_returnsOnlyHeader() {
-        when(transactionService.listAll(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(transactionService.listAll(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyBoolean()))
                 .thenReturn(List.of());
 
         String csv = exportService.exportTransactionsCsv(
-                UUID.randomUUID(), null, null, null, null, null, null);
+                UUID.randomUUID(), null, null, null, null, null, null, false);
 
         assertThat(csv.split("\n")).hasSize(1);
     }
@@ -89,11 +90,11 @@ class ExportServiceTest {
     @Test
     void csv_remarkWithComma_isQuoted() {
         Transaction tx = buildTx("Paid to Swiggy, online", "Food & Dining", new BigDecimal("500.00"), BigDecimal.ZERO);
-        when(transactionService.listAll(any(), any(), any(), any(), any(), any(), any()))
+        when(transactionService.listAll(any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
                 .thenReturn(List.of(tx));
 
         String csv = exportService.exportTransactionsCsv(
-                UUID.randomUUID(), null, null, null, null, null, null);
+                UUID.randomUUID(), null, null, null, null, null, null, false);
 
         assertThat(csv).contains("\"Paid to Swiggy, online\"");
     }
@@ -101,11 +102,11 @@ class ExportServiceTest {
     @Test
     void csv_nullCategory_writesEmpty() {
         Transaction tx = buildTxNoCategory("plain remark", new BigDecimal("200.00"), BigDecimal.ZERO);
-        when(transactionService.listAll(any(), any(), any(), any(), any(), any(), any()))
+        when(transactionService.listAll(any(), any(), any(), any(), any(), any(), any(), anyBoolean()))
                 .thenReturn(List.of(tx));
 
         String csv = exportService.exportTransactionsCsv(
-                UUID.randomUUID(), null, null, null, null, null, null);
+                UUID.randomUUID(), null, null, null, null, null, null, false);
 
         // line 2 (data row), category column (index 3) should be empty — two consecutive commas
         String dataRow = csv.split("\n")[1];

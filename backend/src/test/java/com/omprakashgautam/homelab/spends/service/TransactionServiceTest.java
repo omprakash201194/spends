@@ -139,11 +139,64 @@ class TransactionServiceTest {
                 .thenReturn(org.springframework.data.domain.Page.empty());
 
         // Filter by parent "foodId" — should expand to include swiggyId
-        transactionService.list(userId, null, foodId, null, null, null, null, 0, 25, null, null);
+        transactionService.list(userId, null, foodId, null, null, null, null, 0, 25, null, null, false);
 
         verify(transactionRepository).findAll(
                 any(org.springframework.data.jpa.domain.Specification.class),
                 any(org.springframework.data.domain.Pageable.class));
         verify(categoryRepository).findBySystemTrueOrHouseholdId(householdId);
+    }
+
+    @Test
+    void list_uncategorizedOnly_skipsCategoryExpansion() {
+        UUID userId = UUID.randomUUID();
+        when(transactionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        // uncategorizedOnly=true with no categoryId — must NOT touch userRepository or categoryRepository
+        transactionService.list(userId, null, null, null, null, null, null, 0, 25, null, null, true);
+
+        verify(transactionRepository).findAll(
+                any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class));
+        org.mockito.Mockito.verifyNoInteractions(userRepository);
+        org.mockito.Mockito.verifyNoInteractions(categoryRepository);
+    }
+
+    @Test
+    void list_uncategorizedOnlyWithCategoryId_uncategorizedWinsAndCategoryIsIgnored() {
+        UUID userId = UUID.randomUUID();
+        UUID someCategoryId = UUID.randomUUID();
+
+        when(transactionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        // Both params sent — uncategorizedOnly must win, so no category lookup happens
+        transactionService.list(userId, null, someCategoryId, null, null, null, null, 0, 25, null, null, true);
+
+        verify(transactionRepository).findAll(
+                any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class));
+        org.mockito.Mockito.verifyNoInteractions(userRepository);
+        org.mockito.Mockito.verifyNoInteractions(categoryRepository);
+    }
+
+    @Test
+    void getSummary_uncategorizedOnly_skipsCategoryExpansion() {
+        UUID userId = UUID.randomUUID();
+
+        // We don't stub the EntityManager path here; the test's purpose is to prove that
+        // when uncategorizedOnly=true, the service does NOT look up the user/categories.
+        // The EntityManager call will throw NPE, which we catch as expected.
+        try {
+            transactionService.getSummary(userId, null, null, null, null, null, null, true);
+        } catch (NullPointerException expected) {
+            // EntityManager is not mocked — fine, we only care that user/category lookups didn't happen
+        }
+
+        org.mockito.Mockito.verifyNoInteractions(userRepository);
+        org.mockito.Mockito.verifyNoInteractions(categoryRepository);
     }
 }

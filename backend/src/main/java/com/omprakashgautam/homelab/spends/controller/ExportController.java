@@ -31,10 +31,11 @@ public class ExportController {
             @RequestParam(required = false) UUID accountId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(defaultValue = "false") boolean uncategorizedOnly) {
 
         String csv = exportService.exportTransactionsCsv(
-                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo);
+                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo, uncategorizedOnly);
         byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
         String filename = "transactions-" + LocalDate.now() + ".csv";
 

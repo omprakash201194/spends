@@ -55,18 +55,19 @@ public class TransactionService {
             int page,
             int size,
             String sortBy,
-            String sortDir
+            String sortDir,
+            boolean uncategorizedOnly
     ) {
         Sort sort = buildSort(sortBy, sortDir);
         PageRequest pageable = PageRequest.of(page, size, sort);
 
         Set<UUID> categoryIds = null;
-        if (categoryId != null) {
+        if (!uncategorizedOnly && categoryId != null) {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo, uncategorizedOnly);
         Page<Transaction> result = transactionRepository.findAll(spec, pageable);
 
         List<TransactionDto.Response> content = result.getContent()
@@ -91,29 +92,31 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<Transaction> listAll(UUID userId, String search, UUID categoryId,
                                      UUID accountId, String type,
-                                     LocalDate dateFrom, LocalDate dateTo) {
+                                     LocalDate dateFrom, LocalDate dateTo,
+                                     boolean uncategorizedOnly) {
         Set<UUID> categoryIds = null;
-        if (categoryId != null) {
+        if (!uncategorizedOnly && categoryId != null) {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo, uncategorizedOnly);
         return transactionRepository.findAll(spec, Sort.by("valueDate").descending());
     }
 
     @Transactional(readOnly = true)
     public TransactionDto.SummaryResponse getSummary(
             UUID userId, String search, UUID categoryId,
-            UUID accountId, String type, LocalDate dateFrom, LocalDate dateTo
+            UUID accountId, String type, LocalDate dateFrom, LocalDate dateTo,
+            boolean uncategorizedOnly
     ) {
         Set<UUID> categoryIds = null;
-        if (categoryId != null) {
+        if (!uncategorizedOnly && categoryId != null) {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
             categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
         }
-        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo);
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, dateFrom, dateTo, uncategorizedOnly);
 
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
@@ -142,7 +145,8 @@ public class TransactionService {
             UUID accountId,
             String type,
             LocalDate dateFrom,
-            LocalDate dateTo
+            LocalDate dateTo,
+            boolean uncategorizedOnly
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -190,7 +194,9 @@ public class TransactionService {
                 }
             }
 
-            if (categoryIds != null && !categoryIds.isEmpty()) {
+            if (uncategorizedOnly) {
+                predicates.add(cb.isNull(root.get("category")));
+            } else if (categoryIds != null && !categoryIds.isEmpty()) {
                 predicates.add(root.get("category").get("id").in(categoryIds));
             }
 

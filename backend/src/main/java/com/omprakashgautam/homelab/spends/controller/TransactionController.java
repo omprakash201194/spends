@@ -35,6 +35,7 @@ public class TransactionController {
      *   size       – page size (default 25)
      *   sortBy     – valueDate | txDate | merchant | withdrawal | deposit | balance (default valueDate)
      *   sortDir    – asc | desc (default desc)
+     *   uncategorizedOnly – if true, return only transactions where category IS NULL (overrides categoryId)
      */
     @GetMapping
     public ResponseEntity<TransactionDto.PagedResponse> list(
@@ -48,11 +49,12 @@ public class TransactionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(defaultValue = "valueDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(defaultValue = "false") boolean uncategorizedOnly
     ) {
         return ResponseEntity.ok(transactionService.list(
                 principal.getId(), search, categoryId, accountId,
-                type, dateFrom, dateTo, page, size, sortBy, sortDir
+                type, dateFrom, dateTo, page, size, sortBy, sortDir, uncategorizedOnly
         ));
     }
 
@@ -64,10 +66,11 @@ public class TransactionController {
             @RequestParam(required = false) UUID accountId,
             @RequestParam(defaultValue = "ALL") String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(defaultValue = "false") boolean uncategorizedOnly
     ) {
         return ResponseEntity.ok(transactionService.getSummary(
-                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo
+                principal.getId(), search, categoryId, accountId, type, dateFrom, dateTo, uncategorizedOnly
         ));
     }
 
