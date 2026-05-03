@@ -54,6 +54,7 @@ class WidgetControllerTest {
         WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
                 widgetId, dashboardId, "Updated Title", WidgetType.LINE,
                 FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb", 0,
+                0, 0, 4, 3,
                 null, null, null);
         when(widgetService.updateWidget(widgetId, userId, req)).thenReturn(response);
 
@@ -61,6 +62,37 @@ class WidgetControllerTest {
 
         assertThat(result.title()).isEqualTo("Updated Title");
         verify(widgetService).updateWidget(widgetId, userId, req);
+    }
+
+    @Test
+    void duplicateWidget_delegatesToService() {
+        UUID widgetId = UUID.randomUUID();
+        UUID newId = UUID.randomUUID();
+        UUID dashboardId = UUID.randomUUID();
+        WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
+                newId, dashboardId, "Title (copy)", WidgetType.PIE,
+                FilterType.ALL, null, Metric.SPEND, 6, "#6366f1", 1,
+                0, 3, 4, 3,
+                null, null, null);
+        when(widgetService.duplicateWidget(widgetId, userId)).thenReturn(response);
+
+        WidgetDto.WidgetResponse result = controller.duplicateWidget(widgetId, principal);
+
+        assertThat(result.title()).isEqualTo("Title (copy)");
+        verify(widgetService).duplicateWidget(widgetId, userId);
+    }
+
+    @Test
+    void applyLayout_delegatesToService() {
+        UUID w1 = UUID.randomUUID();
+        UUID w2 = UUID.randomUUID();
+        WidgetDto.LayoutBatchRequest req = new WidgetDto.LayoutBatchRequest(java.util.List.of(
+                new WidgetDto.LayoutItem(w1, 0, 0, 4, 3),
+                new WidgetDto.LayoutItem(w2, 4, 0, 8, 3)));
+
+        controller.applyLayout(principal, req);
+
+        verify(widgetService).applyLayoutBatch(userId, req.items());
     }
 
     @Test

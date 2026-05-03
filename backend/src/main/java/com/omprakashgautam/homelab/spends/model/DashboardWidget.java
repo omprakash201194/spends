@@ -82,6 +82,22 @@ public class DashboardWidget {
     @Builder.Default
     private int position = 0;
 
+    @Column(name = "grid_x", nullable = false)
+    @Builder.Default
+    private int gridX = 0;
+
+    @Column(name = "grid_y", nullable = false)
+    @Builder.Default
+    private int gridY = 0;
+
+    @Column(name = "grid_w", nullable = false)
+    @Builder.Default
+    private int gridW = 4;
+
+    @Column(name = "grid_h", nullable = false)
+    @Builder.Default
+    private int gridH = 3;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

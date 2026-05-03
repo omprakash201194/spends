@@ -55,6 +55,17 @@ public class WidgetDto {
 
     public record MoveRequest(@Min(0) int position) {}
 
+    /** Single layout entry sent in a batch when user drags/resizes the grid. */
+    public record LayoutItem(
+            @NotNull UUID id,
+            @Min(0) int gridX,
+            @Min(0) int gridY,
+            @Min(1) int gridW,
+            @Min(1) int gridH
+    ) {}
+
+    public record LayoutBatchRequest(@NotNull List<LayoutItem> items) {}
+
     public record WidgetResponse(
             UUID id,
             UUID dashboardId,
@@ -66,13 +77,17 @@ public class WidgetDto {
             int periodMonths,
             String color,
             int position,
+            int gridX,
+            int gridY,
+            int gridW,
+            int gridH,
             UUID accountId,
             LocalDate customFrom,
             LocalDate customTo
     ) {}
 
-    /** One slice in a pie/bar chart — row layout matches categoryBreakdownAll/ForIds: [id, name, color, sum] */
-    public record DataSlice(String label, String color, BigDecimal value) {}
+    /** One slice in a pie/bar chart — categoryId is set when this slice represents a category (null for TAG-filter widgets). */
+    public record DataSlice(UUID categoryId, String label, String color, BigDecimal value) {}
 
     /** One point in a line chart — row layout: [month, withdrawal, deposit, count] */
     public record DataPoint(String month, BigDecimal spend, BigDecimal income, long count) {}

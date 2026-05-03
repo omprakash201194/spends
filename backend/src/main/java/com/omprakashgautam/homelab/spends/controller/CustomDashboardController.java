@@ -30,6 +30,13 @@ public class CustomDashboardController {
         return dashboardService.getDashboards(user.getId());
     }
 
+    @GetMapping("/{id}")
+    public CustomDashboardDto.DashboardResponse getDashboard(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return dashboardService.getDashboard(id, user.getId());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CustomDashboardDto.DashboardResponse createDashboard(
@@ -44,6 +51,22 @@ public class CustomDashboardController {
             @AuthenticationPrincipal UserDetailsImpl user,
             @Valid @RequestBody CustomDashboardDto.RenameRequest req) {
         return dashboardService.renameDashboard(id, user.getId(), req);
+    }
+
+    @PatchMapping("/{id}/filters")
+    public CustomDashboardDto.DashboardResponse updateFilters(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @Valid @RequestBody CustomDashboardDto.UpdateFiltersRequest req) {
+        return dashboardService.updateFilters(id, user.getId(), req);
+    }
+
+    @PostMapping("/{id}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CustomDashboardDto.DashboardResponse duplicateDashboard(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return dashboardService.duplicateDashboard(id, user.getId());
     }
 
     @DeleteMapping("/{id}")

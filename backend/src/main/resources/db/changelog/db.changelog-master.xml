@@ -28,5 +28,6 @@
     <include file="changes/021-dashboard-widgets.yaml" relativeToChangelogFile="true"/>
     <include file="changes/022-dashboards.yaml" relativeToChangelogFile="true"/>
     <include file="changes/023-widget-account-and-date-range.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/024-dashboard-filters-and-widget-grid.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

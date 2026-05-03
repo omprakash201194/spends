@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { LayoutGrid, Plus, Pencil, Trash2, X, Check, Copy } from 'lucide-react'
 import {
-  getDashboards, createDashboard, renameDashboard, deleteDashboard,
+  getDashboards, createDashboard, renameDashboard, deleteDashboard, duplicateDashboard,
   type Dashboard,
 } from '../api/dashboards'
 
@@ -20,6 +20,11 @@ function DashboardCard({ dashboard, onDelete }: { dashboard: Dashboard; onDelete
       queryClient.invalidateQueries({ queryKey: ['dashboards'] })
       setRenaming(false)
     },
+  })
+
+  const duplicateMut = useMutation({
+    mutationFn: () => duplicateDashboard(dashboard.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dashboards'] }),
   })
 
   return (
@@ -63,13 +68,23 @@ function DashboardCard({ dashboard, onDelete }: { dashboard: Dashboard; onDelete
         {!renaming && (
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
             <button
+              onClick={() => duplicateMut.mutate()}
+              disabled={duplicateMut.isPending}
+              title="Duplicate"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={() => setRenaming(true)}
+              title="Rename"
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
+              title="Delete"
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
             >
               <Trash2 className="w-3.5 h-3.5" />

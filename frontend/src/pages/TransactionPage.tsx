@@ -10,6 +10,7 @@ import { getAutoCategorizeSuggestions, type RuleSuggestion } from '../api/insigh
 import { createCategory } from '../api/categories'
 import { createCategoryRule, reapplyCategoryRules, getCategoryRules } from '../api/categoryRules'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   ChevronLeft, ChevronRight, Check, X, CircleDot,
@@ -71,6 +72,24 @@ export default function TransactionPage() {
 
   // pagination
   const [page, setPage] = useState(0)
+
+  // Seed filters from URL params once on mount (used by chart click-through from dashboards).
+  const [searchParams] = useSearchParams()
+  const [seededFromUrl, setSeededFromUrl] = useState(false)
+  useEffect(() => {
+    if (seededFromUrl) return
+    const cat = searchParams.get('categoryId')
+    const acc = searchParams.get('accountId')
+    const df  = searchParams.get('dateFrom')
+    const dt  = searchParams.get('dateTo')
+    const t   = searchParams.get('type')
+    if (cat) setCategoryId(cat)
+    if (acc) setAccountId(acc)
+    if (df)  setDateFrom(df)
+    if (dt)  setDateTo(dt)
+    if (t === 'DEBIT' || t === 'CREDIT' || t === 'ALL') setType(t)
+    setSeededFromUrl(true)
+  }, [searchParams, seededFromUrl])
 
   const debouncedSearch = useDebounce(search, 300)
 

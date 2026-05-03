@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 024-dashboard-filters
+      author: omprakash
+      changes:
+        - addColumn:
+            tableName: dashboard
+            columns:
+              - column:
+                  name: account_id
+                  type: UUID
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_dashboard_account
+                    references: bank_account(id)
+                    deleteSetNull: true
+              - column:
+                  name: period_months
+                  type: int
+                  constraints:
+                    nullable: true
+              - column:
+                  name: custom_from
+                  type: DATE
+                  constraints:
+                    nullable: true
+              - column:
+                  name: custom_to
+                  type: DATE
+                  constraints:
+                    nullable: true
+        - sql:
+            sql: |
+              ALTER TABLE dashboard
+                ADD CONSTRAINT dashboard_custom_range_chk CHECK (
+                  (custom_from IS NULL AND custom_to IS NULL)
+                  OR (custom_from IS NOT NULL AND (custom_to IS NULL OR custom_from <= custom_to))
+                );
+            rollback: |
+              ALTER TABLE dashboard DROP CONSTRAINT IF EXISTS dashboard_custom_range_chk;
+
+  - changeSet:
+      id: 024-widget-grid
+      author: omprakash
+      changes:
+        - addColumn:
+            tableName: dashboard_widget
+            columns:
+              - column:
+                  name: grid_x
+                  type: int
+                  defaultValue: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: grid_y
+                  type: int
+                  defaultValue: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: grid_w
+                  type: int
+                  defaultValue: 4
+                  constraints:
+                    nullable: false
+              - column:
+                  name: grid_h
+                  type: int
+                  defaultValue: 3
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: |
+              UPDATE dashboard_widget
+                SET grid_x = (position % 3) * 4,
+                    grid_y = (position / 3) * 3,
+                    grid_w = 4,
+                    grid_h = 3;

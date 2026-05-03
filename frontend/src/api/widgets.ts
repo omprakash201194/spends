@@ -15,6 +15,10 @@ export interface Widget {
   periodMonths: number
   color: string
   position: number
+  gridX: number
+  gridY: number
+  gridW: number
+  gridH: number
   accountId: string | null
   customFrom: string | null
   customTo: string | null
@@ -59,6 +63,8 @@ export interface PreviewRequest {
 }
 
 export interface DataSlice {
+  /** Set when the slice represents a category. Null for TAG-filter widgets. */
+  categoryId: string | null
   label: string
   color: string
   value: number
@@ -84,6 +90,14 @@ export interface WidgetData {
   stat: StatData | null
 }
 
+export interface LayoutItem {
+  id: string
+  gridX: number
+  gridY: number
+  gridW: number
+  gridH: number
+}
+
 export async function getWidgets(dashboardId: string): Promise<Widget[]> {
   const { data } = await apiClient.get<Widget[]>(`/dashboards/${dashboardId}/widgets`)
   return data
@@ -105,6 +119,15 @@ export async function deleteWidget(id: string): Promise<void> {
 
 export async function moveWidget(id: string, position: number): Promise<void> {
   await apiClient.post(`/widgets/${id}/move`, { position })
+}
+
+export async function duplicateWidget(id: string): Promise<Widget> {
+  const { data } = await apiClient.post<Widget>(`/widgets/${id}/duplicate`)
+  return data
+}
+
+export async function applyLayout(items: LayoutItem[]): Promise<void> {
+  await apiClient.post('/widgets/layout', { items })
 }
 
 export async function getWidgetData(id: string): Promise<WidgetData> {

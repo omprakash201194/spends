@@ -50,6 +50,22 @@ public class WidgetController {
         widgetService.moveWidget(id, user.getId(), req.position());
     }
 
+    @PostMapping("/{id}/duplicate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public WidgetDto.WidgetResponse duplicateWidget(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return widgetService.duplicateWidget(id, user.getId());
+    }
+
+    @PostMapping("/layout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void applyLayout(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @Valid @RequestBody WidgetDto.LayoutBatchRequest req) {
+        widgetService.applyLayoutBatch(user.getId(), req.items());
+    }
+
     @GetMapping("/{id}/data")
     public WidgetDto.WidgetData getWidgetData(
             @PathVariable UUID id,
