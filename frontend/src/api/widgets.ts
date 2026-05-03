@@ -15,6 +15,9 @@ export interface Widget {
   periodMonths: number
   color: string
   position: number
+  accountId: string | null
+  customFrom: string | null
+  customTo: string | null
 }
 
 export interface CreateWidgetRequest {
@@ -25,6 +28,9 @@ export interface CreateWidgetRequest {
   metric: Metric
   periodMonths: number
   color: string
+  accountId?: string
+  customFrom?: string
+  customTo?: string
 }
 
 export interface UpdateWidgetRequest {
@@ -35,6 +41,9 @@ export interface UpdateWidgetRequest {
   metric: Metric
   periodMonths: number
   color: string
+  accountId?: string
+  customFrom?: string
+  customTo?: string
 }
 
 export interface PreviewRequest {
@@ -44,6 +53,9 @@ export interface PreviewRequest {
   metric: Metric
   periodMonths: number
   color: string
+  accountId?: string
+  customFrom?: string
+  customTo?: string
 }
 
 export interface DataSlice {

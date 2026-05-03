@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, RefreshCw } from 'lucide-react'
 import { getCategories } from '../api/categories'
+import { getBankAccounts } from '../api/bankAccounts'
 import {
   previewWidget,
   type CreateWidgetRequest, type FilterType, type Metric,
@@ -56,6 +57,11 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
   const [metric, setMetric] = useState<Metric>(existing?.metric ?? 'SPEND')
   const [periodMonths, setPeriodMonths] = useState(existing?.periodMonths ?? 6)
   const [color, setColor] = useState(existing?.color ?? '#6366f1')
+  const [accountId, setAccountId] = useState(existing?.accountId ?? '')
+  const [customFrom, setCustomFrom] = useState(existing?.customFrom ?? '')
+  const [customTo, setCustomTo] = useState(existing?.customTo ?? '')
+  const [customPopoverOpen, setCustomPopoverOpen] = useState(false)
+  const [customError, setCustomError] = useState<string | null>(null)
 
   // Preview panel — independent chart type so user can try alternatives without affecting save
   const [previewWidgetType, setPreviewWidgetType] = useState<WidgetType>(existing?.widgetType ?? 'PIE')
@@ -70,7 +76,14 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
     staleTime: 60_000,
   })
 
-  async function runPreview(wt: WidgetType, ft: FilterType, fv: string, m: Metric, pm: number, c: string) {
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['bank-accounts'],
+    queryFn: getBankAccounts,
+    staleTime: Infinity,
+  })
+
+  async function runPreview(wt: WidgetType, ft: FilterType, fv: string, m: Metric, pm: number, c: string,
+                            acc: string, cf: string, ct: string) {
     setPreviewLoading(true)
     setPreviewError(null)
     try {
@@ -81,6 +94,9 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
         metric: m,
         periodMonths: pm,
         color: c,
+        accountId: acc || undefined,
+        customFrom: cf || undefined,
+        customTo: ct || undefined,
       })
       setPreviewData(result)
     } catch {
@@ -94,11 +110,11 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color)
+      runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color, accountId, customFrom, customTo)
     }, 600)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewWidgetType, filterType, filterValue, metric, periodMonths, color])
+  }, [previewWidgetType, filterType, filterValue, metric, periodMonths, color, accountId, customFrom, customTo])
 
   // When user changes the configure chart type, sync preview type too
   function handleWidgetTypeChange(wt: WidgetType) {
@@ -108,6 +124,15 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setCustomError(null)
+    if (customTo && !customFrom) {
+      setCustomError('Set a "From" date to use a custom range')
+      return
+    }
+    if (customFrom && customTo && customFrom > customTo) {
+      setCustomError('"From" must be on or before "To"')
+      return
+    }
     onSave({
       title,
       widgetType,
@@ -116,6 +141,9 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
       metric,
       periodMonths,
       color,
+      accountId: accountId || undefined,
+      customFrom: customFrom || undefined,
+      customTo: customTo || undefined,
     })
   }
 
@@ -226,17 +254,39 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
               </div>
             )}
 
+            {/* Account */}
+            {accounts.length > 1 && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Account</label>
+                <select
+                  value={accountId}
+                  onChange={e => setAccountId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">All accounts</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>{a.bankName} {a.accountNumberMasked ?? ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Period */}
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Period</label>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 flex-wrap relative">
                 {PERIOD_PRESETS.map(p => (
                   <button
                     key={p.value}
                     type="button"
-                    onClick={() => setPeriodMonths(p.value)}
-                    className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
-                      periodMonths === p.value
+                    onClick={() => {
+                      setPeriodMonths(p.value)
+                      setCustomFrom('')
+                      setCustomTo('')
+                      setCustomPopoverOpen(false)
+                    }}
+                    className={`flex-1 min-w-[40px] py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                      !customFrom && periodMonths === p.value
                         ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
                         : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                     }`}
@@ -244,6 +294,59 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
                     {p.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomPopoverOpen(!customPopoverOpen)}
+                  className={`flex-1 min-w-[80px] py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                    customFrom
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                  }`}
+                >
+                  {customFrom
+                    ? `${customFrom} → ${customTo || 'today'}`
+                    : 'Custom ▾'}
+                </button>
+
+                {customPopoverOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 z-10 p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg space-y-2">
+                    <div>
+                      <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">From</label>
+                      <input
+                        type="date"
+                        value={customFrom}
+                        onChange={e => setCustomFrom(e.target.value)}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase mb-1">To (optional, defaults to today)</label>
+                      <input
+                        type="date"
+                        value={customTo}
+                        onChange={e => setCustomTo(e.target.value)}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setCustomFrom(''); setCustomTo(''); setCustomPopoverOpen(false) }}
+                        className="flex-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!customFrom}
+                        onClick={() => setCustomPopoverOpen(false)}
+                        className="flex-1 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -264,6 +367,10 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
                 ))}
               </div>
             </div>
+
+            {customError && (
+              <div className="text-xs text-red-500">{customError}</div>
+            )}
           </form>
 
           {/* Right: Preview */}
@@ -276,7 +383,7 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
                 )}
                 <button
                   type="button"
-                  onClick={() => runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color)}
+                  onClick={() => runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color, accountId, customFrom, customTo)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   title="Refresh preview"
                 >
@@ -313,7 +420,7 @@ export default function WidgetForm({ existing, onSave, onClose }: Props) {
                   <span>{previewError}</span>
                   <button
                     type="button"
-                    onClick={() => runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color)}
+                    onClick={() => runPreview(previewWidgetType, filterType, filterValue, metric, periodMonths, color, accountId, customFrom, customTo)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-red-300 rounded-lg hover:bg-red-50"
                   >
                     <RefreshCw className="w-3.5 h-3.5" /> Retry
