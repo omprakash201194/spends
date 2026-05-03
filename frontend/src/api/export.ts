@@ -7,6 +7,7 @@ export interface TransactionExportParams {
   type?: string
   dateFrom?: string
   dateTo?: string
+  uncategorizedOnly?: boolean
 }
 
 /**
@@ -24,6 +25,7 @@ export async function downloadTransactionsCsv(params: TransactionExportParams): 
   if (params.type && params.type !== 'ALL')   url.searchParams.set('type', params.type)
   if (params.dateFrom)                        url.searchParams.set('dateFrom', params.dateFrom)
   if (params.dateTo)                          url.searchParams.set('dateTo', params.dateTo)
+  if (params.uncategorizedOnly)               url.searchParams.set('uncategorizedOnly', 'true')
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },

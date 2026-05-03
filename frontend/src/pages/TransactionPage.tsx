@@ -59,6 +59,7 @@ export default function TransactionPage() {
   // filters
   const [search, setSearch]         = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [uncategorizedOnly, setUncategorizedOnly] = useState(false)
   const [accountId, setAccountId]       = useState('')
   const [type, setType]                 = useState<'ALL' | 'DEBIT' | 'CREDIT'>('ALL')
   const [dateFrom, setDateFrom]         = useState('')
@@ -84,6 +85,7 @@ export default function TransactionPage() {
     size: 25,
     sortBy,
     sortDir,
+    uncategorizedOnly: uncategorizedOnly || undefined,
   }
 
   const { data, isLoading } = useQuery({
@@ -93,11 +95,11 @@ export default function TransactionPage() {
     staleTime: 30_000,
   })
 
-  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
+  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, uncategorizedOnly: uncategorizedOnly || undefined }
   const { data: summary } = useQuery({
     queryKey: ['transactions-summary', summaryFilters],
     queryFn: () => getTransactionSummary(summaryFilters),
-    enabled: !!(debouncedSearch || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo),
+    enabled: !!(debouncedSearch || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo || uncategorizedOnly),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   })
@@ -174,11 +176,11 @@ export default function TransactionPage() {
   }, [sortBy])
 
   const resetFilters = () => {
-    setSearch(''); setCategoryId(''); setAccountId('')
+    setSearch(''); setCategoryId(''); setAccountId(''); setUncategorizedOnly(false)
     setType('ALL'); setDateFrom(''); setDateTo(''); setPage(0)
   }
 
-  const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo
+  const hasFilters = search || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo || uncategorizedOnly
 
   const activeYear = (() => {
     if (!dateFrom || !dateTo) return null
@@ -293,6 +295,7 @@ export default function TransactionPage() {
         type,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        uncategorizedOnly: uncategorizedOnly || undefined,
       })
     } catch {
       window.alert('Export failed. Please try again.')
@@ -356,11 +359,20 @@ export default function TransactionPage() {
 
         {/* Category */}
         <select
-          value={categoryId}
-          onChange={(e) => { setCategoryId(e.target.value); setPage(0) }}
+          value={uncategorizedOnly ? '__UNCAT__' : categoryId}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === '__UNCAT__') {
+              setUncategorizedOnly(true); setCategoryId(''); setPage(0)
+            } else {
+              setUncategorizedOnly(false); setCategoryId(v); setPage(0)
+            }
+          }}
           className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
         >
           <option value="">All categories</option>
+          <option value="__UNCAT__">Uncategorized</option>
+          <option value="__SEP__" disabled>──────────</option>
           {renderCategoryOptions(buildCategoryTree(categories))}
         </select>
 
@@ -443,6 +455,7 @@ export default function TransactionPage() {
             })
           })()}
           {categoryId && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">category<button onClick={() => { setCategoryId(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
+          {uncategorizedOnly && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">uncategorized<button onClick={() => { setUncategorizedOnly(false); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
           {accountId && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">account<button onClick={() => { setAccountId(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
           {type !== 'ALL' && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{type.toLowerCase()}<button onClick={() => { setType('ALL'); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}
           {dateFrom && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">from {dateFrom}<button onClick={() => { setDateFrom(''); setPage(0) }} className="opacity-60 hover:opacity-100">×</button></span>}

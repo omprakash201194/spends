@@ -49,6 +49,7 @@ export interface TransactionFilters {
   size?: number
   sortBy?: string
   sortDir?: 'asc' | 'desc'
+  uncategorizedOnly?: boolean
 }
 
 export interface TransactionSummary {
