@@ -597,4 +597,139 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     List<Object[]> monthlyTrendAll(@Param("userId") UUID userId,
                                     @Param("from") LocalDate from,
                                     @Param("to") LocalDate to);
+
+    // ── Widget: account-aware (null-safe) variants ──────────────────────────
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category IS NOT NULL
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownAllByAccount(@Param("userId") UUID userId,
+                                                  @Param("from") LocalDate from,
+                                                  @Param("to") LocalDate to,
+                                                  @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.depositAmount > 0
+          AND t.category IS NOT NULL
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.depositAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownAllIncomeByAccount(@Param("userId") UUID userId,
+                                                        @Param("from") LocalDate from,
+                                                        @Param("to") LocalDate to,
+                                                        @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category IS NOT NULL
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY COUNT(t) DESC
+        """)
+    List<Object[]> categoryBreakdownAllCountByAccount(@Param("userId") UUID userId,
+                                                       @Param("from") LocalDate from,
+                                                       @Param("to") LocalDate to,
+                                                       @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND t.category.id IN :categoryIds
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownForIdsByAccount(@Param("userId") UUID userId,
+                                                     @Param("from") LocalDate from,
+                                                     @Param("to") LocalDate to,
+                                                     @Param("categoryIds") Collection<UUID> categoryIds,
+                                                     @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COALESCE(SUM(t.depositAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.depositAmount > 0
+          AND t.category.id IN :categoryIds
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.depositAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownForIdsIncomeByAccount(@Param("userId") UUID userId,
+                                                           @Param("from") LocalDate from,
+                                                           @Param("to") LocalDate to,
+                                                           @Param("categoryIds") Collection<UUID> categoryIds,
+                                                           @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color, COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category.id IN :categoryIds
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY COUNT(t) DESC
+        """)
+    List<Object[]> categoryBreakdownForIdsCountByAccount(@Param("userId") UUID userId,
+                                                          @Param("from") LocalDate from,
+                                                          @Param("to") LocalDate to,
+                                                          @Param("categoryIds") Collection<UUID> categoryIds,
+                                                          @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendAllByAccount(@Param("userId") UUID userId,
+                                             @Param("from") LocalDate from,
+                                             @Param("to") LocalDate to,
+                                             @Param("accountId") UUID accountId);
+
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.category.id IN :categoryIds
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendForIdsByAccount(@Param("userId") UUID userId,
+                                                @Param("from") LocalDate from,
+                                                @Param("to") LocalDate to,
+                                                @Param("categoryIds") Collection<UUID> categoryIds,
+                                                @Param("accountId") UUID accountId);
 }

@@ -1,6 +1,7 @@
 package com.omprakashgautam.homelab.spends.service;
 
 import com.omprakashgautam.homelab.spends.dto.WidgetDto;
+import com.omprakashgautam.homelab.spends.model.BankAccount;
 import com.omprakashgautam.homelab.spends.model.Category;
 import com.omprakashgautam.homelab.spends.model.Dashboard;
 import com.omprakashgautam.homelab.spends.model.DashboardWidget;
@@ -43,8 +44,12 @@ public class WidgetService {
     @Transactional
     public WidgetDto.WidgetResponse createWidget(UUID dashboardId, UUID userId, WidgetDto.CreateRequest req) {
         Dashboard dashboard = verifyDashboardOwnership(dashboardId, userId);
+        validateCustomRange(req.customFrom(), req.customTo());
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BankAccount account = req.accountId() != null
+                ? BankAccount.builder().id(req.accountId()).build()
+                : null;
         int nextPos = Objects.requireNonNullElse(widgetRepo.findMaxPositionInDashboard(dashboardId), -1) + 1;
         DashboardWidget widget = DashboardWidget.builder()
                 .user(user)
@@ -57,12 +62,16 @@ public class WidgetService {
                 .periodMonths(req.periodMonths())
                 .color(req.color())
                 .position(nextPos)
+                .account(account)
+                .customFrom(req.customFrom())
+                .customTo(req.customTo())
                 .build();
         return toResponse(widgetRepo.save(widget));
     }
 
     @Transactional
     public WidgetDto.WidgetResponse updateWidget(UUID id, UUID userId, WidgetDto.UpdateRequest req) {
+        validateCustomRange(req.customFrom(), req.customTo());
         DashboardWidget widget = getOwned(id, userId);
         widget.setTitle(req.title());
         widget.setWidgetType(req.widgetType());
@@ -71,7 +80,23 @@ public class WidgetService {
         widget.setMetric(req.metric());
         widget.setPeriodMonths(req.periodMonths());
         widget.setColor(req.color());
+        widget.setAccount(req.accountId() != null
+                ? BankAccount.builder().id(req.accountId()).build()
+                : null);
+        widget.setCustomFrom(req.customFrom());
+        widget.setCustomTo(req.customTo());
         return toResponse(widgetRepo.save(widget));
+    }
+
+    private void validateCustomRange(LocalDate from, LocalDate to) {
+        if (to != null && from == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "customTo requires customFrom");
+        }
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "customFrom must be on or before customTo");
+        }
     }
 
     @Transactional
@@ -93,11 +118,19 @@ public class WidgetService {
     public WidgetDto.WidgetData getWidgetData(UUID id, UUID userId) {
         DashboardWidget widget = getOwned(id, userId);
         LocalDate anchor = txRepo.latestTransactionDate(userId);
-        if (anchor == null) return emptyData(widget);
-        LocalDate to = anchor;
-        LocalDate from = widget.getPeriodMonths() == 0
-                ? LocalDate.of(2000, 1, 1)
-                : to.minusMonths(widget.getPeriodMonths()).withDayOfMonth(1);
+        if (anchor == null && widget.getCustomFrom() == null) return emptyData(widget);
+
+        LocalDate from, to;
+        if (widget.getCustomFrom() != null) {
+            from = widget.getCustomFrom();
+            to   = widget.getCustomTo() != null ? widget.getCustomTo() : LocalDate.now();
+        } else if (widget.getPeriodMonths() == 0) {
+            from = LocalDate.of(2000, 1, 1);
+            to   = anchor;
+        } else {
+            from = anchor.minusMonths(widget.getPeriodMonths()).withDayOfMonth(1);
+            to   = anchor;
+        }
 
         return switch (widget.getWidgetType()) {
             case PIE, BAR -> buildSliceData(widget, userId, from, to);
@@ -108,13 +141,22 @@ public class WidgetService {
 
     @Transactional(readOnly = true)
     public WidgetDto.WidgetData previewWidget(UUID userId, WidgetDto.PreviewRequest req) {
+        validateCustomRange(req.customFrom(), req.customTo());
         LocalDate anchor = txRepo.latestTransactionDate(userId);
         DashboardWidget tmp = buildTempWidget(req);
-        if (anchor == null) return emptyData(tmp);
-        LocalDate to = anchor;
-        LocalDate from = req.periodMonths() == 0
-                ? LocalDate.of(2000, 1, 1)
-                : to.minusMonths(req.periodMonths()).withDayOfMonth(1);
+        if (anchor == null && tmp.getCustomFrom() == null) return emptyData(tmp);
+
+        LocalDate from, to;
+        if (tmp.getCustomFrom() != null) {
+            from = tmp.getCustomFrom();
+            to   = tmp.getCustomTo() != null ? tmp.getCustomTo() : LocalDate.now();
+        } else if (tmp.getPeriodMonths() == 0) {
+            from = LocalDate.of(2000, 1, 1);
+            to   = anchor;
+        } else {
+            from = anchor.minusMonths(tmp.getPeriodMonths()).withDayOfMonth(1);
+            to   = anchor;
+        }
 
         return switch (req.widgetType()) {
             case PIE, BAR -> buildSliceData(tmp, userId, from, to);
@@ -124,6 +166,9 @@ public class WidgetService {
     }
 
     private DashboardWidget buildTempWidget(WidgetDto.PreviewRequest req) {
+        BankAccount account = req.accountId() != null
+                ? BankAccount.builder().id(req.accountId()).build()
+                : null;
         return DashboardWidget.builder()
                 .widgetType(req.widgetType())
                 .filterType(req.filterType() != null ? req.filterType() : FilterType.ALL)
@@ -131,6 +176,9 @@ public class WidgetService {
                 .metric(req.metric() != null ? req.metric() : DashboardWidget.Metric.SPEND)
                 .periodMonths(req.periodMonths())
                 .color(req.color() != null ? req.color() : "#6366f1")
+                .account(account)
+                .customFrom(req.customFrom())
+                .customTo(req.customTo())
                 .build();
     }
 
@@ -176,10 +224,15 @@ public class WidgetService {
 
     private WidgetDto.WidgetData buildStatData(DashboardWidget w, UUID userId,
                                                 LocalDate from, LocalDate to) {
+        UUID accountId = w.getAccount() != null ? w.getAccount().getId() : null;
         BigDecimal value = switch (w.getMetric()) {
             case SPEND  -> fetchTotalSpend(w, userId, from, to);
-            case INCOME -> txRepo.sumDeposits(userId, from, to);
-            case COUNT  -> BigDecimal.valueOf(txRepo.countInPeriod(userId, from, to));
+            case INCOME -> accountId != null
+                    ? txRepo.sumDepositsFiltered(userId, from, to, accountId)
+                    : txRepo.sumDeposits(userId, from, to);
+            case COUNT  -> accountId != null
+                    ? BigDecimal.valueOf(txRepo.countInPeriodFiltered(userId, from, to, accountId))
+                    : BigDecimal.valueOf(txRepo.countInPeriod(userId, from, to));
         };
         String label = w.getMetric().name().toLowerCase();
         return new WidgetDto.WidgetData(w.getWidgetType(), w.getMetric(), null, null,
@@ -191,24 +244,27 @@ public class WidgetService {
     private List<Object[]> fetchBreakdown(DashboardWidget w, UUID userId,
                                            LocalDate from, LocalDate to) {
         DashboardWidget.Metric metric = w.getMetric() != null ? w.getMetric() : DashboardWidget.Metric.SPEND;
+        UUID accountId = w.getAccount() != null ? w.getAccount().getId() : null;
         return switch (w.getFilterType()) {
             case ALL -> switch (metric) {
-                case SPEND  -> txRepo.categoryBreakdownAll(userId, from, to);
-                case INCOME -> txRepo.categoryBreakdownAllIncome(userId, from, to);
-                case COUNT  -> txRepo.categoryBreakdownAllCount(userId, from, to);
+                case SPEND  -> txRepo.categoryBreakdownAllByAccount(userId, from, to, accountId);
+                case INCOME -> txRepo.categoryBreakdownAllIncomeByAccount(userId, from, to, accountId);
+                case COUNT  -> txRepo.categoryBreakdownAllCountByAccount(userId, from, to, accountId);
             };
             case CATEGORY -> {
                 Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
                 if (ids.isEmpty()) yield List.of();
                 yield switch (metric) {
-                    case SPEND  -> txRepo.categoryBreakdownForIds(userId, from, to, ids);
-                    case INCOME -> txRepo.categoryBreakdownForIdsIncome(userId, from, to, ids);
-                    case COUNT  -> txRepo.categoryBreakdownForIdsCount(userId, from, to, ids);
+                    case SPEND  -> txRepo.categoryBreakdownForIdsByAccount(userId, from, to, ids, accountId);
+                    case INCOME -> txRepo.categoryBreakdownForIdsIncomeByAccount(userId, from, to, ids, accountId);
+                    case COUNT  -> txRepo.categoryBreakdownForIdsCountByAccount(userId, from, to, ids, accountId);
                 };
             }
             case TAG -> {
                 // TAG breakdown shows total spend as a single labelled slice — no per-tag aggregate query exists yet
-                BigDecimal total = txRepo.sumWithdrawals(userId, from, to);
+                BigDecimal total = accountId != null
+                        ? txRepo.sumWithdrawalsFiltered(userId, from, to, accountId)
+                        : txRepo.sumWithdrawals(userId, from, to);
                 String tag = w.getFilterValue() != null ? w.getFilterValue() : "tag";
                 yield Collections.singletonList(new Object[]{ null, tag, w.getColor(), total });
             }
@@ -217,27 +273,31 @@ public class WidgetService {
 
     private List<Object[]> fetchMonthlyTrend(DashboardWidget w, UUID userId,
                                               LocalDate from, LocalDate to) {
+        UUID accountId = w.getAccount() != null ? w.getAccount().getId() : null;
         return switch (w.getFilterType()) {
             // TAG trend uses global monthly data — no per-tag aggregate query exists yet
-            case ALL, TAG -> txRepo.monthlyTrendAll(userId, from, to);
+            case ALL, TAG -> txRepo.monthlyTrendAllByAccount(userId, from, to, accountId);
             case CATEGORY -> {
                 Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
-                yield ids.isEmpty() ? List.of() : txRepo.monthlyTrendForIds(userId, from, to, ids);
+                yield ids.isEmpty() ? List.of() : txRepo.monthlyTrendForIdsByAccount(userId, from, to, ids, accountId);
             }
         };
     }
 
     private BigDecimal fetchTotalSpend(DashboardWidget w, UUID userId,
                                         LocalDate from, LocalDate to) {
+        UUID accountId = w.getAccount() != null ? w.getAccount().getId() : null;
         // TAG total falls through to global sumWithdrawals — no per-tag aggregate query exists yet
         if (w.getFilterType() == FilterType.CATEGORY) {
             Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
             if (ids.isEmpty()) return BigDecimal.ZERO;
-            return txRepo.categoryBreakdownForIds(userId, from, to, ids).stream()
+            return txRepo.categoryBreakdownForIdsByAccount(userId, from, to, ids, accountId).stream()
                     .map(r -> (BigDecimal) r[3])
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
-        return txRepo.sumWithdrawals(userId, from, to);
+        return accountId != null
+                ? txRepo.sumWithdrawalsFiltered(userId, from, to, accountId)
+                : txRepo.sumWithdrawals(userId, from, to);
     }
 
     private Set<UUID> expandCategorySubtree(String filterValue) {
@@ -267,6 +327,9 @@ public class WidgetService {
                 w.getDashboard() != null ? w.getDashboard().getId() : null,
                 w.getTitle(), w.getWidgetType(),
                 w.getFilterType(), w.getFilterValue(), w.getMetric(),
-                w.getPeriodMonths(), w.getColor(), w.getPosition());
+                w.getPeriodMonths(), w.getColor(), w.getPosition(),
+                w.getAccount() != null ? w.getAccount().getId() : null,
+                w.getCustomFrom(),
+                w.getCustomTo());
     }
 }

@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,7 +22,10 @@ public class WidgetDto {
             String filterValue,
             @NotNull Metric metric,
             @Min(0) @Max(24) int periodMonths,   // 0 = all time
-            @NotBlank String color
+            @NotBlank String color,
+            UUID accountId,                       // nullable
+            LocalDate customFrom,                 // nullable
+            LocalDate customTo                    // nullable; requires customFrom
     ) {}
 
     public record UpdateRequest(
@@ -31,7 +35,10 @@ public class WidgetDto {
             String filterValue,
             @NotNull Metric metric,
             @Min(0) @Max(24) int periodMonths,   // 0 = all time
-            @NotBlank String color
+            @NotBlank String color,
+            UUID accountId,
+            LocalDate customFrom,
+            LocalDate customTo
     ) {}
 
     public record PreviewRequest(
@@ -40,7 +47,10 @@ public class WidgetDto {
             String filterValue,
             @NotNull Metric metric,
             @Min(0) @Max(24) int periodMonths,
-            String color
+            String color,
+            UUID accountId,
+            LocalDate customFrom,
+            LocalDate customTo
     ) {}
 
     public record MoveRequest(@Min(0) int position) {}
@@ -55,7 +65,10 @@ public class WidgetDto {
             Metric metric,
             int periodMonths,
             String color,
-            int position
+            int position,
+            UUID accountId,
+            LocalDate customFrom,
+            LocalDate customTo
     ) {}
 
     /** One slice in a pie/bar chart — row layout matches categoryBreakdownAll/ForIds: [id, name, color, sum] */

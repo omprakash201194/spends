@@ -3,6 +3,7 @@ package com.omprakashgautam.homelab.spends.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,6 +37,17 @@ public class DashboardWidget {
     @JoinColumn(name = "dashboard_id")
     @ToString.Exclude
     private Dashboard dashboard;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    @ToString.Exclude
+    private BankAccount account;
+
+    @Column(name = "custom_from")
+    private LocalDate customFrom;
+
+    @Column(name = "custom_to")
+    private LocalDate customTo;
 
     @Column(nullable = false, length = 100)
     private String title;

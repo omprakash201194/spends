@@ -49,10 +49,12 @@ class WidgetControllerTest {
         UUID widgetId = UUID.randomUUID();
         UUID dashboardId = UUID.randomUUID();
         WidgetDto.UpdateRequest req = new WidgetDto.UpdateRequest(
-                "Updated Title", WidgetType.LINE, FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb");
+                "Updated Title", WidgetType.LINE, FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb",
+                null, null, null);
         WidgetDto.WidgetResponse response = new WidgetDto.WidgetResponse(
                 widgetId, dashboardId, "Updated Title", WidgetType.LINE,
-                FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb", 0);
+                FilterType.ALL, null, Metric.INCOME, 12, "#36a2eb", 0,
+                null, null, null);
         when(widgetService.updateWidget(widgetId, userId, req)).thenReturn(response);
 
         WidgetDto.WidgetResponse result = controller.updateWidget(widgetId, principal, req);
@@ -98,7 +100,8 @@ class WidgetControllerTest {
     @Test
     void previewWidget_delegatesToService() {
         WidgetDto.PreviewRequest req = new WidgetDto.PreviewRequest(
-                WidgetType.PIE, FilterType.ALL, null, Metric.SPEND, 6, "#6366f1");
+                WidgetType.PIE, FilterType.ALL, null, Metric.SPEND, 6, "#6366f1",
+                null, null, null);
         WidgetDto.WidgetData data = new WidgetDto.WidgetData(
                 WidgetType.PIE, Metric.SPEND, java.util.List.of(), null, null);
         when(widgetService.previewWidget(userId, req)).thenReturn(data);
