@@ -5,7 +5,7 @@ import {
   Briefcase, ShoppingCart, Utensils, Car, Home, Heart, Music, Zap,
   TrendingUp, DollarSign, Gift, Coffee, Plane, Book, Smartphone,
   Baby, Dumbbell, Dog, Wallet, Bus, Fuel, Pizza, Shirt,
-  Download, Upload,
+  Download, Upload, MoreHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -460,6 +460,43 @@ function CategoriesTab() {
 
 // ── Tab: Rules ────────────────────────────────────────────────────────────────
 
+/** A group of rule rows that share a category and priority — rendered as one card with chips. */
+interface RuleGroup {
+  key: string                 // `${categoryId}:${priority}`
+  categoryId: string
+  categoryName: string
+  categoryColor: string | null
+  priority: number
+  patterns: { id: string; pattern: string; aiGenerated: boolean }[]
+}
+
+function groupRules(rules: CategoryRule[]): RuleGroup[] {
+  const map = new Map<string, RuleGroup>()
+  for (const r of rules) {
+    const key = `${r.categoryId}:${r.priority}`
+    let g = map.get(key)
+    if (!g) {
+      g = {
+        key,
+        categoryId: r.categoryId,
+        categoryName: r.categoryName,
+        categoryColor: r.categoryColor,
+        priority: r.priority,
+        patterns: [],
+      }
+      map.set(key, g)
+    }
+    g.patterns.push({ id: r.id, pattern: r.pattern, aiGenerated: r.aiGenerated })
+  }
+  for (const g of map.values()) {
+    g.patterns.sort((a, b) => a.pattern.localeCompare(b.pattern))
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const c = a.categoryName.localeCompare(b.categoryName)
+    return c !== 0 ? c : b.priority - a.priority
+  })
+}
+
 function RulesTab() {
   const qc = useQueryClient()
   const { data: rules = [], isLoading } = useQuery({
@@ -471,18 +508,11 @@ function RulesTab() {
     queryFn: getCategories,
   })
 
-  const [showForm, setShowForm]       = useState(false)
-  const [newPattern, setNewPattern]   = useState('')
-  const [newCatId, setNewCatId]       = useState('')
-  const [newPriority, setNewPriority] = useState(0)
+  const [showCreate, setShowCreate] = useState(false)
 
-  const [editId, setEditId]             = useState<string | null>(null)
-  const [editPattern, setEditPattern]   = useState('')
-  const [editCatId, setEditCatId]       = useState('')
-  const [editPriority, setEditPriority] = useState(0)
-
+  // Reapply prompt is shared by every mutation that creates/edits a rule
   const [showReapplyPrompt, setShowReapplyPrompt] = useState(false)
-  const [reapplyResult, setReapplyResult]         = useState<number | null>(null)
+  const [reapplyResult, setReapplyResult] = useState<number | null>(null)
 
   const reapplyMutation = useMutation({
     mutationFn: reapplyCategoryRules,
@@ -495,10 +525,32 @@ function RulesTab() {
     },
   })
 
+  // Search filter — handy once you have ~20+ groups
+  const [search, setSearch] = useState('')
+  const groups = groupRules(rules)
+  const filteredGroups = search.trim()
+    ? groups.filter(g => {
+        const q = search.toLowerCase()
+        return g.categoryName.toLowerCase().includes(q)
+            || g.patterns.some(p => p.pattern.toLowerCase().includes(q))
+      })
+    : groups
+
   // ── Export / Import ──────────────────────────────────────────────────────
   const rulesImportRef = useRef<HTMLInputElement>(null)
   const [rulesImportResult, setRulesImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null)
   const [rulesImporting, setRulesImporting] = useState(false)
+  const [showIO, setShowIO] = useState(false)
+  const ioMenuRef = useRef<HTMLDivElement>(null)
+  // Close the import/export menu on outside click
+  React.useEffect(() => {
+    if (!showIO) return
+    const onDown = (e: MouseEvent) => {
+      if (ioMenuRef.current && !ioMenuRef.current.contains(e.target as Node)) setShowIO(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [showIO])
 
   async function handleRulesExport() {
     const data = await exportCategoryRules()
@@ -506,6 +558,7 @@ function RulesTab() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'category-rules.json'; a.click()
     URL.revokeObjectURL(url)
+    setShowIO(false)
   }
 
   async function handleRulesImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -525,66 +578,56 @@ function RulesTab() {
     }
   }
 
-  const createMutation = useMutation({
-    mutationFn: () => createCategoryRule(newPattern.trim(), newCatId, newPriority),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['category-rules'] })
-      setNewPattern('')
-      setNewCatId('')
-      setNewPriority(0)
-      setShowForm(false)
-      setShowReapplyPrompt(true)
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: (id: string) => updateCategoryRule(id, {
-      pattern: editPattern.trim(),
-      categoryId: editCatId,
-      priority: editPriority,
-    }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['category-rules'] })
-      setEditId(null)
-      setShowReapplyPrompt(true)
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteCategoryRule,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['category-rules'] }),
-  })
-
-  const startEdit = (r: CategoryRule) => {
-    setEditId(r.id)
-    setEditPattern(r.pattern)
-    setEditCatId(r.categoryId)
-    setEditPriority(r.priority)
-  }
-
   if (isLoading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Categorization Rules</h2>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            Keywords matched against transaction remarks — higher priority wins
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Categorization Rules</h2>
+
         <div className="flex items-center gap-2">
-          <button type="button" onClick={handleRulesExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors">
-            <Download className="w-3.5 h-3.5" /> Export
-          </button>
-          <button type="button" onClick={() => rulesImportRef.current?.click()} disabled={rulesImporting}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
-            <Upload className="w-3.5 h-3.5" /> {rulesImporting ? 'Importing…' : 'Import'}
-          </button>
-          <input ref={rulesImportRef} type="file" accept=".json" className="hidden" onChange={handleRulesImportFile} />
-          <button onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors">
+          {/* Search */}
+          {groups.length > 5 && (
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          )}
+
+          {/* Import / Export — collapsed into a kebab menu */}
+          <div className="relative" ref={ioMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowIO(v => !v)}
+              className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs rounded-lg"
+              title="Import / Export"
+            >
+              <MoreHorizontal className="w-3.5 h-3.5" />
+            </button>
+            {showIO && (
+              <div className="absolute right-0 top-full mt-1 z-10 w-40 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+                <button onClick={handleRulesExport} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <Download className="w-3.5 h-3.5" /> Export
+                </button>
+                <button
+                  onClick={() => { rulesImportRef.current?.click(); setShowIO(false) }}
+                  disabled={rulesImporting}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  <Upload className="w-3.5 h-3.5" /> {rulesImporting ? 'Importing…' : 'Import'}
+                </button>
+              </div>
+            )}
+            <input ref={rulesImportRef} type="file" accept=".json" className="hidden" onChange={handleRulesImportFile} />
+          </div>
+
+          <button
+            onClick={() => setShowCreate(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
             <Plus className="w-3.5 h-3.5" /> New Rule
           </button>
         </div>
@@ -606,11 +649,10 @@ function RulesTab() {
         </div>
       )}
 
-      {/* Reapply prompt */}
       {showReapplyPrompt && (
         <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between gap-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            Apply this rule to your existing transactions?
+            Apply your rules to existing transactions?
           </p>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -630,7 +672,6 @@ function RulesTab() {
         </div>
       )}
 
-      {/* Reapply result toast */}
       {reapplyResult !== null && (
         <div className="mb-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-800 dark:text-green-200">
           {reapplyResult === 0
@@ -639,91 +680,384 @@ function RulesTab() {
         </div>
       )}
 
-      {/* Create form */}
-      {showForm && (
-        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
-          <RuleForm
-            pattern={newPattern} setPattern={setNewPattern}
-            catId={newCatId}    setCatId={setNewCatId}
-            priority={newPriority} setPriority={setNewPriority}
-            cats={cats}
-            onSubmit={() => createMutation.mutate()}
-            onCancel={() => setShowForm(false)}
-            isPending={createMutation.isPending}
-            submitLabel="Create"
-          />
-        </div>
+      {showCreate && (
+        <NewRuleGroupForm
+          cats={cats}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); setShowReapplyPrompt(true) }}
+        />
       )}
 
-      {rules.length === 0 && !showForm ? (
+      {groups.length === 0 && !showCreate ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
           No rules yet. Rules are created automatically when you re-categorize a transaction,
-          or you can add them manually above.
+          or you can add one above.
+        </p>
+      ) : filteredGroups.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
+          No rules match "{search}".
         </p>
       ) : (
-        <div className="space-y-1">
-          {/* Header */}
-          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 px-3 pb-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            <span>Pattern</span>
-            <span>Category</span>
-            <span>Priority</span>
-            <span />
-          </div>
-
-          {rules.map(rule => (
-            <div key={rule.id}>
-              {editId === rule.id ? (
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 mb-1">
-                  <RuleForm
-                    pattern={editPattern} setPattern={setEditPattern}
-                    catId={editCatId}    setCatId={setEditCatId}
-                    priority={editPriority} setPriority={setEditPriority}
-                    cats={cats}
-                    onSubmit={() => updateMutation.mutate(rule.id)}
-                    onCancel={() => setEditId(null)}
-                    isPending={updateMutation.isPending}
-                    submitLabel="Save"
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-3 items-center px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 group">
-                  <span className="text-sm font-mono text-gray-700 dark:text-gray-200 truncate">{rule.pattern}</span>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: rule.categoryColor ?? '#94a3b8' }}
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{rule.categoryName}</span>
-                    {rule.aiGenerated && (
-                      <span title="AI-generated rule">
-                        <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-violet-500" />
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-gray-400 dark:text-gray-500 text-right tabular-nums">{rule.priority}</span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => startEdit(rule)}
-                      className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
-                      title="Edit"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteMutation.mutate(rule.id)}
-                      disabled={deleteMutation.isPending}
-                      className="p-1 text-gray-400 hover:text-red-500 rounded disabled:opacity-50"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+        <div className="space-y-2">
+          {filteredGroups.map(g => (
+            <RuleGroupCard
+              key={g.key}
+              group={g}
+              cats={cats}
+              onChanged={() => setShowReapplyPrompt(true)}
+            />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Rule group card + sub-components ──────────────────────────────────────────
+
+function RuleGroupCard({ group, cats, onChanged }: {
+  group: RuleGroup
+  cats: Category[]
+  onChanged: () => void
+}) {
+  const qc = useQueryClient()
+  const [editingMeta, setEditingMeta] = useState(false)
+  const [editCatId, setEditCatId] = useState(group.categoryId)
+  const [editPriority, setEditPriority] = useState(group.priority)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const invalidateRules = () => qc.invalidateQueries({ queryKey: ['category-rules'] })
+
+  const removePatternMut = useMutation({
+    mutationFn: (id: string) => deleteCategoryRule(id),
+    onSuccess: invalidateRules,
+  })
+
+  const addPatternMut = useMutation({
+    mutationFn: (pattern: string) => createCategoryRule(pattern, group.categoryId, group.priority),
+    onSuccess: () => { invalidateRules(); onChanged() },
+  })
+
+  // Edit category/priority — applied to every rule row in the group
+  const updateMetaMut = useMutation({
+    mutationFn: async () => {
+      await Promise.all(
+        group.patterns.map(p =>
+          updateCategoryRule(p.id, { categoryId: editCatId, priority: editPriority })
+        )
+      )
+    },
+    onSuccess: () => { invalidateRules(); setEditingMeta(false); onChanged() },
+  })
+
+  // Delete the entire group — all rule rows
+  const deleteGroupMut = useMutation({
+    mutationFn: async () => {
+      await Promise.all(group.patterns.map(p => deleteCategoryRule(p.id)))
+    },
+    onSuccess: () => { invalidateRules(); setConfirmDelete(false) },
+  })
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-white dark:bg-gray-800 group">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-2">
+        {editingMeta ? (
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            <select
+              value={editCatId}
+              onChange={e => setEditCatId(e.target.value)}
+              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              priority
+              <input
+                type="number"
+                value={editPriority}
+                onChange={e => setEditPriority(Number(e.target.value))}
+                className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </label>
+            <button
+              onClick={() => updateMetaMut.mutate()}
+              disabled={updateMetaMut.isPending || !editCatId}
+              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { setEditingMeta(false); setEditCatId(group.categoryId); setEditPriority(group.priority) }}
+              className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs rounded"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: group.categoryColor ?? '#94a3b8' }}
+            />
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{group.categoryName}</span>
+            {group.priority !== 0 && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                priority {group.priority}
+              </span>
+            )}
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {group.patterns.length} {group.patterns.length === 1 ? 'pattern' : 'patterns'}
+            </span>
+          </div>
+        )}
+
+        {!editingMeta && (
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => setEditingMeta(true)}
+              className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
+              title="Edit category / priority"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-1 text-gray-400 hover:text-red-500 rounded"
+              title="Delete entire rule"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Patterns + add */}
+      <div className="flex flex-wrap gap-1.5 items-center">
+        {group.patterns.map(p => (
+          <PatternChip
+            key={p.id}
+            pattern={p.pattern}
+            aiGenerated={p.aiGenerated}
+            onRemove={() => removePatternMut.mutate(p.id)}
+            disabled={removePatternMut.isPending}
+          />
+        ))}
+        <AddPatternInline
+          onAdd={pattern => addPatternMut.mutate(pattern)}
+          isPending={addPatternMut.isPending}
+        />
+      </div>
+
+      {confirmDelete && (
+        <div className="mt-3 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between gap-3">
+          <p className="text-xs text-red-800 dark:text-red-300">
+            Delete all {group.patterns.length} pattern{group.patterns.length === 1 ? '' : 's'} for {group.categoryName}?
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteGroupMut.mutate()}
+              disabled={deleteGroupMut.isPending}
+              className="px-2.5 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PatternChip({ pattern, aiGenerated, onRemove, disabled }: {
+  pattern: string
+  aiGenerated: boolean
+  onRemove: () => void
+  disabled: boolean
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md text-xs font-mono text-gray-700 dark:text-gray-200">
+      {pattern}
+      {aiGenerated && (
+        <span title="AI-generated">
+          <Sparkles className="w-3 h-3 text-violet-500" />
+        </span>
+      )}
+      <button
+        onClick={onRemove}
+        disabled={disabled}
+        className="ml-0.5 p-0.5 text-gray-400 hover:text-red-500 rounded disabled:opacity-50"
+        title="Remove pattern"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  )
+}
+
+function AddPatternInline({ onAdd, isPending }: { onAdd: (pattern: string) => void; isPending: boolean }) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+
+  const submit = () => {
+    const v = value.trim()
+    if (!v) { setEditing(false); return }
+    onAdd(v)
+    setValue('')
+    setEditing(false)
+  }
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        disabled={isPending}
+        className="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-md text-xs text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50"
+      >
+        <Plus className="w-3 h-3" /> Add pattern
+      </button>
+    )
+  }
+  return (
+    <input
+      autoFocus
+      type="text"
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={submit}
+      onKeyDown={e => {
+        if (e.key === 'Enter')   submit()
+        if (e.key === 'Escape') { setValue(''); setEditing(false) }
+      }}
+      placeholder="keyword…"
+      className="px-2 py-0.5 border border-blue-400 rounded-md text-xs font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none w-32"
+    />
+  )
+}
+
+function NewRuleGroupForm({ cats, onClose, onCreated }: {
+  cats: Category[]
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const qc = useQueryClient()
+  const [catId, setCatId] = useState('')
+  const [priority, setPriority] = useState(0)
+  const [patterns, setPatterns] = useState<string[]>([])
+  const [draft, setDraft] = useState('')
+
+  const addPattern = () => {
+    const v = draft.trim()
+    if (!v) return
+    if (patterns.includes(v)) { setDraft(''); return }
+    setPatterns(p => [...p, v])
+    setDraft('')
+  }
+
+  const createMut = useMutation({
+    mutationFn: async () => {
+      await Promise.all(patterns.map(p => createCategoryRule(p, catId, priority)))
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['category-rules'] })
+      setPatterns([])
+      setCatId('')
+      setPriority(0)
+      onCreated()
+    },
+  })
+
+  const canSubmit = !!catId && patterns.length > 0 && !createMut.isPending
+
+  return (
+    <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">New rule</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-[10px] uppercase font-medium text-gray-500 dark:text-gray-400 mb-1">Category</label>
+        <select
+          value={catId}
+          onChange={e => setCatId(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+        >
+          <option value="">— Select category —</option>
+          {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-[10px] uppercase font-medium text-gray-500 dark:text-gray-400 mb-1">Patterns (any of these matches)</label>
+        <div className="flex flex-wrap gap-1.5 items-center p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+          {patterns.map(p => (
+            <span key={p} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-100 dark:bg-blue-950 rounded-md text-xs font-mono text-blue-800 dark:text-blue-200">
+              {p}
+              <button
+                onClick={() => setPatterns(prev => prev.filter(x => x !== p))}
+                className="ml-0.5 p-0.5 text-blue-400 hover:text-red-500 rounded"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          <input
+            type="text"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addPattern() }
+              if (e.key === 'Backspace' && !draft && patterns.length > 0) {
+                setPatterns(prev => prev.slice(0, -1))
+              }
+            }}
+            onBlur={addPattern}
+            placeholder={patterns.length === 0 ? 'paytm, one97 — Enter or comma to add' : ''}
+            className="flex-1 min-w-[140px] px-1 py-0.5 text-xs font-mono bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none"
+          />
+        </div>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          Each pattern is a substring matched against transaction remarks. Higher priority wins on conflict.
+        </p>
+      </div>
+
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-500 dark:text-gray-400 select-none">Advanced</summary>
+        <label className="block mt-2">
+          <span className="text-[10px] uppercase font-medium text-gray-500 dark:text-gray-400">Priority</span>
+          <input
+            type="number"
+            value={priority}
+            onChange={e => setPriority(Number(e.target.value))}
+            className="block w-24 mt-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          />
+        </label>
+      </details>
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:underline"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => createMut.mutate()}
+          disabled={!canSubmit}
+          className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg"
+        >
+          {createMut.isPending ? 'Creating…' : `Create ${patterns.length || ''} rule${patterns.length === 1 ? '' : 's'}`}
+        </button>
+      </div>
     </div>
   )
 }
@@ -754,67 +1088,3 @@ function ColourPicker({ value, onChange }: { value: string; onChange: (c: string
   )
 }
 
-function RuleForm({
-  pattern, setPattern, catId, setCatId, priority, setPriority,
-  cats, onSubmit, onCancel, isPending, submitLabel,
-}: {
-  pattern: string; setPattern: (v: string) => void
-  catId: string;   setCatId:   (v: string) => void
-  priority: number; setPriority: (v: number) => void
-  cats: Category[]
-  onSubmit: () => void
-  onCancel: () => void
-  isPending: boolean
-  submitLabel: string
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <input
-          autoFocus
-          type="text"
-          value={pattern}
-          onChange={e => setPattern(e.target.value)}
-          placeholder="keyword or phrase…"
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-          onKeyDown={e => {
-            if (e.key === 'Enter' && pattern.trim() && catId) onSubmit()
-            if (e.key === 'Escape') onCancel()
-          }}
-        />
-        <select
-          value={catId}
-          onChange={e => setCatId(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-        >
-          <option value="">— Select category —</option>
-          {cats.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <input
-          type="number"
-          value={priority}
-          onChange={e => setPriority(Number(e.target.value))}
-          placeholder="Priority (higher = first)"
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-        />
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={onSubmit}
-          disabled={!pattern.trim() || !catId || isPending}
-          className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {submitLabel}
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
-}

@@ -147,7 +147,8 @@ export default function TransactionPage() {
     staleTime: Infinity,
   })
 
-  const aiRuleCategoryIds = new Set(rules.filter(r => r.aiGenerated).map(r => r.categoryId))
+  const aiRuleCategoryIds       = new Set(rules.filter(r => r.aiGenerated).map(r => r.categoryId))
+  const categoryIdsWithAnyRule  = new Set(rules.map(r => r.categoryId))
 
   const toggleReviewedMut = useMutation({
     mutationFn: toggleReviewed,
@@ -570,6 +571,7 @@ export default function TransactionPage() {
                   tx={tx}
                   categories={categories}
                   aiRuleCategoryIds={aiRuleCategoryIds}
+                  categoryIdsWithAnyRule={categoryIdsWithAnyRule}
                   checked={selectedIds.has(tx.id)}
                   onToggle={() => toggleSelect(tx.id)}
                   onToggleReviewed={() => toggleReviewedMut.mutate(tx.id)}
@@ -878,10 +880,11 @@ function AddToViewPicker({
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 
-function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit, onTagClick }: {
+function TxRow({ tx, categories, aiRuleCategoryIds, categoryIdsWithAnyRule, checked, onToggle, onToggleReviewed, onCategoryUpdated, onSplit, onTagClick }: {
   tx: Transaction
   categories: Category[]
   aiRuleCategoryIds: Set<string>
+  categoryIdsWithAnyRule: Set<string>
   checked: boolean
   onToggle: () => void
   onToggleReviewed: () => void
@@ -1118,42 +1121,50 @@ function TxRow({ tx, categories, aiRuleCategoryIds, checked, onToggle, onToggleR
         </td>
       </tr>
 
-      {/* Rule creation prompt */}
-      {rulePrompt && (
-        <tr>
-          <td colSpan={10} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-blue-800">
-                Create a rule to automatically categorize <strong>{tx.merchantName ?? 'this merchant'}</strong> as{' '}
-                <strong>{rulePrompt.categoryName}</strong> in future imports?
-              </p>
-              <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                <button
-                  onClick={() => handleRuleDecision(true)}
-                  disabled={updateCatMut.isPending}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Yes, create rule
-                </button>
-                <button
-                  onClick={() => handleRuleDecision(false)}
-                  disabled={updateCatMut.isPending}
-                  className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Just this once
-                </button>
-                <button
-                  onClick={() => setRulePrompt(null)}
-                  disabled={updateCatMut.isPending}
-                  className="px-3 py-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+      {/* Rule creation prompt — wording adapts when a rule for this category already exists */}
+      {rulePrompt && (() => {
+        const hasExisting = categoryIdsWithAnyRule.has(rulePrompt.categoryId)
+        return (
+          <tr>
+            <td colSpan={10} className="bg-blue-50 border-y border-blue-100 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-blue-800">
+                  {hasExisting ? (
+                    <>Add <strong>{tx.merchantName ?? 'this merchant'}</strong> as a pattern to your existing{' '}
+                    <strong>{rulePrompt.categoryName}</strong> rule?</>
+                  ) : (
+                    <>Create a rule to automatically categorize <strong>{tx.merchantName ?? 'this merchant'}</strong> as{' '}
+                    <strong>{rulePrompt.categoryName}</strong> in future imports?</>
+                  )}
+                </p>
+                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  <button
+                    onClick={() => handleRuleDecision(true)}
+                    disabled={updateCatMut.isPending}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {hasExisting ? 'Yes, add pattern' : 'Yes, create rule'}
+                  </button>
+                  <button
+                    onClick={() => handleRuleDecision(false)}
+                    disabled={updateCatMut.isPending}
+                    className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Just this once
+                  </button>
+                  <button
+                    onClick={() => setRulePrompt(null)}
+                    disabled={updateCatMut.isPending}
+                    className="px-3 py-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-          </td>
-        </tr>
-      )}
+            </td>
+          </tr>
+        )
+      })()}
     </>
   )
 }
