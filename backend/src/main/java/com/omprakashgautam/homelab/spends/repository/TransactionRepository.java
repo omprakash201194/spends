@@ -732,4 +732,38 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                                 @Param("to") LocalDate to,
                                                 @Param("categoryIds") Collection<UUID> categoryIds,
                                                 @Param("accountId") UUID accountId);
+
+    // ── Lifetime dashboard: per-bank totals ──────────────────────────────────
+
+    /**
+     * Per-bank lifetime activity. Total amount = withdrawals + deposits to mirror
+     * the "money flowed through this bank" summary on the home dashboard.
+     * Row layout: [bankName, totalAmount, txnCount]
+     */
+    @Query("""
+        SELECT t.bankAccount.bankName,
+               COALESCE(SUM(t.withdrawalAmount + t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+        GROUP BY t.bankAccount.bankName
+        ORDER BY SUM(t.withdrawalAmount + t.depositAmount) DESC
+        """)
+    List<Object[]> bankBreakdown(@Param("userId") UUID userId);
+
+    // ── Lifetime dashboard: yearly withdrawal totals ─────────────────────────
+
+    /**
+     * Yearly withdrawal sum, ascending by year. Row layout: [year (Integer), total].
+     */
+    @Query("""
+        SELECT YEAR(t.valueDate),
+               COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.withdrawalAmount > 0
+        GROUP BY YEAR(t.valueDate)
+        ORDER BY YEAR(t.valueDate) ASC
+        """)
+    List<Object[]> yearlySpending(@Param("userId") UUID userId);
 }

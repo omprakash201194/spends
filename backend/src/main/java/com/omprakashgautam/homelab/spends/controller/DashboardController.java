@@ -26,4 +26,10 @@ public class DashboardController {
             @RequestParam(required = false) UUID accountId) {
         return ResponseEntity.ok(dashboardService.getSummary(principal.getId(), accountId));
     }
+
+    @GetMapping("/lifetime")
+    public ResponseEntity<DashboardDto.Lifetime> lifetime(
+            @AuthenticationPrincipal UserDetailsImpl principal) {
+        return ResponseEntity.ok(dashboardService.getLifetime(principal.getId()));
+    }
 }

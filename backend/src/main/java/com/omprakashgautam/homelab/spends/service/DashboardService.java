@@ -32,8 +32,93 @@ public class DashboardService {
 
     private static final DateTimeFormatter MONTH_LABEL  = DateTimeFormatter.ofPattern("MMM");
     private static final DateTimeFormatter MONTH_HEADER = DateTimeFormatter.ofPattern("MMMM yyyy");
+    private static final DateTimeFormatter YEAR_MONTH   = DateTimeFormatter.ofPattern("yyyy-MM");
+    private static final LocalDate EPOCH = LocalDate.of(2000, 1, 1);
 
     private record CategorySpendRow(UUID categoryId, String name, String color, BigDecimal spent) {}
+
+    // ── Lifetime overview ─────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public DashboardDto.Lifetime getLifetime(UUID userId) {
+        LocalDate today = LocalDate.now();
+        LocalDate earliest = transactionRepository.earliestDate(userId);
+        LocalDate latest   = transactionRepository.latestTransactionDate(userId);
+
+        // Use a wide range so existing aggregate queries can be reused for lifetime sums.
+        LocalDate from = earliest != null ? earliest : EPOCH;
+        LocalDate to   = latest   != null ? latest   : today;
+
+        long count = transactionRepository.countByUserId(userId);
+        BigDecimal withdrawals = transactionRepository.sumWithdrawals(userId, from, to);
+        BigDecimal deposits    = transactionRepository.sumDeposits(userId, from, to);
+        BigDecimal totalAmount = withdrawals.add(deposits);
+
+        DashboardDto.LifetimeSummary summary = new DashboardDto.LifetimeSummary(
+                count, totalAmount, withdrawals, deposits, earliest, latest
+        );
+
+        // Categories — same rollup-to-roots logic the month dashboard uses
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User not found"));
+        List<Category> allCats = categoryRepository.findBySystemTrueOrHouseholdId(user.getHousehold().getId());
+        List<CategorySpendRow> rawRows = transactionRepository.categoryBreakdown(userId, from, to).stream()
+                .map(row -> new CategorySpendRow((UUID) row[0], (String) row[1], (String) row[2], (BigDecimal) row[3]))
+                .toList();
+        List<DashboardDto.CategoryAmount> categories = rollupToRoots(rawRows, allCats).stream()
+                .map(r -> new DashboardDto.CategoryAmount(r.name(), r.color(), r.spent()))
+                .toList();
+
+        // Banks
+        List<DashboardDto.BankActivity> banks = transactionRepository.bankBreakdown(userId).stream()
+                .map(row -> new DashboardDto.BankActivity(
+                        (String) row[0],
+                        (BigDecimal) row[1],
+                        ((Number) row[2]).longValue()))
+                .toList();
+
+        // Monthly trend — last 24 months anchored on the most recent month with data
+        LocalDate trendAnchor = latest != null ? latest : today;
+        LocalDate trendFrom   = trendAnchor.minusMonths(23).withDayOfMonth(1);
+        List<DashboardDto.MonthlyPoint> trend = buildMonthlyPoints(
+                transactionRepository.monthlyTrend(userId, trendFrom),
+                trendFrom, trendAnchor
+        );
+
+        // Yearly
+        List<DashboardDto.YearlyPoint> yearly = transactionRepository.yearlySpending(userId).stream()
+                .map(row -> new DashboardDto.YearlyPoint(
+                        ((Number) row[0]).intValue(),
+                        (BigDecimal) row[1]))
+                .toList();
+
+        return new DashboardDto.Lifetime(summary, categories, banks, trend, yearly);
+    }
+
+    /**
+     * Builds a contiguous monthly series from `start` to `end` (inclusive of both
+     * months), zero-filling months with no transactions. Row layout from the
+     * underlying query: [yyyy-MM, withdrawals, deposits].
+     */
+    private List<DashboardDto.MonthlyPoint> buildMonthlyPoints(
+            List<Object[]> rows, LocalDate start, LocalDate end) {
+        var byYearMonth = new java.util.HashMap<String, Object[]>();
+        for (Object[] row : rows) {
+            byYearMonth.put((String) row[0], row);
+        }
+        List<DashboardDto.MonthlyPoint> result = new ArrayList<>();
+        LocalDate cursor = start.withDayOfMonth(1);
+        LocalDate stop   = end.withDayOfMonth(1);
+        while (!cursor.isAfter(stop)) {
+            String key = cursor.format(YEAR_MONTH);
+            Object[] row = byYearMonth.get(key);
+            BigDecimal w = row != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+            BigDecimal d = row != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+            result.add(new DashboardDto.MonthlyPoint(key, w, d));
+            cursor = cursor.plusMonths(1);
+        }
+        return result;
+    }
 
     @Transactional(readOnly = true)
     public DashboardDto.Summary getSummary(UUID userId, UUID accountId) {
