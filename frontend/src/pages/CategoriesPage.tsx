@@ -158,7 +158,21 @@ function SharePackPanel() {
   const [importResult, setImportResult] = useState<BundleImportSummary | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [reapplyPrompt, setReapplyPrompt] = useState(false)
+  const [reapplyCount, setReapplyCount] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const reapplyMut = useMutation({
+    mutationFn: reapplyCategoryRules,
+    onSuccess: (r) => {
+      setReapplyCount(r.updated)
+      setReapplyPrompt(false)
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['budgets'] })
+      qc.invalidateQueries({ queryKey: ['recurring'] })
+    },
+  })
 
   async function handleExport() {
     setExporting(true)
@@ -212,6 +226,9 @@ function SharePackPanel() {
       setImportResult(result)
       setPendingBundle(null)
       setPreview(null)
+      setReapplyCount(null)
+      // Offer reapply only if anything actually landed in the DB.
+      setReapplyPrompt(result.categoriesCreated + result.rulesCreated > 0)
       qc.invalidateQueries({ queryKey: ['categories'] })
       qc.invalidateQueries({ queryKey: ['category-rules'] })
     } catch (err: unknown) {
@@ -318,7 +335,43 @@ function SharePackPanel() {
                   {(importResult.categoriesSkipped > 0 || importResult.rulesSkipped > 0) &&
                     ` Skipped ${importResult.categoriesSkipped} categor${importResult.categoriesSkipped === 1 ? 'y' : 'ies'} and ${importResult.rulesSkipped} duplicate rule${importResult.rulesSkipped === 1 ? '' : 's'}.`}
                 </p>
-                <button onClick={() => setImportResult(null)} className="opacity-60 hover:opacity-100">
+                <button onClick={() => { setImportResult(null); setReapplyPrompt(false); setReapplyCount(null) }} className="opacity-60 hover:opacity-100">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {reapplyPrompt && (
+              <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-3">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  Apply the new rules and exclusions to your existing transactions?
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => reapplyMut.mutate()}
+                    disabled={reapplyMut.isPending}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium rounded"
+                  >
+                    {reapplyMut.isPending ? 'Applying…' : 'Yes, apply'}
+                  </button>
+                  <button
+                    onClick={() => setReapplyPrompt(false)}
+                    className="px-3 py-1 text-xs text-blue-700 dark:text-blue-300 hover:underline"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {reapplyCount !== null && (
+              <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-start justify-between gap-3">
+                <p className="text-xs text-emerald-800 dark:text-emerald-200">
+                  {reapplyCount === 0
+                    ? 'No transactions changed — they were already categorized correctly.'
+                    : `${reapplyCount} transaction${reapplyCount === 1 ? '' : 's'} updated.`}
+                </p>
+                <button onClick={() => setReapplyCount(null)} className="opacity-60 hover:opacity-100">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
