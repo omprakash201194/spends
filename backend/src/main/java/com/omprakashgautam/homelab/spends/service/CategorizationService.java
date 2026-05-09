@@ -10,9 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -66,7 +68,21 @@ public class CategorizationService {
         String lowerRemarks = rawRemarks.toLowerCase(Locale.ROOT);
         List<CategoryRule> rules = categoryRuleRepository.findAllApplicableRules(userId);
 
+        // First pass: collect categories whose exclusion rules trip on this transaction.
+        // Fast path: when no exclusion rules exist (the default for existing users),
+        // this loop is a single boolean check per rule and the set stays empty.
+        Set<UUID> excludedCategoryIds = new HashSet<>();
         for (CategoryRule rule : rules) {
+            if (rule.isExclusion() && matchesPattern(lowerRemarks, rule.getPattern())) {
+                excludedCategoryIds.add(rule.getCategory().getId());
+            }
+        }
+
+        // Second pass: highest-priority non-exclusion rule wins, skipping any whose
+        // category was suppressed above.
+        for (CategoryRule rule : rules) {
+            if (rule.isExclusion()) continue;
+            if (excludedCategoryIds.contains(rule.getCategory().getId())) continue;
             if (matchesPattern(lowerRemarks, rule.getPattern())) {
                 return rule.getCategory();
             }

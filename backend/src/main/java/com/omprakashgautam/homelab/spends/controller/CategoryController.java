@@ -28,17 +28,19 @@ public class CategoryController {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    public record CategoryResponse(UUID id, String name, String icon, String color, boolean system, UUID parentId) {
+    public record CategoryResponse(UUID id, String name, String icon, String color, String description,
+                                   boolean system, UUID parentId) {
         public static CategoryResponse from(Category c) {
             return new CategoryResponse(
-                    c.getId(), c.getName(), c.getIcon(), c.getColor(), c.isSystem(),
+                    c.getId(), c.getName(), c.getIcon(), c.getColor(), c.getDescription(), c.isSystem(),
                     c.getParent() != null ? c.getParent().getId() : null
             );
         }
     }
 
-    public record CreateRequest(String name, String color, String icon, UUID parentId) {}
-    public record UpdateRequest(String name, String color, String icon, UUID parentId, boolean clearParent) {}
+    public record CreateRequest(String name, String color, String icon, String description, UUID parentId) {}
+    public record UpdateRequest(String name, String color, String icon, String description,
+                                UUID parentId, boolean clearParent) {}
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> list(@AuthenticationPrincipal UserDetailsImpl principal) {
@@ -80,6 +82,7 @@ public class CategoryController {
                 .name(req.name().trim())
                 .color(req.color() != null ? req.color().trim() : "#94a3b8")
                 .icon(req.icon() != null && !req.icon().isBlank() ? req.icon().trim() : null)
+                .description(req.description() != null && !req.description().isBlank() ? req.description().trim() : null)
                 .household(household)
                 .system(false)
                 .parent(parent)
@@ -115,6 +118,9 @@ public class CategoryController {
         if (req.icon() != null) {
             cat.setIcon(req.icon().isBlank() ? null : req.icon().trim());
         }
+        if (req.description() != null) {
+            cat.setDescription(req.description().isBlank() ? null : req.description().trim());
+        }
 
         if (req.parentId() != null) {
             if (req.parentId().equals(id)) {
@@ -139,7 +145,7 @@ public class CategoryController {
 
     // ── Export / Import ───────────────────────────────────────────────────────
 
-    public record ExportEntry(String name, String color, String icon, String parentName) {}
+    public record ExportEntry(String name, String color, String icon, String parentName, String description) {}
     public record ImportResult(int created, int skipped, List<String> errors) {}
 
     @GetMapping("/export")
@@ -149,7 +155,8 @@ public class CategoryController {
         List<ExportEntry> entries = custom.stream()
                 .map(c -> new ExportEntry(
                         c.getName(), c.getColor(), c.getIcon(),
-                        c.getParent() != null ? c.getParent().getName() : null))
+                        c.getParent() != null ? c.getParent().getName() : null,
+                        c.getDescription()))
                 .toList();
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=\"categories.json\"")

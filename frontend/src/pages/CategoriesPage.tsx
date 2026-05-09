@@ -5,7 +5,7 @@ import {
   Briefcase, ShoppingCart, Utensils, Car, Home, Heart, Music, Zap,
   TrendingUp, DollarSign, Gift, Coffee, Plane, Book, Smartphone,
   Baby, Dumbbell, Dog, Wallet, Bus, Fuel, Pizza, Shirt,
-  Download, Upload, MoreHorizontal,
+  Download, Upload, MoreHorizontal, Package,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -19,6 +19,10 @@ import {
   reapplyCategoryRules, exportCategoryRules, importCategoryRules,
   type CategoryRule, type RuleExportEntry,
 } from '../api/categoryRules'
+import {
+  exportBundle, importBundle, previewBundleImport, downloadBundleFile,
+  type Bundle, type BundleImportSummary,
+} from '../api/categoryBundle'
 
 // ── Colour palette for custom categories ─────────────────────────────────────
 
@@ -141,6 +145,200 @@ export default function CategoriesPage() {
   )
 }
 
+// ── Share Pack panel (bundle export/import) ──────────────────────────────────
+
+function SharePackPanel() {
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [packName, setPackName] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [pendingBundle, setPendingBundle] = useState<Bundle | null>(null)
+  const [preview, setPreview] = useState<BundleImportSummary | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+  const [importResult, setImportResult] = useState<BundleImportSummary | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const bundle = await exportBundle(packName.trim() || undefined)
+      const stamp = new Date().toISOString().slice(0, 10)
+      const slug = (packName.trim() || 'spendstack-pack').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      downloadBundleFile(bundle, `${slug}-${stamp}.json`)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImportError(null)
+    setImportResult(null)
+    setPreview(null)
+    setPendingBundle(null)
+    let bundle: Bundle
+    try {
+      bundle = JSON.parse(await file.text())
+    } catch {
+      setImportError('Invalid file — expected a JSON bundle exported from SpendStack')
+      return
+    }
+    if (!bundle?.schemaVersion?.startsWith('spendstack-bundle/')) {
+      setImportError('Unrecognised bundle format — schemaVersion missing or invalid')
+      return
+    }
+    setPreviewing(true)
+    try {
+      const summary = await previewBundleImport(bundle)
+      setPendingBundle(bundle)
+      setPreview(summary)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Preview failed'
+      setImportError(msg)
+    } finally {
+      setPreviewing(false)
+    }
+  }
+
+  async function confirmImport() {
+    if (!pendingBundle) return
+    setImporting(true)
+    try {
+      const result = await importBundle(pendingBundle)
+      setImportResult(result)
+      setPendingBundle(null)
+      setPreview(null)
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      qc.invalidateQueries({ queryKey: ['category-rules'] })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Import failed'
+      setImportError(msg)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <div className="mb-4 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Share a category pack</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">— bundles categories + rules + descriptions in one file</span>
+        </div>
+        {open ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-4 border-t border-indigo-200 dark:border-indigo-800">
+          {/* Export */}
+          <div className="pt-3">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Export pack</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={packName}
+                onChange={e => setPackName(e.target.value)}
+                placeholder="Pack name (optional) — e.g. Indian Personal Finance"
+                className="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg"
+              >
+                <Download className="w-3.5 h-3.5" /> {exporting ? 'Exporting…' : 'Download'}
+              </button>
+            </div>
+          </div>
+
+          {/* Import */}
+          <div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Import pack</p>
+            {!preview && !importResult && (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={previewing}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs font-medium rounded-lg disabled:opacity-50"
+              >
+                <Upload className="w-3.5 h-3.5" /> {previewing ? 'Reading…' : 'Choose pack file…'}
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleFile} />
+
+            {preview && pendingBundle && (
+              <div className="mt-2 p-3 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded-lg">
+                <p className="text-xs font-medium text-gray-800 dark:text-gray-100 mb-1">
+                  Preview {pendingBundle.metadata?.packName ? `“${pendingBundle.metadata.packName}”` : ''}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  Will create <strong>{preview.categoriesCreated}</strong> categor{preview.categoriesCreated === 1 ? 'y' : 'ies'} and <strong>{preview.rulesCreated}</strong> rule{preview.rulesCreated === 1 ? '' : 's'}.
+                  {' '}Skip <strong>{preview.categoriesSkipped}</strong> existing categor{preview.categoriesSkipped === 1 ? 'y' : 'ies'} and <strong>{preview.rulesSkipped}</strong> duplicate rule{preview.rulesSkipped === 1 ? '' : 's'}.
+                </p>
+                {preview.errors.length > 0 && (
+                  <ul className="mt-1 text-[11px] text-amber-700 dark:text-amber-400 list-disc list-inside">
+                    {preview.errors.slice(0, 5).map((e, i) => <li key={i}>{e}</li>)}
+                    {preview.errors.length > 5 && <li>…and {preview.errors.length - 5} more</li>}
+                  </ul>
+                )}
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={confirmImport}
+                    disabled={importing}
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded"
+                  >
+                    {importing ? 'Importing…' : 'Confirm import'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPreview(null); setPendingBundle(null) }}
+                    className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {importResult && (
+              <div className="mt-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg flex items-start justify-between gap-3">
+                <p className="text-xs text-green-800 dark:text-green-200">
+                  Imported <strong>{importResult.categoriesCreated}</strong> categor{importResult.categoriesCreated === 1 ? 'y' : 'ies'} and <strong>{importResult.rulesCreated}</strong> rule{importResult.rulesCreated === 1 ? '' : 's'}.
+                  {(importResult.categoriesSkipped > 0 || importResult.rulesSkipped > 0) &&
+                    ` Skipped ${importResult.categoriesSkipped} categor${importResult.categoriesSkipped === 1 ? 'y' : 'ies'} and ${importResult.rulesSkipped} duplicate rule${importResult.rulesSkipped === 1 ? '' : 's'}.`}
+                </p>
+                <button onClick={() => setImportResult(null)} className="opacity-60 hover:opacity-100">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {importError && (
+              <div className="mt-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-start justify-between gap-3">
+                <p className="text-xs text-red-700 dark:text-red-300">{importError}</p>
+                <button onClick={() => setImportError(null)} className="opacity-60 hover:opacity-100">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Tab: Categories ───────────────────────────────────────────────────────────
 
 function CategoriesTab() {
@@ -155,20 +353,23 @@ function CategoriesTab() {
   const [newName, setNewName]   = useState('')
   const [newColor, setNewColor] = useState(COLOUR_SWATCHES[5])
   const [newIcon, setNewIcon]   = useState<string | null>(null)
+  const [newDescription, setNewDescription] = useState('')
   const [editId, setEditId]           = useState<string | null>(null)
   const [editName, setEditName]       = useState('')
   const [editColor, setEditColor]     = useState('')
   const [editIcon, setEditIcon]       = useState<string | null>(null)
+  const [editDescription, setEditDescription] = useState('')
   const [editParentId, setEditParentId] = useState<string>('')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   const createMutation = useMutation({
-    mutationFn: () => createCategory(newName.trim(), newColor, createParentId, newIcon),
+    mutationFn: () => createCategory(newName.trim(), newColor, createParentId, newIcon, newDescription.trim() || null),
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['categories'] })
       setNewName('')
       setNewColor(COLOUR_SWATCHES[5])
       setNewIcon(null)
+      setNewDescription('')
       setShowCreateForm(false)
       // Auto-expand parent so user sees the new child
       if (created.parentId) setExpandedIds(prev => new Set([...prev, created.parentId!]))
@@ -182,6 +383,7 @@ function CategoriesTab() {
       editParentId || null,           // new parent (null = top-level)
       editParentId === '',            // clearParent when explicitly set to top-level
       editIcon,
+      editDescription.trim() || null,
     ),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['categories'] })
@@ -230,6 +432,7 @@ function CategoriesTab() {
     setEditName(c.name)
     setEditColor(c.color ?? COLOUR_SWATCHES[5])
     setEditIcon(c.icon ?? null)
+    setEditDescription(c.description ?? '')
     setEditParentId(c.parentId ?? '')
   }
 
@@ -294,6 +497,14 @@ function CategoriesTab() {
                 <button type="button" onClick={() => setEditId(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="w-4 h-4" /></button>
               </div>
               <IconPicker value={editIcon} onChange={setEditIcon} />
+              <textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                placeholder="Description (optional) — what this category covers"
+                rows={2}
+                maxLength={500}
+                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-500 rounded bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+              />
               {/* Parent selector */}
               {(() => {
                 const excluded = getDescendantIds(node.id)
@@ -362,7 +573,9 @@ function CategoriesTab() {
   if (isLoading) return <div className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">Loading…</div>
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+    <>
+      <SharePackPanel />
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">All Categories</h2>
@@ -424,6 +637,17 @@ function CategoriesTab() {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 mb-1">Icon</p>
           <IconPicker value={newIcon} onChange={setNewIcon} />
           <div className="mt-3">
+            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Description (optional)</label>
+            <textarea
+              value={newDescription}
+              onChange={e => setNewDescription(e.target.value)}
+              placeholder="What this category covers — shown in shared packs"
+              rows={2}
+              maxLength={500}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+            />
+          </div>
+          <div className="mt-3">
             <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Parent category (optional)</label>
             <select
               value={createParentId ?? ''}
@@ -454,26 +678,28 @@ function CategoriesTab() {
       <div className="space-y-0.5">
         {allTree.map(node => renderNode(node, 0))}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
 // ── Tab: Rules ────────────────────────────────────────────────────────────────
 
-/** A group of rule rows that share a category and priority — rendered as one card with chips. */
+/** A group of rule rows that share a category, priority, and exclusion flag — rendered as one card with chips. */
 interface RuleGroup {
-  key: string                 // `${categoryId}:${priority}`
+  key: string                 // `${categoryId}:${priority}:${exclusion}`
   categoryId: string
   categoryName: string
   categoryColor: string | null
   priority: number
+  exclusion: boolean
   patterns: { id: string; pattern: string; aiGenerated: boolean }[]
 }
 
 function groupRules(rules: CategoryRule[]): RuleGroup[] {
   const map = new Map<string, RuleGroup>()
   for (const r of rules) {
-    const key = `${r.categoryId}:${r.priority}`
+    const key = `${r.categoryId}:${r.priority}:${r.exclusion ? 'x' : 'i'}`
     let g = map.get(key)
     if (!g) {
       g = {
@@ -482,6 +708,7 @@ function groupRules(rules: CategoryRule[]): RuleGroup[] {
         categoryName: r.categoryName,
         categoryColor: r.categoryColor,
         priority: r.priority,
+        exclusion: r.exclusion,
         patterns: [],
       }
       map.set(key, g)
@@ -493,7 +720,9 @@ function groupRules(rules: CategoryRule[]): RuleGroup[] {
   }
   return Array.from(map.values()).sort((a, b) => {
     const c = a.categoryName.localeCompare(b.categoryName)
-    return c !== 0 ? c : b.priority - a.priority
+    if (c !== 0) return c
+    if (a.exclusion !== b.exclusion) return a.exclusion ? 1 : -1
+    return b.priority - a.priority
   })
 }
 
@@ -724,6 +953,7 @@ function RuleGroupCard({ group, cats, onChanged }: {
   const [editingMeta, setEditingMeta] = useState(false)
   const [editCatId, setEditCatId] = useState(group.categoryId)
   const [editPriority, setEditPriority] = useState(group.priority)
+  const [editExclusion, setEditExclusion] = useState(group.exclusion)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const invalidateRules = () => qc.invalidateQueries({ queryKey: ['category-rules'] })
@@ -734,16 +964,16 @@ function RuleGroupCard({ group, cats, onChanged }: {
   })
 
   const addPatternMut = useMutation({
-    mutationFn: (pattern: string) => createCategoryRule(pattern, group.categoryId, group.priority),
+    mutationFn: (pattern: string) => createCategoryRule(pattern, group.categoryId, group.priority, false, group.exclusion),
     onSuccess: () => { invalidateRules(); onChanged() },
   })
 
-  // Edit category/priority — applied to every rule row in the group
+  // Edit category/priority/exclusion — applied to every rule row in the group
   const updateMetaMut = useMutation({
     mutationFn: async () => {
       await Promise.all(
         group.patterns.map(p =>
-          updateCategoryRule(p.id, { categoryId: editCatId, priority: editPriority })
+          updateCategoryRule(p.id, { categoryId: editCatId, priority: editPriority, exclusion: editExclusion })
         )
       )
     },
@@ -780,6 +1010,15 @@ function RuleGroupCard({ group, cats, onChanged }: {
                 className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1" title="Block this category when patterns match">
+              <input
+                type="checkbox"
+                checked={editExclusion}
+                onChange={e => setEditExclusion(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-500"
+              />
+              exclusion
+            </label>
             <button
               onClick={() => updateMetaMut.mutate()}
               disabled={updateMetaMut.isPending || !editCatId}
@@ -788,7 +1027,7 @@ function RuleGroupCard({ group, cats, onChanged }: {
               <Check className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => { setEditingMeta(false); setEditCatId(group.categoryId); setEditPriority(group.priority) }}
+              onClick={() => { setEditingMeta(false); setEditCatId(group.categoryId); setEditPriority(group.priority); setEditExclusion(group.exclusion) }}
               className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs rounded"
             >
               <X className="w-3.5 h-3.5" />
@@ -801,6 +1040,14 @@ function RuleGroupCard({ group, cats, onChanged }: {
               style={{ backgroundColor: group.categoryColor ?? '#94a3b8' }}
             />
             <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{group.categoryName}</span>
+            {group.exclusion && (
+              <span
+                title="Exclusion: matching transactions are NOT classified as this category"
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800"
+              >
+                blocks
+              </span>
+            )}
             {group.priority !== 0 && (
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                 priority {group.priority}
@@ -949,6 +1196,7 @@ function NewRuleGroupForm({ cats, onClose, onCreated }: {
   const qc = useQueryClient()
   const [catId, setCatId] = useState('')
   const [priority, setPriority] = useState(0)
+  const [exclusion, setExclusion] = useState(false)
   const [patterns, setPatterns] = useState<string[]>([])
   const [draft, setDraft] = useState('')
 
@@ -962,13 +1210,14 @@ function NewRuleGroupForm({ cats, onClose, onCreated }: {
 
   const createMut = useMutation({
     mutationFn: async () => {
-      await Promise.all(patterns.map(p => createCategoryRule(p, catId, priority)))
+      await Promise.all(patterns.map(p => createCategoryRule(p, catId, priority, false, exclusion)))
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['category-rules'] })
       setPatterns([])
       setCatId('')
       setPriority(0)
+      setExclusion(false)
       onCreated()
     },
   })
@@ -1040,6 +1289,17 @@ function NewRuleGroupForm({ cats, onClose, onCreated }: {
             onChange={e => setPriority(Number(e.target.value))}
             className="block w-24 mt-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
+        </label>
+        <label className="flex items-center gap-2 mt-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={exclusion}
+            onChange={e => setExclusion(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-500"
+          />
+          <span className="text-xs text-gray-600 dark:text-gray-300">
+            Exclusion rule — block this category when patterns match
+          </span>
         </label>
       </details>
 

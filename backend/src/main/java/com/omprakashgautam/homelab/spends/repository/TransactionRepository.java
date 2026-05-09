@@ -420,6 +420,36 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         """)
     long countDistinctBankAccounts(@Param("userId") UUID userId);
 
+    /**
+     * Per-category lifetime stats (count + total withdrawal sum) for the household's
+     * custom categories. Used by the bundle export to attach display-only stats.
+     * Returns rows: [categoryId UUID, txCount Long, totalWithdrawal BigDecimal].
+     */
+    @Query("""
+        SELECT t.category.id, COUNT(t), COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.household.id = :householdId
+          AND t.category IS NOT NULL
+        GROUP BY t.category.id
+        """)
+    List<Object[]> categoryLifetimeStatsForHousehold(@Param("householdId") UUID householdId);
+
+    /**
+     * Top sample remarks (by withdrawal amount) for one category — used as
+     * informational context inside the bundle export.
+     */
+    @Query("""
+        SELECT t.rawRemarks, t.withdrawalAmount
+        FROM Transaction t
+        WHERE t.bankAccount.user.household.id = :householdId
+          AND t.category.id = :categoryId
+          AND t.withdrawalAmount > 0
+        ORDER BY t.withdrawalAmount DESC
+        """)
+    List<Object[]> sampleRemarksForCategory(@Param("householdId") UUID householdId,
+                                            @Param("categoryId") UUID categoryId,
+                                            org.springframework.data.domain.Pageable pageable);
+
     // ── Annual budgets: year-level withdrawal sum per category ────────────────
 
     @Query("""

@@ -8,6 +8,7 @@ export interface CategoryRule {
   categoryColor: string | null
   priority: number
   aiGenerated: boolean
+  exclusion: boolean
 }
 
 export async function getCategoryRules(): Promise<CategoryRule[]> {
@@ -19,15 +20,17 @@ export async function createCategoryRule(
   pattern: string,
   categoryId: string,
   priority: number,
-  aiGenerated = false
+  aiGenerated = false,
+  exclusion = false,
 ): Promise<CategoryRule> {
-  const { data } = await apiClient.post<CategoryRule>('/category-rules', { pattern, categoryId, priority, aiGenerated })
+  const { data } = await apiClient.post<CategoryRule>('/category-rules',
+    { pattern, categoryId, priority, aiGenerated, exclusion })
   return data
 }
 
 export async function updateCategoryRule(
   id: string,
-  updates: { pattern?: string; categoryId?: string; priority?: number }
+  updates: { pattern?: string; categoryId?: string; priority?: number; exclusion?: boolean }
 ): Promise<CategoryRule> {
   const { data } = await apiClient.put<CategoryRule>(`/category-rules/${id}`, updates)
   return data
@@ -46,6 +49,7 @@ export interface RuleExportEntry {
   pattern: string
   categoryName: string
   priority: number
+  exclusion?: boolean
 }
 
 export interface RulesImportResult {

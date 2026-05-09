@@ -31,17 +31,18 @@ public class CategoryRuleController {
     private final CategorizationService categorizationService;
 
     public record RuleResponse(UUID id, String pattern, UUID categoryId, String categoryName,
-                               String categoryColor, int priority, boolean aiGenerated) {
+                               String categoryColor, int priority, boolean aiGenerated, boolean exclusion) {
         public static RuleResponse from(CategoryRule r) {
             return new RuleResponse(
                     r.getId(), r.getPattern(),
                     r.getCategory().getId(), r.getCategory().getName(), r.getCategory().getColor(),
-                    r.getPriority(), r.isAiGenerated());
+                    r.getPriority(), r.isAiGenerated(), r.isExclusion());
         }
     }
 
-    public record CreateRequest(String pattern, UUID categoryId, int priority, boolean aiGenerated) {}
-    public record UpdateRequest(String pattern, UUID categoryId, Integer priority) {}
+    public record CreateRequest(String pattern, UUID categoryId, int priority,
+                                boolean aiGenerated, Boolean exclusion) {}
+    public record UpdateRequest(String pattern, UUID categoryId, Integer priority, Boolean exclusion) {}
 
     @GetMapping
     public ResponseEntity<List<RuleResponse>> list(@AuthenticationPrincipal UserDetailsImpl principal) {
@@ -69,6 +70,7 @@ public class CategoryRuleController {
                 .priority(req.priority())
                 .global(false)
                 .aiGenerated(req.aiGenerated())
+                .exclusion(Boolean.TRUE.equals(req.exclusion()))
                 .build());
 
         return ResponseEntity.status(CREATED).body(RuleResponse.from(saved));
@@ -98,6 +100,9 @@ public class CategoryRuleController {
         if (req.priority() != null) {
             rule.setPriority(req.priority());
         }
+        if (req.exclusion() != null) {
+            rule.setExclusion(req.exclusion());
+        }
         return ResponseEntity.ok(RuleResponse.from(ruleRepository.save(rule)));
     }
 
@@ -119,14 +124,14 @@ public class CategoryRuleController {
 
     // ── Export / Import ───────────────────────────────────────────────────────
 
-    public record RuleExportEntry(String pattern, String categoryName, int priority) {}
+    public record RuleExportEntry(String pattern, String categoryName, int priority, Boolean exclusion) {}
     public record ImportResult(int created, int skipped, List<String> errors) {}
 
     @GetMapping("/export")
     public ResponseEntity<List<RuleExportEntry>> export(@AuthenticationPrincipal UserDetailsImpl principal) {
         List<RuleExportEntry> entries = ruleRepository.listRulesForUser(principal.getId())
                 .stream()
-                .map(r -> new RuleExportEntry(r.getPattern(), r.getCategory().getName(), r.getPriority()))
+                .map(r -> new RuleExportEntry(r.getPattern(), r.getCategory().getName(), r.getPriority(), r.isExclusion()))
                 .toList();
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=\"category-rules.json\"")
@@ -165,7 +170,9 @@ public class CategoryRuleController {
             }
             CategoryRule saved = ruleRepository.save(CategoryRule.builder()
                     .user(user).pattern(normalised).category(cat)
-                    .priority(entry.priority()).global(false).build());
+                    .priority(entry.priority()).global(false)
+                    .exclusion(Boolean.TRUE.equals(entry.exclusion()))
+                    .build());
             existing.add(saved);
             created++;
         }

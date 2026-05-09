@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 025-category-description
+      author: spends
+      changes:
+        - addColumn:
+            tableName: category
+            columns:
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: 025-category-rule-is-exclusion
+      author: spends
+      changes:
+        - addColumn:
+            tableName: category_rule
+            columns:
+              - column:
+                  name: is_exclusion
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

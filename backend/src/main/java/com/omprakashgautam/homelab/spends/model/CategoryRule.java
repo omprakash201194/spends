@@ -42,6 +42,10 @@ public class CategoryRule {
     @Builder.Default
     private boolean aiGenerated = false;
 
+    @Column(name = "is_exclusion", nullable = false)
+    @Builder.Default
+    private boolean exclusion = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
