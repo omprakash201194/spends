@@ -23,6 +23,10 @@ import {
   exportBundle, importBundle, previewBundleImport, downloadBundleFile,
   type Bundle, type BundleImportSummary,
 } from '../api/categoryBundle'
+import CodeMirror from '@uiw/react-codemirror'
+import { json as jsonLang } from '@codemirror/lang-json'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { useThemeStore } from '../store/themeStore'
 
 // ── Colour palette for custom categories ─────────────────────────────────────
 
@@ -160,7 +164,12 @@ function SharePackPanel() {
   const [importing, setImporting] = useState(false)
   const [reapplyPrompt, setReapplyPrompt] = useState(false)
   const [reapplyCount, setReapplyCount] = useState<number | null>(null)
+  const [jsonOpen, setJsonOpen] = useState(false)
+  const [jsonText, setJsonText] = useState('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [jsonBusy, setJsonBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const theme = useThemeStore(s => s.theme)
 
   const reapplyMut = useMutation({
     mutationFn: reapplyCategoryRules,
@@ -186,21 +195,14 @@ function SharePackPanel() {
     }
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  function resetImportState() {
     setImportError(null)
     setImportResult(null)
     setPreview(null)
     setPendingBundle(null)
-    let bundle: Bundle
-    try {
-      bundle = JSON.parse(await file.text())
-    } catch {
-      setImportError('Invalid file — expected a JSON bundle exported from SpendStack')
-      return
-    }
+  }
+
+  async function runPreview(bundle: Bundle) {
     if (!bundle?.schemaVersion?.startsWith('spendstack-bundle/')) {
       setImportError('Unrecognised bundle format — schemaVersion missing or invalid')
       return
@@ -216,6 +218,47 @@ function SharePackPanel() {
     } finally {
       setPreviewing(false)
     }
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    resetImportState()
+    let bundle: Bundle
+    try {
+      bundle = JSON.parse(await file.text())
+    } catch {
+      setImportError('Invalid file — expected a JSON bundle exported from SpendStack')
+      return
+    }
+    await runPreview(bundle)
+  }
+
+  async function loadCurrentIntoEditor() {
+    setJsonError(null)
+    setJsonBusy(true)
+    try {
+      const bundle = await exportBundle(packName.trim() || undefined)
+      setJsonText(JSON.stringify(bundle, null, 2))
+    } catch (err: unknown) {
+      setJsonError(err instanceof Error ? err.message : 'Failed to load current pack')
+    } finally {
+      setJsonBusy(false)
+    }
+  }
+
+  async function validateAndPreviewJson() {
+    setJsonError(null)
+    resetImportState()
+    let bundle: Bundle
+    try {
+      bundle = JSON.parse(jsonText)
+    } catch (err: unknown) {
+      setJsonError(`JSON parse error: ${err instanceof Error ? err.message : 'invalid JSON'}`)
+      return
+    }
+    await runPreview(bundle)
   }
 
   async function confirmImport() {
@@ -383,6 +426,78 @@ function SharePackPanel() {
                 <button onClick={() => setImportError(null)} className="opacity-60 hover:opacity-100">
                   <X className="w-3.5 h-3.5" />
                 </button>
+              </div>
+            )}
+          </div>
+
+          {/* Raw JSON editor (power user) */}
+          <div className="border-t border-indigo-200 dark:border-indigo-800 pt-3">
+            <button
+              type="button"
+              onClick={() => setJsonOpen(v => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200"
+            >
+              {jsonOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              Edit raw JSON
+              <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400">— bulk edits, paste a shared pack, or hand-author</span>
+            </button>
+
+            {jsonOpen && (
+              <div className="mt-2 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadCurrentIntoEditor}
+                    disabled={jsonBusy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs font-medium rounded-lg disabled:opacity-50"
+                  >
+                    <Download className="w-3.5 h-3.5" /> {jsonBusy ? 'Loading…' : 'Load current pack'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={validateAndPreviewJson}
+                    disabled={!jsonText.trim() || previewing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg"
+                  >
+                    <Check className="w-3.5 h-3.5" /> {previewing ? 'Validating…' : 'Validate & preview'}
+                  </button>
+                  {jsonText.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => { setJsonText(''); setJsonError(null) }}
+                      className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <CodeMirror
+                    value={jsonText}
+                    height="320px"
+                    theme={theme === 'dark' ? oneDark : 'light'}
+                    extensions={[jsonLang()]}
+                    onChange={v => setJsonText(v)}
+                    placeholder='Paste a SpendStack bundle here, or click "Load current pack" to start from your existing categories.'
+                    basicSetup={{
+                      lineNumbers: true,
+                      foldGutter: true,
+                      bracketMatching: true,
+                      autocompletion: false,
+                      highlightActiveLine: true,
+                    }}
+                  />
+                </div>
+
+                {jsonError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-start justify-between gap-3">
+                    <p className="text-xs font-mono text-red-700 dark:text-red-300 whitespace-pre-wrap">{jsonError}</p>
+                    <button onClick={() => setJsonError(null)} className="opacity-60 hover:opacity-100 shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
