@@ -21,7 +21,8 @@ import {
 } from '../api/categoryRules'
 import {
   exportBundle, importBundle, previewBundleImport, downloadBundleFile,
-  type Bundle, type BundleImportSummary,
+  isExternalCategorySchema, convertExternalToBundle,
+  type Bundle, type BundleImportSummary, type ExternalConversionStats,
 } from '../api/categoryBundle'
 import CodeMirror from '@uiw/react-codemirror'
 import { json as jsonLang } from '@codemirror/lang-json'
@@ -168,6 +169,7 @@ function SharePackPanel() {
   const [jsonText, setJsonText] = useState('')
   const [jsonError, setJsonError] = useState<string | null>(null)
   const [jsonBusy, setJsonBusy] = useState(false)
+  const [conversionStats, setConversionStats] = useState<ExternalConversionStats | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const theme = useThemeStore(s => s.theme)
 
@@ -200,11 +202,25 @@ function SharePackPanel() {
     setImportResult(null)
     setPreview(null)
     setPendingBundle(null)
+    setConversionStats(null)
   }
 
-  async function runPreview(bundle: Bundle) {
+  /**
+   * Accept either a SpendStack Bundle or the external keyword-classifier schema.
+   * Converts the external shape client-side, then runs the existing server preview.
+   */
+  async function runPreviewFromAny(parsed: unknown) {
+    let bundle: Bundle
+    if (isExternalCategorySchema(parsed)) {
+      const { bundle: converted, stats } = convertExternalToBundle(parsed)
+      bundle = converted
+      setConversionStats(stats)
+    } else {
+      bundle = parsed as Bundle
+      setConversionStats(null)
+    }
     if (!bundle?.schemaVersion?.startsWith('spendstack-bundle/')) {
-      setImportError('Unrecognised bundle format — schemaVersion missing or invalid')
+      setImportError('Unrecognised format — expected a SpendStack bundle or a classifier schema with "categories[].keywords"')
       return
     }
     setPreviewing(true)
@@ -225,14 +241,14 @@ function SharePackPanel() {
     if (!file) return
     e.target.value = ''
     resetImportState()
-    let bundle: Bundle
+    let parsed: unknown
     try {
-      bundle = JSON.parse(await file.text())
+      parsed = JSON.parse(await file.text())
     } catch {
-      setImportError('Invalid file — expected a JSON bundle exported from SpendStack')
+      setImportError('Invalid file — expected a JSON bundle or classifier schema')
       return
     }
-    await runPreview(bundle)
+    await runPreviewFromAny(parsed)
   }
 
   async function loadCurrentIntoEditor() {
@@ -251,14 +267,14 @@ function SharePackPanel() {
   async function validateAndPreviewJson() {
     setJsonError(null)
     resetImportState()
-    let bundle: Bundle
+    let parsed: unknown
     try {
-      bundle = JSON.parse(jsonText)
+      parsed = JSON.parse(jsonText)
     } catch (err: unknown) {
       setJsonError(`JSON parse error: ${err instanceof Error ? err.message : 'invalid JSON'}`)
       return
     }
-    await runPreview(bundle)
+    await runPreviewFromAny(parsed)
   }
 
   async function confirmImport() {
@@ -335,6 +351,21 @@ function SharePackPanel() {
               </button>
             )}
             <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleFile} />
+
+            {conversionStats && (
+              <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  Detected external classifier schema — converted to a SpendStack pack
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  {conversionStats.categoriesConverted} categor{conversionStats.categoriesConverted === 1 ? 'y' : 'ies'},{' '}
+                  {conversionStats.rulesFromKeywords} base pattern{conversionStats.rulesFromKeywords === 1 ? '' : 's'}
+                  {conversionStats.rulesFromPurposeKeywords > 0 && `, ${conversionStats.rulesFromPurposeKeywords} from purpose_keywords (AND-logic flattened to OR)`}
+                  {conversionStats.rulesFromExclusions > 0 && `, ${conversionStats.rulesFromExclusions} exclusion rule${conversionStats.rulesFromExclusions === 1 ? '' : 's'}`}
+                  {conversionStats.defaultCategorySkipped && ' · default "Other" category skipped'}
+                </p>
+              </div>
+            )}
 
             {preview && pendingBundle && (
               <div className="mt-2 p-3 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded-lg">
@@ -479,7 +510,7 @@ function SharePackPanel() {
                     theme={theme === 'dark' ? oneDark : 'light'}
                     extensions={[jsonLang()]}
                     onChange={v => setJsonText(v)}
-                    placeholder='Paste a SpendStack bundle here, or click "Load current pack" to start from your existing categories.'
+                    placeholder='Paste a SpendStack bundle or an external classifier schema ({categories: [{name, keywords, ...}]}), or click "Load current pack".'
                     basicSetup={{
                       lineNumbers: true,
                       foldGutter: true,
@@ -867,7 +898,7 @@ function groupRuleEntries(entries: RuleExportEntry[]): GroupedRuleEntry[] {
   const map = new Map<string, GroupedRuleEntry>()
   for (const e of entries) {
     const excl = e.exclusion ?? false
-    const key = `${e.categoryName} ${e.priority} ${excl ? '1' : '0'}`
+    const key = `${e.categoryName}|${e.priority}|${excl ? '1' : '0'}`
     let g = map.get(key)
     if (!g) {
       g = { categoryName: e.categoryName, priority: e.priority, exclusion: excl, patterns: [] }
