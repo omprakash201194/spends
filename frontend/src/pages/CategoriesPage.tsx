@@ -853,6 +853,127 @@ function CategoriesTab() {
 
 // ── Tab: Rules ────────────────────────────────────────────────────────────────
 
+// ── Grouped JSON shape for editor + downloaded file ─────────────────────────
+// Backend export/import endpoints use the flat shape; we convert at the edges.
+
+interface GroupedRuleEntry {
+  categoryName: string
+  priority: number
+  exclusion?: boolean
+  patterns: string[]
+}
+
+function groupRuleEntries(entries: RuleExportEntry[]): GroupedRuleEntry[] {
+  const map = new Map<string, GroupedRuleEntry>()
+  for (const e of entries) {
+    const excl = e.exclusion ?? false
+    const key = `${e.categoryName} ${e.priority} ${excl ? '1' : '0'}`
+    let g = map.get(key)
+    if (!g) {
+      g = { categoryName: e.categoryName, priority: e.priority, exclusion: excl, patterns: [] }
+      map.set(key, g)
+    }
+    g.patterns.push(e.pattern)
+  }
+  for (const g of map.values()) g.patterns.sort((a, b) => a.localeCompare(b))
+  return Array.from(map.values()).sort((a, b) => {
+    const c = a.categoryName.localeCompare(b.categoryName)
+    if (c !== 0) return c
+    if (a.exclusion !== b.exclusion) return a.exclusion ? 1 : -1
+    return b.priority - a.priority
+  })
+}
+
+function flattenGroupedEntries(grouped: GroupedRuleEntry[]): RuleExportEntry[] {
+  const out: RuleExportEntry[] = []
+  for (const g of grouped) {
+    for (const p of g.patterns) {
+      out.push({
+        pattern: p,
+        categoryName: g.categoryName,
+        priority: g.priority,
+        exclusion: g.exclusion ?? false,
+      })
+    }
+  }
+  return out
+}
+
+/** Auto-detect grouped vs flat. Returns null if invalid. Does NOT report errors. */
+function parseRulesPayload(parsed: unknown): RuleExportEntry[] | null {
+  if (!Array.isArray(parsed)) return null
+  if (parsed.length === 0) return []
+  const first = parsed[0] as Record<string, unknown> | null
+  if (!first || typeof first !== 'object') return null
+  if (Array.isArray((first as Record<string, unknown>).patterns)) {
+    const ok = validateGrouped(parsed, () => {})
+    return ok
+  }
+  return validateFlat(parsed, () => {})
+}
+
+function validateFlat(parsed: unknown[], onError: (msg: string) => void): RuleExportEntry[] | null {
+  const out: RuleExportEntry[] = []
+  for (let i = 0; i < parsed.length; i++) {
+    const e = parsed[i] as Record<string, unknown>
+    if (!e || typeof e !== 'object') { onError(`Entry #${i + 1}: must be an object`); return null }
+    if (typeof e.pattern !== 'string' || !e.pattern.trim()) {
+      onError(`Entry #${i + 1}: "pattern" must be a non-empty string`); return null
+    }
+    if (typeof e.categoryName !== 'string' || !e.categoryName.trim()) {
+      onError(`Entry #${i + 1}: "categoryName" must be a non-empty string`); return null
+    }
+    if (e.priority !== undefined && typeof e.priority !== 'number') {
+      onError(`Entry #${i + 1}: "priority" must be a number`); return null
+    }
+    if (e.exclusion !== undefined && typeof e.exclusion !== 'boolean') {
+      onError(`Entry #${i + 1}: "exclusion" must be a boolean`); return null
+    }
+    out.push({
+      pattern: e.pattern,
+      categoryName: e.categoryName,
+      priority: typeof e.priority === 'number' ? e.priority : 0,
+      exclusion: typeof e.exclusion === 'boolean' ? e.exclusion : false,
+    })
+  }
+  return out
+}
+
+function validateGrouped(parsed: unknown[], onError: (msg: string) => void): RuleExportEntry[] | null {
+  const groups: GroupedRuleEntry[] = []
+  for (let i = 0; i < parsed.length; i++) {
+    const g = parsed[i] as Record<string, unknown>
+    if (!g || typeof g !== 'object') { onError(`Entry #${i + 1}: must be an object`); return null }
+    if (typeof g.categoryName !== 'string' || !g.categoryName.trim()) {
+      onError(`Entry #${i + 1}: "categoryName" must be a non-empty string`); return null
+    }
+    if (g.priority !== undefined && typeof g.priority !== 'number') {
+      onError(`Entry #${i + 1}: "priority" must be a number`); return null
+    }
+    if (g.exclusion !== undefined && typeof g.exclusion !== 'boolean') {
+      onError(`Entry #${i + 1}: "exclusion" must be a boolean`); return null
+    }
+    if (!Array.isArray(g.patterns)) {
+      onError(`Entry #${i + 1}: "patterns" must be an array of strings`); return null
+    }
+    const patterns: string[] = []
+    for (let j = 0; j < g.patterns.length; j++) {
+      const p = g.patterns[j]
+      if (typeof p !== 'string' || !p.trim()) {
+        onError(`Entry #${i + 1}, pattern #${j + 1}: must be a non-empty string`); return null
+      }
+      patterns.push(p)
+    }
+    groups.push({
+      categoryName: g.categoryName,
+      priority: typeof g.priority === 'number' ? g.priority : 0,
+      exclusion: typeof g.exclusion === 'boolean' ? g.exclusion : false,
+      patterns,
+    })
+  }
+  return flattenGroupedEntries(groups)
+}
+
 /** A group of rule rows that share a category, priority, and exclusion flag — rendered as one card with chips. */
 interface RuleGroup {
   key: string                 // `${categoryId}:${priority}:${exclusion}`
@@ -958,7 +1079,8 @@ function RulesTab() {
 
   async function handleRulesExport() {
     const data = await exportCategoryRules()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const grouped = groupRuleEntries(data)
+    const blob = new Blob([JSON.stringify(grouped, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'category-rules.json'; a.click()
     URL.revokeObjectURL(url)
@@ -970,7 +1092,12 @@ function RulesTab() {
     e.target.value = ''
     try {
       const text = await file.text()
-      const entries: RuleExportEntry[] = JSON.parse(text)
+      const parsed = JSON.parse(text)
+      const entries = parseRulesPayload(parsed)
+      if (!entries) {
+        setRulesImportResult({ created: 0, skipped: 0, errors: ['Invalid file — make sure it is a category-rules.json exported from SpendStack'] })
+        return
+      }
       setRulesImporting(true)
       const result = await importCategoryRules(entries)
       qc.invalidateQueries({ queryKey: ['category-rules'] })
@@ -988,7 +1115,8 @@ function RulesTab() {
     setJsonBusy(true)
     try {
       const data = await exportCategoryRules()
-      setJsonText(JSON.stringify(data, null, 2))
+      const grouped = groupRuleEntries(data)
+      setJsonText(JSON.stringify(grouped, null, 2))
     } catch (err: unknown) {
       setJsonError(err instanceof Error ? err.message : 'Failed to load current rules')
     } finally {
@@ -1008,37 +1136,14 @@ function RulesTab() {
       setJsonError('Expected a JSON array of rule entries')
       return null
     }
-    const out: RuleExportEntry[] = []
-    for (let i = 0; i < parsed.length; i++) {
-      const e = parsed[i] as Record<string, unknown>
-      if (!e || typeof e !== 'object') {
-        setJsonError(`Entry #${i + 1}: must be an object`)
-        return null
-      }
-      if (typeof e.pattern !== 'string' || !e.pattern.trim()) {
-        setJsonError(`Entry #${i + 1}: "pattern" must be a non-empty string`)
-        return null
-      }
-      if (typeof e.categoryName !== 'string' || !e.categoryName.trim()) {
-        setJsonError(`Entry #${i + 1}: "categoryName" must be a non-empty string`)
-        return null
-      }
-      if (e.priority !== undefined && typeof e.priority !== 'number') {
-        setJsonError(`Entry #${i + 1}: "priority" must be a number`)
-        return null
-      }
-      if (e.exclusion !== undefined && typeof e.exclusion !== 'boolean') {
-        setJsonError(`Entry #${i + 1}: "exclusion" must be a boolean`)
-        return null
-      }
-      out.push({
-        pattern: e.pattern,
-        categoryName: e.categoryName,
-        priority: typeof e.priority === 'number' ? e.priority : 0,
-        exclusion: typeof e.exclusion === 'boolean' ? e.exclusion : undefined,
-      })
-    }
-    return out
+    if (parsed.length === 0) return []
+
+    // Auto-detect: grouped shape has a "patterns" array; flat shape has a "pattern" string.
+    const first = parsed[0] as Record<string, unknown> | null
+    const isGrouped = !!first && typeof first === 'object' && Array.isArray((first as Record<string, unknown>).patterns)
+
+    if (isGrouped) return validateGrouped(parsed, setJsonError)
+    return validateFlat(parsed, setJsonError)
   }
 
   function handleValidateJson() {
@@ -1188,7 +1293,7 @@ function RulesTab() {
               theme={theme === 'dark' ? oneDark : 'light'}
               extensions={[jsonLang()]}
               onChange={v => setJsonText(v)}
-              placeholder='Click "Load current rules" to start from your existing rules, or paste a JSON array of {"pattern": "...", "categoryName": "...", "priority": 0, "exclusion": false} entries.'
+              placeholder='Click "Load current rules" to start from your existing rules, or paste a JSON array of {"categoryName": "...", "priority": 0, "exclusion": false, "patterns": ["...", "..."]} entries.'
               basicSetup={{
                 lineNumbers: true,
                 foldGutter: true,
