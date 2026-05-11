@@ -14,7 +14,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   ChevronLeft, ChevronRight, Check, X, CircleDot,
-  Bookmark,
+  Bookmark, RefreshCw,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import {
@@ -107,7 +107,7 @@ export default function TransactionPage() {
     uncategorizedOnly: uncategorizedOnly || undefined,
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['transactions', filters],
     queryFn: () => getTransactions(filters),
     placeholderData: (prev) => prev,
@@ -337,6 +337,17 @@ export default function TransactionPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              qc.invalidateQueries({ queryKey: ['transactions'] })
+              qc.invalidateQueries({ queryKey: ['transactions-summary'] })
+            }}
+            disabled={isFetching}
+            title="Refresh transactions"
+            className="flex items-center justify-center w-9 h-9 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={clsx('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+          </button>
           <button
             onClick={handleExport}
             disabled={exporting}
