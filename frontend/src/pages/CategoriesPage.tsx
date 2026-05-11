@@ -949,6 +949,13 @@ function RulesTab() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [showIO])
 
+  // ── Raw JSON editor (power user) ─────────────────────────────────────────
+  const [jsonOpen, setJsonOpen] = useState(false)
+  const [jsonText, setJsonText] = useState('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [jsonBusy, setJsonBusy] = useState(false)
+  const theme = useThemeStore(s => s.theme)
+
   async function handleRulesExport() {
     const data = await exportCategoryRules()
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -968,8 +975,92 @@ function RulesTab() {
       const result = await importCategoryRules(entries)
       qc.invalidateQueries({ queryKey: ['category-rules'] })
       setRulesImportResult(result)
+      if (result.created > 0) setShowReapplyPrompt(true)
     } catch {
       setRulesImportResult({ created: 0, skipped: 0, errors: ['Invalid file — make sure it is a category-rules.json exported from SpendStack'] })
+    } finally {
+      setRulesImporting(false)
+    }
+  }
+
+  async function loadCurrentRulesIntoEditor() {
+    setJsonError(null)
+    setJsonBusy(true)
+    try {
+      const data = await exportCategoryRules()
+      setJsonText(JSON.stringify(data, null, 2))
+    } catch (err: unknown) {
+      setJsonError(err instanceof Error ? err.message : 'Failed to load current rules')
+    } finally {
+      setJsonBusy(false)
+    }
+  }
+
+  function parseAndValidateRulesJson(): RuleExportEntry[] | null {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(jsonText)
+    } catch (err: unknown) {
+      setJsonError(`JSON parse error: ${err instanceof Error ? err.message : 'invalid JSON'}`)
+      return null
+    }
+    if (!Array.isArray(parsed)) {
+      setJsonError('Expected a JSON array of rule entries')
+      return null
+    }
+    const out: RuleExportEntry[] = []
+    for (let i = 0; i < parsed.length; i++) {
+      const e = parsed[i] as Record<string, unknown>
+      if (!e || typeof e !== 'object') {
+        setJsonError(`Entry #${i + 1}: must be an object`)
+        return null
+      }
+      if (typeof e.pattern !== 'string' || !e.pattern.trim()) {
+        setJsonError(`Entry #${i + 1}: "pattern" must be a non-empty string`)
+        return null
+      }
+      if (typeof e.categoryName !== 'string' || !e.categoryName.trim()) {
+        setJsonError(`Entry #${i + 1}: "categoryName" must be a non-empty string`)
+        return null
+      }
+      if (e.priority !== undefined && typeof e.priority !== 'number') {
+        setJsonError(`Entry #${i + 1}: "priority" must be a number`)
+        return null
+      }
+      if (e.exclusion !== undefined && typeof e.exclusion !== 'boolean') {
+        setJsonError(`Entry #${i + 1}: "exclusion" must be a boolean`)
+        return null
+      }
+      out.push({
+        pattern: e.pattern,
+        categoryName: e.categoryName,
+        priority: typeof e.priority === 'number' ? e.priority : 0,
+        exclusion: typeof e.exclusion === 'boolean' ? e.exclusion : undefined,
+      })
+    }
+    return out
+  }
+
+  function handleValidateJson() {
+    setJsonError(null)
+    const entries = parseAndValidateRulesJson()
+    if (entries) {
+      setJsonError(`OK — ${entries.length} rule${entries.length === 1 ? '' : 's'} parsed. Click Import to apply (duplicates by pattern are skipped).`)
+    }
+  }
+
+  async function handleImportFromJson() {
+    setJsonError(null)
+    const entries = parseAndValidateRulesJson()
+    if (!entries) return
+    setRulesImporting(true)
+    try {
+      const result = await importCategoryRules(entries)
+      qc.invalidateQueries({ queryKey: ['category-rules'] })
+      setRulesImportResult(result)
+      if (result.created > 0) setShowReapplyPrompt(true)
+    } catch (err: unknown) {
+      setJsonError(err instanceof Error ? err.message : 'Import failed')
     } finally {
       setRulesImporting(false)
     }
@@ -1005,7 +1096,7 @@ function RulesTab() {
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
             {showIO && (
-              <div className="absolute right-0 top-full mt-1 z-10 w-40 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 z-10 w-44 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
                 <button onClick={handleRulesExport} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
                   <Download className="w-3.5 h-3.5" /> Export
                 </button>
@@ -1015,6 +1106,12 @@ function RulesTab() {
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
                 >
                   <Upload className="w-3.5 h-3.5" /> {rulesImporting ? 'Importing…' : 'Import'}
+                </button>
+                <button
+                  onClick={() => { setJsonOpen(true); setShowIO(false) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border-t border-gray-200 dark:border-gray-600"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit raw JSON
                 </button>
               </div>
             )}
@@ -1029,6 +1126,89 @@ function RulesTab() {
           </button>
         </div>
       </div>
+
+      {jsonOpen && (
+        <div className="mb-4 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Edit rules as JSON</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">— bulk edits, reassign categories, hand-author patterns</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setJsonOpen(false); setJsonText(''); setJsonError(null) }}
+              className="opacity-60 hover:opacity-100"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={loadCurrentRulesIntoEditor}
+              disabled={jsonBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-xs font-medium rounded-lg disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" /> {jsonBusy ? 'Loading…' : 'Load current rules'}
+            </button>
+            <button
+              type="button"
+              onClick={handleValidateJson}
+              disabled={!jsonText.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium rounded-lg disabled:opacity-50"
+            >
+              <Check className="w-3.5 h-3.5" /> Validate
+            </button>
+            <button
+              type="button"
+              onClick={handleImportFromJson}
+              disabled={!jsonText.trim() || rulesImporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-medium rounded-lg"
+            >
+              <Upload className="w-3.5 h-3.5" /> {rulesImporting ? 'Importing…' : 'Import'}
+            </button>
+            {jsonText.trim() && (
+              <button
+                type="button"
+                onClick={() => { setJsonText(''); setJsonError(null) }}
+                className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+            <CodeMirror
+              value={jsonText}
+              height="320px"
+              theme={theme === 'dark' ? oneDark : 'light'}
+              extensions={[jsonLang()]}
+              onChange={v => setJsonText(v)}
+              placeholder='Click "Load current rules" to start from your existing rules, or paste a JSON array of {"pattern": "...", "categoryName": "...", "priority": 0, "exclusion": false} entries.'
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                bracketMatching: true,
+                autocompletion: false,
+                highlightActiveLine: true,
+              }}
+            />
+          </div>
+
+          {jsonError && (
+            <div className="mt-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex items-start justify-between gap-3">
+              <p className="text-xs font-mono text-red-700 dark:text-red-300 whitespace-pre-wrap">{jsonError}</p>
+              <button onClick={() => setJsonError(null)} className="opacity-60 hover:opacity-100 shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {rulesImportResult && (
         <div className={`mb-4 p-3 rounded-lg border text-xs flex items-start justify-between gap-3 ${
