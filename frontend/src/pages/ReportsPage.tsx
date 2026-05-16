@@ -22,7 +22,7 @@ function escapeCsvField(value: string): string {
 }
 
 function generateCsv(months: MonthRow[], year: number): void {
-  const rows = ['Month,Total Spent (INR),Total Income (INR),Net (INR),Top Category']
+  const rows = ['Month,Total Debited (INR),Total Credited (INR),Net (INR),Top Category']
   for (const m of months) {
     const hasData = m.totalSpent > 0 || m.totalIncome > 0
     const topCat = [...m.categories].sort((a, b) => b.amount - a.amount)[0]?.category ?? ''
@@ -178,11 +178,11 @@ export default function ReportsPage() {
           {/* Annual stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Spent</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Debited</p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(summary.grandTotalSpent)}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Income</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Annual Credited</p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{inrFull(summary.grandTotalIncome)}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -192,7 +192,7 @@ export default function ReportsPage() {
               </p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Monthly Spend</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Monthly Debit</p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">
                 {inrFull(summary.grandTotalSpent / 12)}
               </p>
@@ -205,8 +205,8 @@ export default function ReportsPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Month</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Spent</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Income</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Debited</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Credited</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:table-cell">Top Category</th>
                 </tr>

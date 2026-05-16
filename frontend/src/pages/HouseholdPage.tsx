@@ -79,14 +79,14 @@ function HouseholdContent({ data }: { data: HouseholdSummary }) {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Total Spent</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Total Debited</span>
           </div>
           <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{inr(data.totalSpent)}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Total Income</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Total Credited</span>
           </div>
           <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{inr(data.totalIncome)}</p>
         </div>
@@ -181,11 +181,11 @@ function MemberCard({ member, householdTotal }: { member: MemberStat; householdT
           {/* Stats row */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Spent</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Debited</p>
               <p className="font-bold text-gray-900 dark:text-white">{inrFull(member.totalSpent)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Income</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Credited</p>
               <p className="font-bold text-gray-900 dark:text-white">{inrFull(member.totalIncome)}</p>
             </div>
           </div>

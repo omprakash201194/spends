@@ -24,8 +24,8 @@ const FILTER_TYPES: { value: FilterType; label: string }[] = [
 ]
 
 const METRICS: { value: Metric; label: string }[] = [
-  { value: 'SPEND',  label: 'Total Spend' },
-  { value: 'INCOME', label: 'Total Income' },
+  { value: 'SPEND',  label: 'Total Debited' },
+  { value: 'INCOME', label: 'Total Credited' },
   { value: 'COUNT',  label: 'Transaction Count' },
 ]
 

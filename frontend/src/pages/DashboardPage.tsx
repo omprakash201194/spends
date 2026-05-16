@@ -210,7 +210,7 @@ function DashboardContent({ data, recurringData, goalsData }: {
               iconBg="bg-indigo-50 dark:bg-indigo-950"
             />
             <StatCard
-              label="Total Spent"
+              label="Total Debited"
               value={inr(data.summary.totalWithdrawals)}
               sub="All withdrawals"
               icon={TrendingDown}
@@ -219,7 +219,7 @@ function DashboardContent({ data, recurringData, goalsData }: {
               valueClass="text-red-600 dark:text-red-400"
             />
             <StatCard
-              label="Total Income"
+              label="Total Credited"
               value={inr(data.summary.totalDeposits)}
               sub="All deposits"
               icon={TrendingUp}
