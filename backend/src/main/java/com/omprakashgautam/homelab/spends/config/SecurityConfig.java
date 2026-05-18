@@ -1,6 +1,8 @@
 package com.omprakashgautam.homelab.spends.config;
 
 import com.omprakashgautam.homelab.spends.security.JwtAuthenticationFilter;
+import com.omprakashgautam.homelab.spends.security.OAuth2SuccessHandler;
+import com.omprakashgautam.homelab.spends.security.OAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,20 +33,32 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final OAuth2UserService oauth2UserService;
+    private final OAuth2SuccessHandler oauth2SuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // IF_REQUIRED allows sessions for the OAuth2 state parameter during the redirect flow.
+                // JWT filter still authenticates all /api/ calls via Bearer token — sessions are never used for API auth.
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/api/oauth2/**", "/api/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        // Route OAuth2 endpoints under /api/ so nginx proxies them without extra config
+                        .authorizationEndpoint(ae -> ae.baseUri("/api/oauth2/authorization"))
+                        .redirectionEndpoint(re -> re.baseUri("/api/login/oauth2/code/*"))
+                        .userInfoEndpoint(ui -> ui.userService(oauth2UserService))
+                        .successHandler(oauth2SuccessHandler)
+                );
 
         return http.build();
     }

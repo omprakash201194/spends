@@ -1,5 +1,6 @@
 package com.omprakashgautam.homelab.spends.security;
 
+import com.omprakashgautam.homelab.spends.model.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,17 @@ public class JwtTokenProvider {
                 .subject(principal.getUsername())
                 .claim("userId", principal.getId().toString())
                 .claim("role", principal.getRole())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String generateTokenForUser(User user) {
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .claim("userId", user.getId().toString())
+                .claim("role", user.getRole().name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey())

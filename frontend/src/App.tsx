@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import OAuth2CallbackPage from './pages/OAuth2CallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import BankAccountsPage from './pages/BankAccountsPage'
 import ImportPage from './pages/ImportPage'
@@ -46,6 +47,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
         <Route
           path="/"
           element={

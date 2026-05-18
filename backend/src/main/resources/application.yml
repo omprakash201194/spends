@@ -1,6 +1,16 @@
 spring:
   application:
     name: spends-backend
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - email
+              - profile
   jpa:
     hibernate:
       ddl-auto: validate
@@ -27,6 +37,8 @@ app:
   jwt:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000  # 24 hours
+  oauth2:
+    frontend-redirect-url: ${FRONTEND_URL:https://spends.onelifestack.com}/oauth2/callback
 
 notification:
   enabled: ${NOTIFICATION_ENABLED:false}
