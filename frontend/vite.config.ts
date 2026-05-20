@@ -56,7 +56,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^\/api\//,
+            // Exclude OAuth2 redirect endpoints — service worker must not intercept
+            // them or the 302→Google redirect gets swallowed as an opaque fetch.
+            urlPattern: /^\/api\/(?!oauth2\/|login\/oauth2\/)/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
