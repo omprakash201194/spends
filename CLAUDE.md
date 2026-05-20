@@ -149,6 +149,8 @@ spends/
 | POST | `/api/auth/register` | public | Create account + household or join via invite code |
 | POST | `/api/auth/login` | public | Returns JWT |
 | GET | `/api/auth/me` | JWT | Returns current user profile |
+| POST | `/api/auth/forgot-password` | public | Initiates password reset (sends email if registered) |
+| POST | `/api/auth/reset-password` | public | Resets password using token from email link |
 | GET | `/api/bank-accounts` | JWT | List user's bank accounts |
 | POST | `/api/bank-accounts` | JWT | Create a bank account |
 | PUT | `/api/bank-accounts/{id}` | JWT | Update a bank account |
@@ -650,3 +652,10 @@ Single-click "Sign in with Google" on the login page. New users get a household 
 - **Frontend** — `OAuth2CallbackPage.tsx` reads `?token=` from URL, calls `/api/auth/me`, sets Zustand auth store, navigates to `/`; "Sign in with Google" button on `LoginPage.tsx` is a plain `<a href="/api/oauth2/authorization/google">`
 
 **PWA gotcha — `navigateFallbackDenylist`:** Workbox's SPA navigation fallback intercepts ALL browser navigations (including `/api/oauth2/authorization/google`) and serves cached `index.html`, so clicking the button loads the React app instead of reaching the backend. Fix: `navigateFallbackDenylist: [/^\/api\//]` in the `workbox:` block of `vite.config.ts`. Also: `runtimeCaching.urlPattern` regexes are matched against the full URL (`https://...`), so the anchor `^\/api\/` never matches — use `/\/api\//` without `^`.
+
+### Feature — Password Reset ✅ COMPLETE
+Forgot-password flow: user enters email → backend sends a one-time reset link → user sets new password via link.
+
+- **Backend** — migration `027-password-reset-tokens.yaml` creates `password_reset_tokens` table (user FK cascade delete, SHA-256 hashed token, 1-hour expiry); `PasswordResetToken` entity; `PasswordResetService` silently ignores unknown emails (prevents email enumeration), deletes old token before issuing new one, sends email via `JavaMailSender`; two endpoints on `AuthController`: `POST /api/auth/forgot-password` and `POST /api/auth/reset-password`
+- **Frontend** — `ForgotPasswordPage.tsx` (public route `/forgot-password`): email form, shows "check your inbox" after submit without revealing registration status; `ResetPasswordPage.tsx` (public route `/reset-password`): reads `?token=` from URL, client-side password match validation, redirects to `/login` with success toast on completion; "Forgot password?" link below sign-in button on `LoginPage.tsx`
+- **Env vars** — reuses existing `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` from Phase 23; `app.frontend-url` in `application.yml` controls the reset link base URL (defaults to `https://spends.onelifestack.com`)

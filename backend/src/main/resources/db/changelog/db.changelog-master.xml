@@ -31,5 +31,6 @@
     <include file="changes/024-dashboard-filters-and-widget-grid.yaml" relativeToChangelogFile="true"/>
     <include file="changes/025-bundle-fields.yaml" relativeToChangelogFile="true"/>
     <include file="changes/026-password-nullable.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/027-password-reset-tokens.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

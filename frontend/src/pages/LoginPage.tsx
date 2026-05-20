@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { TrendingUp, Eye, EyeOff } from 'lucide-react'
 import { authApi } from '../api/auth'
@@ -8,7 +8,9 @@ import type { LoginRequest } from '../types'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const successMessage = (location.state as { message?: string } | null)?.message
 
   const [form, setForm] = useState<LoginRequest>({ username: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
@@ -58,6 +60,12 @@ export default function LoginPage() {
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sign in</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Welcome back — let's see where the money went.</p>
+
+          {successMessage && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
+              {successMessage}
+            </div>
+          )}
 
           {errorMessage && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -109,6 +117,12 @@ export default function LoginPage() {
               {isPending ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
+
+          <p className="mt-3 text-right text-sm">
+            <Link to="/forgot-password" className="text-blue-600 hover:underline dark:text-blue-400">
+              Forgot password?
+            </Link>
+          </p>
 
           <div className="mt-6 flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-600" />

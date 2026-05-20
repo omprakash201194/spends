@@ -16,4 +16,12 @@ export const authApi = {
     const res = await apiClient.get<User>('/auth/me')
     return res.data
   },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post('/auth/forgot-password', { email })
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/reset-password', { token, newPassword })
+  },
 }
