@@ -54,11 +54,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Prevent the SPA navigation fallback (index.html) from being served for
+        // /api/ paths — those must reach the backend, not the React app.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            // Exclude OAuth2 redirect endpoints — service worker must not intercept
-            // them or the 302→Google redirect gets swallowed as an opaque fetch.
-            urlPattern: /^\/api\/(?!oauth2\/|login\/oauth2\/)/,
+            // Match full URLs: /api/ but not the OAuth2 redirect paths.
+            // Regex is tested against the full URL string (includes origin).
+            urlPattern: /\/api\/(?!oauth2\/|login\/oauth2\/)/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
