@@ -223,6 +223,9 @@ spends/
 | `SPRING_PROFILES_ACTIVE` | k8s ConfigMap | `k8s` in cluster, `local` for dev |
 | `DB_PASSWORD` | k8s Secret `postgres-secret` | PostgreSQL password |
 | `APP_JWT_SECRET` | k8s Secret `spends-secret` | Base64-encoded ≥256-bit key |
+| `GOOGLE_CLIENT_ID` | k8s SealedSecret `spends-oauth2-secret` | Google OAuth2 client ID |
+| `GOOGLE_CLIENT_SECRET` | k8s SealedSecret `spends-oauth2-secret` | Google OAuth2 client secret |
+| `FRONTEND_URL` | k8s ConfigMap (optional) | Base URL for post-OAuth2 redirect; defaults to `https://spends.onelifestack.com` |
 
 ### Frontend
 None — API calls go to same-origin `/api/` and nginx proxies to backend.
@@ -636,3 +639,14 @@ Bank name + account number shown under every transaction row; optional account f
 - **View transactions filter (backend)** — `findTransactionsByViewIdFiltered(viewId, accountId, pageable)` in `ViewTransactionLinkRepository` with `JOIN FETCH` on main query and separate `countQuery` (no JOIN FETCH) both using CAST null-safe pattern; `ViewService.getTransactions` gains `UUID accountId` 5th param; `ViewController` gains `@RequestParam(required = false) UUID accountId`; old `findTransactionsByViewId` removed (dead code)
 - **View transactions filter (frontend)** — `getViewTransactions(id, page, size, accountId?)` in `api/views.ts`; `ListTab` adds `accountId` state + accounts query; selector above table (always visible even on empty results); changing account resets page to 0; `onMutate` used for remove-loading state (not `mutationFn`)
 - **Tests** — `DashboardServiceTest` has 4 tests covering null and non-null accountId paths; `getSummary_withAccountId_usesFilteredQueries` verifies old unfiltered queries are never called; 105 total tests pass
+
+### Feature — Google OAuth2 Login ✅ COMPLETE
+Single-click "Sign in with Google" on the login page. New users get a household auto-created; existing users are matched by email.
+
+- **Backend** — `spring-boot-starter-oauth2-client` added to `pom.xml`; `OAuth2UserService` (`DefaultOAuth2UserService` subclass) handles user lookup/creation on first Google login; `OAuth2SuccessHandler` generates a JWT via `JwtTokenProvider.generateTokenForUser` and redirects to `${FRONTEND_URL}/oauth2/callback?token=<jwt>`; `SecurityConfig` uses `SessionCreationPolicy.IF_REQUIRED` (session needed to store OAuth2 state during redirect), custom `authorizationEndpoint` at `/api/oauth2/authorization`, `redirectionEndpoint` at `/api/login/oauth2/code/*`
+- **`application.yml`** — `server.forward-headers-strategy: framework` ensures Spring reads `X-Forwarded-Proto`/`Host` headers so `redirect_uri` is built with `https://spends.onelifestack.com` (not `http://localhost`); `redirect-uri: "{baseUrl}/api/login/oauth2/code/{registrationId}"`; `app.oauth2.frontend-redirect-url: ${FRONTEND_URL:https://spends.onelifestack.com}/oauth2/callback`
+- **k8s** — credentials in `k8s/oauth2-sealed-secret.yaml` (SealedSecret `spends-oauth2-secret`); `backend-deployment.yaml` mounts `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` from it; plaintext template at `k8s/oauth2-secret.yaml.template` (gitignored pattern)
+- **Google Console setup** — Authorized JavaScript origins: `https://spends.onelifestack.com`; Authorized redirect URIs: `https://spends.onelifestack.com/api/login/oauth2/code/google`; see `k8s/oauth2-secret.yaml.template` for full instructions
+- **Frontend** — `OAuth2CallbackPage.tsx` reads `?token=` from URL, calls `/api/auth/me`, sets Zustand auth store, navigates to `/`; "Sign in with Google" button on `LoginPage.tsx` is a plain `<a href="/api/oauth2/authorization/google">`
+
+**PWA gotcha — `navigateFallbackDenylist`:** Workbox's SPA navigation fallback intercepts ALL browser navigations (including `/api/oauth2/authorization/google`) and serves cached `index.html`, so clicking the button loads the React app instead of reaching the backend. Fix: `navigateFallbackDenylist: [/^\/api\//]` in the `workbox:` block of `vite.config.ts`. Also: `runtimeCaching.urlPattern` regexes are matched against the full URL (`https://...`), so the anchor `^\/api\/` never matches — use `/\/api\//` without `^`.
