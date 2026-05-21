@@ -116,7 +116,7 @@ export default function Layout() {
       <aside
         className={clsx(
           'fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col',
-          'transition-transform duration-200 ease-in-out',
+          'motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-in-out',
           'md:relative md:z-auto md:translate-x-0 md:flex',
           'print:hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
@@ -154,7 +154,7 @@ export default function Layout() {
               <div key={group.key}>
                 <button
                   onClick={() => toggleSection(group.key)}
-                  className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                  className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded"
                 >
                   {group.label}
                   <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform duration-200', isOpen ? 'rotate-0' : '-rotate-90')} />

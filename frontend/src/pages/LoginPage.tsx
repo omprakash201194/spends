@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { TrendingUp, Eye, EyeOff } from 'lucide-react'
+import { TrendingUp, Eye, EyeOff, Check } from 'lucide-react'
 import { authApi } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import type { LoginRequest } from '../types'
@@ -46,6 +46,20 @@ export default function LoginPage() {
           <p className="mt-4 text-gray-400 text-sm">
             Personal expense tracking for your household — powered by your homelab.
           </p>
+          <ul className="mt-8 space-y-4">
+            {[
+              '10 years of transaction history importable in minutes',
+              'Auto-categorization with smart merchant rules',
+              'Your data, your homelab — no cloud required',
+            ].map((feature) => (
+              <li key={feature} className="flex items-start gap-3 text-sm text-gray-400">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-900 flex items-center justify-center mt-0.5">
+                  <Check className="w-3 h-3 text-blue-400" />
+                </span>
+                {feature}
+              </li>
+            ))}
+          </ul>
         </div>
         <p className="text-xs text-gray-600">© {new Date().getFullYear()} SpendStack</p>
       </div>
@@ -68,7 +82,7 @@ export default function LoginPage() {
           )}
 
           {errorMessage && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300" role="alert">
               {errorMessage}
             </div>
           )}
@@ -102,7 +116,8 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

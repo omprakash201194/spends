@@ -140,6 +140,7 @@ function CreateGoalForm({ onDone }: { onDone: () => void }) {
           <label className={labelCls}>Target amount (&#8377;)</label>
           <input
             type="number"
+            inputMode="decimal"
             min="1"
             placeholder="50000"
             value={form.target || ''}

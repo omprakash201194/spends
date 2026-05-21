@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -15,11 +15,17 @@ const primaryNav = [
   { to: '/import',       label: 'Import',       icon: Upload },
 ]
 
+const primaryPaths = new Set(['/', '/transactions', '/budgets', '/import'])
+
 interface Props {
   onMoreClick: () => void
 }
 
 export default function BottomNav({ onMoreClick }: Props) {
+  const { pathname } = useLocation()
+  // "More" is active when the current page isn't one of the 4 primary tabs
+  const moreIsActive = !primaryPaths.has(pathname)
+
   return (
     <nav
       className="md:hidden print:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex"
@@ -45,7 +51,12 @@ export default function BottomNav({ onMoreClick }: Props) {
       ))}
       <button
         onClick={onMoreClick}
-        className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 transition-colors"
+        className={clsx(
+          'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors',
+          moreIsActive
+            ? 'text-blue-600 dark:text-blue-400'
+            : 'text-gray-500 dark:text-gray-400',
+        )}
         aria-label="Open full menu"
       >
         <Menu className="w-5 h-5" />

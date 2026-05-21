@@ -56,6 +56,14 @@ const FALLBACK_PALETTE = [
   '#14b8a6', '#eab308', '#ec4899', '#06b6d4', '#84cc16', '#f59e0b',
 ]
 
+/** Returns Recharts contentStyle that adapts to current light/dark mode. */
+function tooltipStyle() {
+  const isDark = document.documentElement.classList.contains('dark')
+  return isDark
+    ? { fontSize: 12, borderRadius: 8, border: '1px solid #374151', background: '#1f2937', color: '#f9fafb' }
+    : { fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', background: '#ffffff', color: '#111827' }
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -115,8 +123,8 @@ export default function DashboardPage() {
           <div className="relative" ref={alertRef}>
             <button
               onClick={() => setAlertPopoverOpen(o => !o)}
-              className="relative p-2 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors"
-              title="View alerts"
+              className="relative p-2 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+              aria-label={`View ${alertCount} alert${alertCount !== 1 ? 's' : ''}`}
             >
               <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -157,7 +165,9 @@ function DashboardContent({ data, recurringData, goalsData }: {
       {recurringData && recurringData.patterns.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-300">
-            <Repeat className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <Repeat className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            </span>
             <span>
               <span className="font-semibold">{recurringData.patterns.length}</span> recurring pattern
               {recurringData.patterns.length !== 1 ? 's' : ''} detected (salary, rent, subscriptions)
@@ -172,7 +182,9 @@ function DashboardContent({ data, recurringData, goalsData }: {
       {goalsData && goalsData.length > 0 && (
         <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
-            <Target className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+              <Target className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            </span>
             <span>
               <span className="font-semibold">{goalsData.filter(g => g.achieved).length}</span> of{' '}
               <span className="font-semibold">{goalsData.length}</span>{' '}
@@ -291,7 +303,7 @@ function CategoryDonut({ categories }: { categories: DashboardLifetime['categori
             </Pie>
             <ChartTooltip
               formatter={(v: number) => inrFull(v)}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+              contentStyle={tooltipStyle()}
             />
             <Legend
               iconType="circle"
@@ -324,7 +336,7 @@ function BankComparison({ banks }: { banks: DashboardLifetime['banks'] }) {
             <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
             <ChartTooltip
               formatter={(v: number) => inrFull(v)}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+              contentStyle={tooltipStyle()}
             />
             <Bar dataKey="value" radius={[0, 6, 6, 0]}>
               {banks.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
@@ -355,7 +367,7 @@ function MonthlyTrend({ points }: { points: DashboardLifetime['monthlyTrends'] }
             <YAxis tickFormatter={inr} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
             <ChartTooltip
               formatter={(v: number, name: string) => [inrFull(v), name === 'spending' ? 'Spending' : 'Income']}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+              contentStyle={tooltipStyle()}
             />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
             <Line type="monotone" dataKey="spending" stroke="#ef4444" strokeWidth={2} dot={false} name="spending" />
@@ -381,7 +393,7 @@ function YearlyTrend({ yearly }: { yearly: DashboardLifetime['yearly'] }) {
             <YAxis tickFormatter={inr} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={55} />
             <ChartTooltip
               formatter={(v: number) => inrFull(v)}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+              contentStyle={tooltipStyle()}
             />
             <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
           </BarChart>
@@ -541,7 +553,7 @@ function StatCard({
   valueClass?: string
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 motion-safe:transition-transform active:scale-[0.98]">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>
         <span className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center`}>
@@ -569,11 +581,27 @@ function EmptyState() {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-xl h-28" />)}
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-xl h-28 p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+              <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+            </div>
+            <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-1" />
+            <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+          </div>
+        ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[...Array(4)].map((_, i) => <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-xl h-72" />)}
+      {/* Chart grid — each card has a title stub + a tall grey body */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-5">
+            <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-36 mb-4" />
+            <div className="h-64 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+          </div>
+        ))}
       </div>
     </div>
   )

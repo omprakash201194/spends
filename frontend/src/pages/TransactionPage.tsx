@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus, BookmarkPlus } from 'lucide-react'
+import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus, BookmarkPlus, SlidersHorizontal } from 'lucide-react'
 import { extractTags } from '../utils/tags'
 import CategoryRulePicker from '../components/CategoryRulePicker'
 import { downloadTransactionsCsv } from '../api/export'
@@ -58,6 +58,7 @@ export default function TransactionPage() {
   const qc = useQueryClient()
 
   // filters
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [search, setSearch]         = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false)
@@ -343,8 +344,8 @@ export default function TransactionPage() {
               qc.invalidateQueries({ queryKey: ['transactions-summary'] })
             }}
             disabled={isFetching}
-            title="Refresh transactions"
-            className="flex items-center justify-center w-9 h-9 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Refresh transactions"
+            className="flex items-center justify-center w-9 h-9 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <RefreshCw className={clsx('w-3.5 h-3.5', isFetching && 'animate-spin')} />
           </button>
@@ -360,23 +361,41 @@ export default function TransactionPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48">
+      {/* Row 1: Search (always visible) + Filters toggle (mobile only) */}
+      <div className="flex gap-2 mb-2">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-            placeholder='Search… use "and" / "or" between terms, -word to exclude'
+            placeholder='Search merchants, remarks…'
             className="w-full pl-8 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
           />
           {search && (
-            <button onClick={() => { setSearch(''); setPage(0) }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <button onClick={() => { setSearch(''); setPage(0) }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded" aria-label="Clear search">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
+        {/* Filters toggle — visible on mobile, hidden on md+ where all filters are always shown */}
+        <button
+          onClick={() => setFiltersOpen(o => !o)}
+          className={clsx(
+            'md:hidden flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+            filtersOpen || hasFilters
+              ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-300'
+              : 'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+          )}
+          aria-expanded={filtersOpen}
+          aria-label="Toggle filters"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <span>Filters{hasFilters ? ` (${[type !== 'ALL', !!categoryId, !!uncategorizedOnly, !!accountId, !!dateFrom, !!dateTo].filter(Boolean).length})` : ''}</span>
+        </button>
+      </div>
 
+      {/* Row 2: Secondary filters — always visible on md+, collapsible on mobile */}
+      <div className={clsx('flex-wrap gap-2 mb-2', filtersOpen ? 'flex' : 'hidden md:flex')}>
         {/* Type */}
         <select
           value={type}
@@ -437,6 +456,7 @@ export default function TransactionPage() {
           title="To date"
         />
       </div>
+      {/* /secondary filters */}
 
       {/* Year quick-filter chips */}
       {availableYears.length > 0 && (

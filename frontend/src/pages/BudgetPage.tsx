@@ -171,6 +171,7 @@ export default function BudgetPage() {
                   </select>
                   <input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Annual budget amount"
                     value={annualAmount}
                     onChange={e => setAnnualAmount(e.target.value)}
@@ -354,6 +355,7 @@ function BudgetCard({
                 if (e.key === 'Enter') confirmEdit()
                 if (e.key === 'Escape') setEditing(false)
               }}
+              inputMode="decimal"
               className="w-24 text-sm border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
               placeholder="limit"
             />
