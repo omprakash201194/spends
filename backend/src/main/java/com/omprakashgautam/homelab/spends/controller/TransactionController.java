@@ -74,6 +74,29 @@ public class TransactionController {
         ));
     }
 
+    /**
+     * Picker counts for the Transactions "By time" sub-view.
+     *
+     * Always returns `years`. Returns `months` only when `year` is set;
+     * returns `weeks` only when `year` and `month` are both set.
+     * All other filter params (search, accountId, categoryId, type,
+     * uncategorizedOnly) shape every count in the response.
+     */
+    @GetMapping("/time-aggregates")
+    public ResponseEntity<TransactionDto.TimeAggregateResponse> timeAggregates(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(defaultValue = "ALL") String type,
+            @RequestParam(defaultValue = "false") boolean uncategorizedOnly,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month
+    ) {
+        return ResponseEntity.ok(transactionService.getTimeAggregates(
+                principal.getId(), search, categoryId, accountId, type, uncategorizedOnly, year, month));
+    }
+
     @PatchMapping("/{id}/category")
     public ResponseEntity<TransactionDto.Response> updateCategory(
             @AuthenticationPrincipal UserDetailsImpl principal,
