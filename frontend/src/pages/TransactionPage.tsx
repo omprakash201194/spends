@@ -19,13 +19,15 @@ import {
 import { clsx } from 'clsx'
 import {
   getTransactions, getTransactionSummary, updateCategory, toggleReviewed, updateNote, bulkUpdateCategory,
-  type Transaction, type TransactionFilters,
+  getTimeAggregates,
+  type Transaction, type TransactionFilters, type TimeAggregateResponse,
 } from '../api/transactions'
 import { getCategories, buildCategoryTree, type Category } from '../api/categories'
 import { getBankAccounts } from '../api/bankAccounts'
 import { listViews, addTransactionsToView, type ViewResponse } from '../api/views'
 import { getAvailableYears } from '../api/reports'
 import { useDebounce } from '../hooks/useDebounce'
+import { TimePickers } from '../components/TimePickers'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -123,10 +125,6 @@ export default function TransactionPage() {
     }, { replace: true })
   }
 
-  // Task 9 will consume year/month/weekBucket/setYear/setMonth/setWeek.
-  // Suppress noUnusedLocals until then.
-  void year; void month; void weekBucket; void setYear; void setMonth; void setWeek
-
   // One-time seed of legacy URL params from chart click-through (existing behavior).
   const [seededFromUrl, setSeededFromUrl] = useState(false)
   useEffect(() => {
@@ -147,13 +145,28 @@ export default function TransactionPage() {
 
   const debouncedSearch = useDebounce(search, 300)
 
+  // When in by-time view, derive dateFrom/dateTo from the picker selection.
+  // Otherwise use whatever the user typed into the regular date inputs.
+  const derivedDateRange = (() => {
+    if (view !== 'by-time' || year == null) return { from: dateFrom || undefined, to: dateTo || undefined }
+    if (month == null) return { from: `${year}-01-01`, to: `${year}-12-31` }
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const lengthOfMonth = new Date(year, month, 0).getDate()  // month is 1-indexed; this gives last day
+    if (weekBucket == null) {
+      return { from: `${year}-${pad(month)}-01`, to: `${year}-${pad(month)}-${pad(lengthOfMonth)}` }
+    }
+    const startDay = weekBucket * 7 + 1
+    const endDay = Math.min(startDay + 6, lengthOfMonth)
+    return { from: `${year}-${pad(month)}-${pad(startDay)}`, to: `${year}-${pad(month)}-${pad(endDay)}` }
+  })()
+
   const filters: TransactionFilters = {
     search: debouncedSearch || undefined,
     categoryId: categoryId || undefined,
     accountId: accountId || undefined,
     type,
-    dateFrom: dateFrom || undefined,
-    dateTo: dateTo || undefined,
+    dateFrom: derivedDateRange.from,
+    dateTo: derivedDateRange.to,
     page,
     size: 25,
     sortBy,
@@ -168,11 +181,11 @@ export default function TransactionPage() {
     staleTime: 30_000,
   })
 
-  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, uncategorizedOnly: uncategorizedOnly || undefined }
+  const summaryFilters = { search: debouncedSearch || undefined, categoryId: categoryId || undefined, accountId: accountId || undefined, type, dateFrom: derivedDateRange.from, dateTo: derivedDateRange.to, uncategorizedOnly: uncategorizedOnly || undefined }
   const { data: summary } = useQuery({
     queryKey: ['transactions-summary', summaryFilters],
     queryFn: () => getTransactionSummary(summaryFilters),
-    enabled: !!(debouncedSearch || categoryId || accountId || type !== 'ALL' || dateFrom || dateTo || uncategorizedOnly),
+    enabled: !!(debouncedSearch || categoryId || accountId || type !== 'ALL' || derivedDateRange.from || derivedDateRange.to || uncategorizedOnly),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   })
@@ -200,6 +213,39 @@ export default function TransactionPage() {
     queryFn: getAvailableYears,
     staleTime: Infinity,
   })
+
+  // ── Time-aggregates (picker counts) ─────────────────────────────────────────
+
+  const timeAggFilters = {
+    search: debouncedSearch || undefined,
+    categoryId: categoryId || undefined,
+    accountId: accountId || undefined,
+    type,
+    uncategorizedOnly: uncategorizedOnly || undefined,
+    year: year ?? undefined,
+    month: month ?? undefined,
+  }
+  const { data: timeAggregates } = useQuery<TimeAggregateResponse>({
+    queryKey: ['transactions', 'time-aggregates', timeAggFilters],
+    queryFn: () => getTimeAggregates(timeAggFilters),
+    enabled: view === 'by-time',
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  })
+
+  // Default state when switching to by-time with no year/month in URL.
+  useEffect(() => {
+    if (view !== 'by-time' || !timeAggregates) return
+    if (year == null && timeAggregates.years.length > 0) {
+      setYear(timeAggregates.years[0].year)  // years are sorted DESC
+      return  // month effect fires next render once months are fetched
+    }
+    if (year != null && month == null && timeAggregates.months) {
+      const populated = timeAggregates.months.filter(m => m.total > 0)
+      if (populated.length > 0) setMonth(populated[populated.length - 1].month)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, timeAggregates, year, month])
 
   const aiRuleCategoryIds       = new Set(rules.filter(r => r.aiGenerated).map(r => r.categoryId))
   const categoryIdsWithAnyRule  = new Set(rules.map(r => r.categoryId))
@@ -516,26 +562,30 @@ export default function TransactionPage() {
           </select>
         )}
 
-        {/* Date range */}
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-          title="From date"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(0) }}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-          title="To date"
-        />
+        {/* Date range — list view only */}
+        {view === 'list' && (
+          <>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0) }}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+              title="From date"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0) }}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+              title="To date"
+            />
+          </>
+        )}
       </div>
       {/* /secondary filters */}
 
-      {/* Year quick-filter chips */}
-      {availableYears.length > 0 && (
+      {/* Year quick-filter chips — list view only */}
+      {view === 'list' && availableYears.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {availableYears.map(year => (
             <button
@@ -546,6 +596,21 @@ export default function TransactionPage() {
               {year}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* TimePickers — by-time view only */}
+      {view === 'by-time' && (
+        <div className="w-full mb-2">
+          <TimePickers
+            data={timeAggregates}
+            year={year}
+            month={month}
+            weekBucket={weekBucket}
+            onYearChange={(y) => { setYear(y); setPage(0) }}
+            onMonthChange={(m) => { setMonth(m); setPage(0) }}
+            onWeekChange={(b) => { setWeek(b); setPage(0) }}
+          />
         </div>
       )}
 
