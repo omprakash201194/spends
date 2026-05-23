@@ -103,3 +103,47 @@ export async function bulkUpdateCategory(ids: string[], categoryId: string): Pro
   const { data } = await apiClient.patch<{ updated: number }>('/transactions/bulk-category', { ids, categoryId })
   return data
 }
+
+// ── Time-aggregates ──────────────────────────────────────────────────────────
+
+export interface YearAgg {
+  year: number
+  total: number
+  uncategorized: number
+}
+
+export interface MonthAgg {
+  month: number
+  total: number
+  uncategorized: number
+}
+
+export interface WeekAgg {
+  bucket: number
+  startDay: number
+  endDay: number
+  total: number
+  uncategorized: number
+}
+
+export interface TimeAggregateResponse {
+  years: YearAgg[]
+  months: MonthAgg[] | null
+  weeks: WeekAgg[] | null
+}
+
+export type TimeAggregateFilters = Omit<
+  TransactionFilters,
+  'page' | 'size' | 'sortBy' | 'sortDir' | 'dateFrom' | 'dateTo'
+> & {
+  year?: number
+  month?: number
+}
+
+export async function getTimeAggregates(filters: TimeAggregateFilters = {}): Promise<TimeAggregateResponse> {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v !== undefined && v !== '' && v !== 'ALL')
+  )
+  const { data } = await apiClient.get<TimeAggregateResponse>('/transactions/time-aggregates', { params })
+  return data
+}
