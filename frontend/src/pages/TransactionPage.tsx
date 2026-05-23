@@ -157,6 +157,12 @@ export default function TransactionPage() {
     }
     const startDay = weekBucket * 7 + 1
     const endDay = Math.min(startDay + 6, lengthOfMonth)
+    // Defensive: if the URL has a stale `week` param that points to a bucket
+    // that doesn't exist in this month (e.g., week=5 on a 28-day February),
+    // fall back to the full-month range instead of producing an inverted from>to range.
+    if (startDay > endDay) {
+      return { from: `${year}-${pad(month)}-01`, to: `${year}-${pad(month)}-${pad(lengthOfMonth)}` }
+    }
     return { from: `${year}-${pad(month)}-${pad(startDay)}`, to: `${year}-${pad(month)}-${pad(endDay)}` }
   })()
 
