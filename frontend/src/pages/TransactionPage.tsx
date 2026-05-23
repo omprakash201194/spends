@@ -74,8 +74,60 @@ export default function TransactionPage() {
   // pagination
   const [page, setPage] = useState(0)
 
-  // Seed filters from URL params once on mount (used by chart click-through from dashboards).
-  const [searchParams] = useSearchParams()
+  // ── View + time state (URL-driven) ──────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view = (searchParams.get('view') === 'by-time' ? 'by-time' : 'list') as 'list' | 'by-time'
+  const urlYear  = searchParams.get('year')
+  const urlMonth = searchParams.get('month')
+  const urlWeek  = searchParams.get('week')
+  const year       = urlYear  ? Number(urlYear)         : null
+  const month      = urlMonth ? Number(urlMonth)        : null
+  const weekBucket = urlWeek  ? Number(urlWeek) - 1     : null  // URL is 1-indexed, state is 0-indexed
+
+  const setView = (next: 'list' | 'by-time') => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (next === 'by-time') params.set('view', 'by-time')
+      else {
+        params.delete('view')
+        params.delete('year'); params.delete('month'); params.delete('week')
+      }
+      return params
+    }, { replace: true })
+  }
+
+  const setYear = (y: number | null) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (y == null) { params.delete('year'); params.delete('month'); params.delete('week') }
+      else { params.set('year', String(y)); params.delete('month'); params.delete('week') }
+      return params
+    }, { replace: true })
+  }
+
+  const setMonth = (m: number | null) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (m == null) { params.delete('month'); params.delete('week') }
+      else { params.set('month', String(m)); params.delete('week') }
+      return params
+    }, { replace: true })
+  }
+
+  const setWeek = (bucket: number | null) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev)
+      if (bucket == null) params.delete('week')
+      else params.set('week', String(bucket + 1))  // 0-indexed bucket → 1-indexed URL
+      return params
+    }, { replace: true })
+  }
+
+  // Task 9 will consume year/month/weekBucket/setYear/setMonth/setWeek.
+  // Suppress noUnusedLocals until then.
+  void year; void month; void weekBucket; void setYear; void setMonth; void setWeek
+
+  // One-time seed of legacy URL params from chart click-through (existing behavior).
   const [seededFromUrl, setSeededFromUrl] = useState(false)
   useEffect(() => {
     if (seededFromUrl) return
@@ -90,7 +142,8 @@ export default function TransactionPage() {
     if (dt)  setDateTo(dt)
     if (t === 'DEBIT' || t === 'CREDIT' || t === 'ALL') setType(t)
     setSeededFromUrl(true)
-  }, [searchParams, seededFromUrl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const debouncedSearch = useDebounce(search, 300)
 
@@ -338,6 +391,29 @@ export default function TransactionPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* View switcher */}
+          <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5 text-sm">
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              className={clsx(
+                'px-3 py-1.5 rounded',
+                view === 'list'
+                  ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+              )}
+            >List</button>
+            <button
+              type="button"
+              onClick={() => setView('by-time')}
+              className={clsx(
+                'px-3 py-1.5 rounded',
+                view === 'by-time'
+                  ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+              )}
+            >By time</button>
+          </div>
           <button
             onClick={() => {
               qc.invalidateQueries({ queryKey: ['transactions'] })
