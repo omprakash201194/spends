@@ -40,6 +40,7 @@ public class TransactionService {
     private final CategoryRuleRepository categoryRuleRepository;
     private final UserRepository userRepository;
     private final EntityManager entityManager;
+    private final TransactionAggregateQuery aggregateQuery;
 
     // ── List with filters ────────────────────────────────────────────────────
 
@@ -136,6 +137,70 @@ public class TransactionService {
         BigDecimal debit  = (BigDecimal) row[1];
         long count        = (Long) row[2];
         return new TransactionDto.SummaryResponse(credit, debit, credit.subtract(debit), count);
+    }
+
+    // ── Time-view aggregates (year / month / week pickers) ───────────────────
+
+    @Transactional(readOnly = true)
+    public TransactionDto.TimeAggregateResponse getTimeAggregates(
+            UUID userId,
+            String search,
+            UUID categoryId,
+            UUID accountId,
+            String type,
+            boolean uncategorizedOnly,
+            Integer year,
+            Integer month
+    ) {
+        // dateFrom/dateTo are intentionally NOT passed: the year row spans all years,
+        // and the year/month params themselves constrain the months/weeks sub-aggregations.
+        Set<UUID> categoryIds = null;
+        if (!uncategorizedOnly && categoryId != null) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+            categoryIds = expandCategoryIds(categoryId, user.getHousehold().getId());
+        }
+        Specification<Transaction> spec = buildSpec(userId, search, categoryIds, accountId, type, null, null, uncategorizedOnly);
+
+        List<TransactionDto.YearAgg> years = aggregateQuery.yearAggregates(spec);
+
+        List<TransactionDto.MonthAgg> months = null;
+        if (year != null) {
+            List<TransactionDto.MonthAgg> raw = aggregateQuery.monthAggregates(spec, year);
+            months = zeroFillMonths(raw);
+        }
+
+        List<TransactionDto.WeekAgg> weeks = null;
+        if (year != null && month != null) {
+            List<TransactionDto.WeekAgg> raw = aggregateQuery.weekAggregates(spec, year, month);
+            weeks = zeroFillWeeks(raw, year, month);
+        }
+
+        return new TransactionDto.TimeAggregateResponse(years, months, weeks);
+    }
+
+    private List<TransactionDto.MonthAgg> zeroFillMonths(List<TransactionDto.MonthAgg> populated) {
+        java.util.Map<Integer, TransactionDto.MonthAgg> byMonth = populated.stream()
+                .collect(java.util.stream.Collectors.toMap(TransactionDto.MonthAgg::month, m -> m));
+        List<TransactionDto.MonthAgg> out = new ArrayList<>(12);
+        for (int m = 1; m <= 12; m++) {
+            out.add(byMonth.getOrDefault(m, new TransactionDto.MonthAgg(m, 0L, 0L)));
+        }
+        return out;
+    }
+
+    private List<TransactionDto.WeekAgg> zeroFillWeeks(List<TransactionDto.WeekAgg> populated, int year, int month) {
+        java.util.Map<Integer, TransactionDto.WeekAgg> byBucket = populated.stream()
+                .collect(java.util.stream.Collectors.toMap(TransactionDto.WeekAgg::bucket, w -> w));
+        int lengthOfMonth = java.time.YearMonth.of(year, month).lengthOfMonth();
+        int lastBucket = (lengthOfMonth - 1) / 7; // 27→3 (Feb non-leap), 28→4, 29→4, 30→4
+        List<TransactionDto.WeekAgg> out = new ArrayList<>(lastBucket + 1);
+        for (int b = 0; b <= lastBucket; b++) {
+            int startDay = b * 7 + 1;
+            int endDay = (b == lastBucket) ? lengthOfMonth : startDay + 6;
+            out.add(byBucket.getOrDefault(b, new TransactionDto.WeekAgg(b, startDay, endDay, 0L, 0L)));
+        }
+        return out;
     }
 
     private Specification<Transaction> buildSpec(
