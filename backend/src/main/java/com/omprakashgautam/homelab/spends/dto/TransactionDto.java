@@ -82,4 +82,18 @@ public class TransactionDto {
             BigDecimal net,
             long count
     ) {}
+
+    // ── Time-aggregates (year/month/week picker counts) ──────────────────────
+
+    public record YearAgg(int year, long total, long uncategorized) {}
+
+    public record MonthAgg(int month, long total, long uncategorized) {}
+
+    public record WeekAgg(int bucket, int startDay, int endDay, long total, long uncategorized) {}
+
+    public record TimeAggregateResponse(
+            List<YearAgg> years,
+            List<MonthAgg> months,
+            List<WeekAgg> weeks
+    ) {}
 }
