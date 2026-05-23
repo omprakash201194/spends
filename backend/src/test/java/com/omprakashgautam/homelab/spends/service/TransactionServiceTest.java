@@ -26,8 +26,12 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mockito.Mockito;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -36,6 +40,7 @@ class TransactionServiceTest {
     @Mock CategoryRepository      categoryRepository;
     @Mock CategoryRuleRepository  categoryRuleRepository;
     @Mock UserRepository          userRepository;
+    @Mock TransactionAggregateQuery aggregateQuery;
 
     @InjectMocks TransactionService transactionService;
 
@@ -198,5 +203,118 @@ class TransactionServiceTest {
 
         org.mockito.Mockito.verifyNoInteractions(userRepository);
         org.mockito.Mockito.verifyNoInteractions(categoryRepository);
+    }
+
+    @Test
+    void getTimeAggregates_returnsYearsOnly_whenYearNotSet() {
+        UUID userId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
+                new TransactionDto.YearAgg(2026, 424, 37),
+                new TransactionDto.YearAgg(2025, 1200, 50)
+        ));
+
+        TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
+                userId, null, null, null, "ALL", false, null, null);
+
+        assertThat(result.years()).hasSize(2);
+        assertThat(result.years().get(0).year()).isEqualTo(2026);
+        assertThat(result.months()).isNull();
+        assertThat(result.weeks()).isNull();
+        Mockito.verify(aggregateQuery, Mockito.never()).monthAggregates(any(), anyInt());
+        Mockito.verify(aggregateQuery, Mockito.never()).weekAggregates(any(), anyInt(), anyInt());
+    }
+
+    @Test
+    void getTimeAggregates_returnsMonthsArray_whenYearSet_zeroFillsAllTwelve() {
+        UUID userId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
+                new TransactionDto.YearAgg(2026, 424, 37)));
+        when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
+                new TransactionDto.MonthAgg(5, 142, 18),
+                new TransactionDto.MonthAgg(6, 80, 4)
+        ));
+
+        TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
+                userId, null, null, null, "ALL", false, 2026, null);
+
+        assertThat(result.months()).hasSize(12);
+        assertThat(result.months().get(0).month()).isEqualTo(1);
+        assertThat(result.months().get(0).total()).isEqualTo(0L);
+        assertThat(result.months().get(4).month()).isEqualTo(5);
+        assertThat(result.months().get(4).total()).isEqualTo(142L);
+        assertThat(result.months().get(4).uncategorized()).isEqualTo(18L);
+        assertThat(result.months().get(11).month()).isEqualTo(12);
+        assertThat(result.months().get(11).total()).isEqualTo(0L);
+        assertThat(result.weeks()).isNull();
+        Mockito.verify(aggregateQuery, Mockito.never()).weekAggregates(any(), anyInt(), anyInt());
+    }
+
+    @Test
+    void getTimeAggregates_returnsWeekBuckets_whenYearAndMonthSet_zeroFillsBuckets() {
+        UUID userId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
+                new TransactionDto.YearAgg(2026, 424, 37)));
+        when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
+                new TransactionDto.MonthAgg(5, 142, 18)));
+        when(aggregateQuery.weekAggregates(any(), eq(2026), eq(5))).thenReturn(List.of(
+                new TransactionDto.WeekAgg(0, 1, 7, 34, 5),
+                new TransactionDto.WeekAgg(2, 15, 21, 28, 7)
+        ));
+
+        TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
+                userId, null, null, null, "ALL", false, 2026, 5);
+
+        assertThat(result.weeks()).hasSize(5);
+        assertThat(result.weeks().get(0).total()).isEqualTo(34L);
+        assertThat(result.weeks().get(1).total()).isEqualTo(0L);
+        assertThat(result.weeks().get(1).startDay()).isEqualTo(8);
+        assertThat(result.weeks().get(1).endDay()).isEqualTo(14);
+        assertThat(result.weeks().get(2).total()).isEqualTo(28L);
+        assertThat(result.weeks().get(4).bucket()).isEqualTo(4);
+        assertThat(result.weeks().get(4).startDay()).isEqualTo(29);
+        assertThat(result.weeks().get(4).endDay()).isEqualTo(31);
+    }
+
+    @Test
+    void getTimeAggregates_zeroFillsCorrectBucketCount_forFebruaryNonLeap() {
+        UUID userId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
+                new TransactionDto.YearAgg(2026, 100, 5)));
+        when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
+                new TransactionDto.MonthAgg(2, 50, 3)));
+        when(aggregateQuery.weekAggregates(any(), eq(2026), eq(2))).thenReturn(List.of());
+
+        TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
+                userId, null, null, null, "ALL", false, 2026, 2);
+
+        assertThat(result.weeks()).hasSize(4);
+        assertThat(result.weeks().get(3).bucket()).isEqualTo(3);
+        assertThat(result.weeks().get(3).startDay()).isEqualTo(22);
+        assertThat(result.weeks().get(3).endDay()).isEqualTo(28);
+    }
+
+    @Test
+    void getTimeAggregates_emptyUniverse_returnsEmptyYearsArray() {
+        UUID userId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of());
+
+        TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
+                userId, null, null, null, "ALL", false, null, null);
+
+        assertThat(result.years()).isEmpty();
+        assertThat(result.months()).isNull();
+        assertThat(result.weeks()).isNull();
+    }
+
+    @Test
+    void getTimeAggregates_buildsSpecWithoutDateRange_evenIfFilterFieldsHaveValues() {
+        UUID userId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        when(aggregateQuery.yearAggregates(any())).thenReturn(List.of());
+
+        transactionService.getTimeAggregates(
+                userId, "swiggy", null, accountId, "DEBIT", false, null, null);
+
+        Mockito.verify(aggregateQuery).yearAggregates(any());
     }
 }
