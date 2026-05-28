@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 // spends/frontend/src/pages/ReportsPage.tsx
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -115,6 +116,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <FeatureGuide />
 
       {/* Screen header (hidden when printing) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 print:hidden">

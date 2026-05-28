@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 028-missing-constraints
+      author: system
+      changes:
+        - sql:
+            sql: >
+              -- Prevent duplicate bank accounts per user
+              ALTER TABLE bank_account
+                ADD CONSTRAINT uq_bank_account_user_bank_number
+                UNIQUE (user_id, bank_name, account_number_masked);
+
+              -- Prevent two widgets sharing the same grid position in the same dashboard
+              CREATE UNIQUE INDEX IF NOT EXISTS uq_widget_dashboard_position
+                ON dashboard_widget (dashboard_id, position)
+                WHERE dashboard_id IS NOT NULL;

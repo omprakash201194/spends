@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -26,9 +26,12 @@ import AlertsPage from './pages/AlertsPage'
 import CustomDashboardPage from './pages/CustomDashboardPage'
 import DashboardListPage from './pages/DashboardListPage'
 import DashboardDetailPage from './pages/DashboardDetailPage'
+import OnboardingPage from './pages/OnboardingPage'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
+import { usePersonaStore } from './store/personaStore'
+import { useAuthStore } from './store/authStore'
 
 function ThemeApplier() {
   const { theme } = useThemeStore()
@@ -42,6 +45,16 @@ function ThemeApplier() {
   return null
 }
 
+// Redirects logged-in users to /onboarding if they haven't picked a persona yet
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore()
+  const { onboardingDone } = usePersonaStore()
+  if (user && !onboardingDone) {
+    return <Navigate to="/onboarding" replace />
+  }
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -53,10 +66,20 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Layout />
+              <OnboardingGuard>
+                <Layout />
+              </OnboardingGuard>
             </ProtectedRoute>
           }
         >

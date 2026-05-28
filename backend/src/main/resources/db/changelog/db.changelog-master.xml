@@ -32,5 +32,8 @@
     <include file="changes/025-bundle-fields.yaml" relativeToChangelogFile="true"/>
     <include file="changes/026-password-nullable.yaml" relativeToChangelogFile="true"/>
     <include file="changes/027-password-reset-tokens.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/028-missing-constraints.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/029-additional-indexes.yaml" relativeToChangelogFile="true"/>
+    <include file="changes/030-trgm-search-indexes.yaml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

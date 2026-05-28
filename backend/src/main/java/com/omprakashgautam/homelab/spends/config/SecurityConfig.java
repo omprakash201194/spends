@@ -4,6 +4,7 @@ import com.omprakashgautam.homelab.spends.security.JwtAuthenticationFilter;
 import com.omprakashgautam.homelab.spends.security.OAuth2SuccessHandler;
 import com.omprakashgautam.homelab.spends.security.OAuth2UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -81,10 +82,14 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    @Value("${app.cors.allowed-origins:https://spends.onelifestack.com,https://spends.homelab.local}")
+    private String allowedOriginsRaw;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = List.of(allowedOriginsRaw.split(","));
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

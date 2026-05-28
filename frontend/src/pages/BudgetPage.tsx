@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PiggyBank, Pencil, Trash2, Check, X } from 'lucide-react'
@@ -62,6 +63,7 @@ export default function BudgetPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <FeatureGuide />
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Budgets</h1>
         {tab === 'monthly' && data && (

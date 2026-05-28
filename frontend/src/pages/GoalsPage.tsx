@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Target, Plus, Trash2, CheckCircle2, Clock, X } from 'lucide-react'
@@ -32,6 +33,7 @@ export default function GoalsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <FeatureGuide />
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -242,8 +244,9 @@ function GoalCard({ goal }: { goal: GoalResponse }) {
           <button
             onClick={() => setConfirmDelete(true)}
             className="text-gray-300 dark:text-gray-600 hover:text-red-500 transition-colors flex-shrink-0"
+            aria-label={`Delete goal ${goal.name}`}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
       </div>

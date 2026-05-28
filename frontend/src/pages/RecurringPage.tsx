@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Repeat, Loader2, Calendar, TrendingDown, TrendingUp } from 'lucide-react'
@@ -124,6 +125,7 @@ export default function RecurringPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <FeatureGuide />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>

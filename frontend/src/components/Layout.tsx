@@ -28,6 +28,8 @@ import {
 import { clsx } from 'clsx'
 import { useThemeStore } from '../store/themeStore'
 import { useNavStore } from '../store/navStore'
+import { usePersonaStore } from '../store/personaStore'
+import { isRouteVisible, getPersonaDef } from '../config/personas'
 import BottomNav from './BottomNav'
 import InstallBanner from './InstallBanner'
 
@@ -87,7 +89,10 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggle } = useThemeStore()
   const { openSections, toggle: toggleSection } = useNavStore()
+  const { persona } = usePersonaStore()
   const touchStartX = useRef(0)
+
+  const personaDef = getPersonaDef(persona)
 
   const handleLogout = () => {
     logout()
@@ -149,6 +154,8 @@ export default function Layout() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
           {NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter(item => isRouteVisible(persona, item.to))
+            if (visibleItems.length === 0) return null
             const isOpen = openSections[group.key] ?? true
             return (
               <div key={group.key}>
@@ -161,7 +168,7 @@ export default function Layout() {
                 </button>
                 {isOpen && (
                   <div className="space-y-0.5 mb-2">
-                    {group.items.map(({ to, label, icon: Icon }) => (
+                    {visibleItems.map(({ to, label, icon: Icon }) => (
                       <NavLink key={to} to={to} end={to === '/'} onClick={closeSidebar}
                         className={({ isActive }) => clsx(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
@@ -199,6 +206,16 @@ export default function Layout() {
               <p className="text-xs text-gray-400 truncate">{user?.householdName}</p>
             </div>
           </div>
+          {/* Persona badge */}
+          <button
+            onClick={() => { navigate('/onboarding'); closeSidebar() }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors mb-1"
+            title="Change persona"
+          >
+            <span className="text-base leading-none">{personaDef.emoji}</span>
+            <span className="flex-1 text-left">{personaDef.label}</span>
+            <span className="text-xs text-gray-600 hover:text-gray-400">Change</span>
+          </button>
           <button
             onClick={toggle}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors mb-1"

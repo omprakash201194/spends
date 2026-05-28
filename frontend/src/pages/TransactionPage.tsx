@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import React, { useState, useCallback, useEffect } from 'react'
 import { Download, MessageSquare, Scissors, Sparkles, X as XIcon, Check as CheckIcon, AlertCircle, Plus, BookmarkPlus, SlidersHorizontal } from 'lucide-react'
 import { extractTags } from '../utils/tags'
@@ -258,7 +259,24 @@ export default function TransactionPage() {
 
   const toggleReviewedMut = useMutation({
     mutationFn: toggleReviewed,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+    onMutate: async (txId: string) => {
+      await qc.cancelQueries({ queryKey: ['transactions', filters] })
+      const previous = qc.getQueryData(['transactions', filters])
+      qc.setQueryData(['transactions', filters], (old: typeof data) => {
+        if (!old) return old
+        return {
+          ...old,
+          content: old.content.map(tx =>
+            tx.id === txId ? { ...tx, reviewed: !tx.reviewed } : tx
+          ),
+        }
+      })
+      return { previous }
+    },
+    onError: (_err, _txId, context) => {
+      if (context?.previous) qc.setQueryData(['transactions', filters], context.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   })
 
   // ── Bulk selection ────────────────────────────────────────────────────────────
@@ -432,6 +450,7 @@ export default function TransactionPage() {
 
   return (
     <div className="p-4 sm:p-6">
+      <FeatureGuide />
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>

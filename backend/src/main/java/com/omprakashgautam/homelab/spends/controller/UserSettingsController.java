@@ -7,6 +7,7 @@ import com.omprakashgautam.homelab.spends.repository.HouseholdRepository;
 import com.omprakashgautam.homelab.spends.repository.UserRepository;
 import com.omprakashgautam.homelab.spends.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/settings")
 @RequiredArgsConstructor
@@ -44,6 +46,7 @@ public class UserSettingsController {
         User user = userRepository.findById(principal.getId()).orElseThrow();
         user.setClaudeApiKey(request.apiKey() != null ? request.apiKey().trim() : null);
         userRepository.save(user);
+        log.info("AUDIT: apiKey saved userId={}", principal.getId());
         return ResponseEntity.ok(toSettings(user));
     }
 
@@ -54,6 +57,7 @@ public class UserSettingsController {
         User user = userRepository.findById(principal.getId()).orElseThrow();
         user.setClaudeApiKey(null);
         userRepository.save(user);
+        log.info("AUDIT: apiKey removed userId={}", principal.getId());
         return ResponseEntity.ok(toSettings(user));
     }
 

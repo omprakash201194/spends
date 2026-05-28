@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,6 +93,15 @@ public class PasswordResetService {
         );
         mailSender.send(message);
         log.info("Password reset email sent to {}", to);
+    }
+
+    @Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void purgeExpiredTokens() {
+        int deleted = tokenRepository.deleteByExpiresAtBefore(Instant.now());
+        if (deleted > 0) {
+            log.info("Purged {} expired password reset token(s)", deleted);
+        }
     }
 
     private String hash(String value) {

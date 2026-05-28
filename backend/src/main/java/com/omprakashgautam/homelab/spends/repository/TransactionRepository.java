@@ -796,4 +796,71 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
         ORDER BY YEAR(t.valueDate) ASC
         """)
     List<Object[]> yearlySpending(@Param("userId") UUID userId);
+
+    // ── TAG widget filter queries ─────────────────────────────────────────────
+    // All three use LOWER(rawRemarks) LIKE LOWER('%tag%') so the GIN trigram
+    // index on LOWER(raw_remarks) can accelerate the scan.
+
+    /**
+     * Category breakdown for transactions whose remarks contain the tag string.
+     * Row layout: [categoryId (UUID|null), categoryName (String|null), color (String|null), sum (BigDecimal)]
+     */
+    @Query("""
+        SELECT t.category.id, t.category.name, t.category.color,
+               COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND LOWER(COALESCE(t.rawRemarks, '')) LIKE LOWER(CONCAT('%', :tag, '%'))
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY t.category.id, t.category.name, t.category.color
+        ORDER BY SUM(t.withdrawalAmount) DESC
+        """)
+    List<Object[]> categoryBreakdownForTagByAccount(@Param("userId") UUID userId,
+                                                     @Param("from") LocalDate from,
+                                                     @Param("to") LocalDate to,
+                                                     @Param("tag") String tag,
+                                                     @Param("accountId") UUID accountId);
+
+    /**
+     * Monthly trend for transactions whose remarks contain the tag string.
+     * Row layout: [yearMonth (String), withdrawal (BigDecimal), deposit (BigDecimal), count (Long)]
+     */
+    @Query("""
+        SELECT FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM'),
+               COALESCE(SUM(t.withdrawalAmount), 0),
+               COALESCE(SUM(t.depositAmount), 0),
+               COUNT(t)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND LOWER(COALESCE(t.rawRemarks, '')) LIKE LOWER(CONCAT('%', :tag, '%'))
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        GROUP BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM')
+        ORDER BY FUNCTION('TO_CHAR', t.valueDate, 'YYYY-MM') ASC
+        """)
+    List<Object[]> monthlyTrendForTagByAccount(@Param("userId") UUID userId,
+                                                @Param("from") LocalDate from,
+                                                @Param("to") LocalDate to,
+                                                @Param("tag") String tag,
+                                                @Param("accountId") UUID accountId);
+
+    /**
+     * Total withdrawal amount for transactions whose remarks contain the tag string.
+     */
+    @Query("""
+        SELECT COALESCE(SUM(t.withdrawalAmount), 0)
+        FROM Transaction t
+        WHERE t.bankAccount.user.id = :userId
+          AND t.valueDate >= :from AND t.valueDate <= :to
+          AND t.withdrawalAmount > 0
+          AND LOWER(COALESCE(t.rawRemarks, '')) LIKE LOWER(CONCAT('%', :tag, '%'))
+          AND (CAST(:accountId AS uuid) IS NULL OR t.bankAccount.id = CAST(:accountId AS uuid))
+        """)
+    BigDecimal sumWithdrawalsForTagByAccount(@Param("userId") UUID userId,
+                                              @Param("from") LocalDate from,
+                                              @Param("to") LocalDate to,
+                                              @Param("tag") String tag,
+                                              @Param("accountId") UUID accountId);
 }

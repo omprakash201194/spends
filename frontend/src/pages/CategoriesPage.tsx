@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import React, { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -114,6 +115,7 @@ export default function CategoriesPage() {
   const [tab, setTab] = useState<Tab>('categories')
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <FeatureGuide />
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           Categories &amp; Rules

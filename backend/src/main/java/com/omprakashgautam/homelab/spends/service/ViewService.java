@@ -5,6 +5,7 @@ import com.omprakashgautam.homelab.spends.model.*;
 import com.omprakashgautam.homelab.spends.model.BankAccount;
 import com.omprakashgautam.homelab.spends.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ViewService {
@@ -80,6 +82,7 @@ public class ViewService {
                 .toList();
         linkRepository.saveAll(links);
 
+        log.info("AUDIT: view created viewId={} userId={} name='{}' txCount={}", view.getId(), userId, view.getName(), links.size());
         return toViewResponse(view);
     }
 
@@ -106,7 +109,9 @@ public class ViewService {
 
     @Transactional
     public void deleteView(UUID userId, UUID viewId) {
-        viewRepository.delete(resolveView(userId, viewId));
+        SpendView view = resolveView(userId, viewId);
+        log.warn("AUDIT: view deleted viewId={} userId={} name='{}'", viewId, userId, view.getName());
+        viewRepository.delete(view);
     }
 
     // ── Paginated transactions (List tab) ─────────────────────────────────────

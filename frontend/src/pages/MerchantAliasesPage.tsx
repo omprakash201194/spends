@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, Tag } from 'lucide-react'
@@ -29,6 +30,7 @@ export default function MerchantAliasesPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl space-y-6 bg-gray-50 dark:bg-gray-950 min-h-full">
+      <FeatureGuide />
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Merchant Aliases</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

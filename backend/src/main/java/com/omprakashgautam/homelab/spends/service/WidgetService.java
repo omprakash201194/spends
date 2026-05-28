@@ -341,12 +341,9 @@ public class WidgetService {
                 };
             }
             case TAG -> {
-                // TAG breakdown shows total spend as a single labelled slice — no per-tag aggregate query exists yet
-                BigDecimal total = accountId != null
-                        ? txRepo.sumWithdrawalsFiltered(userId, ctx.from(), ctx.to(), accountId)
-                        : txRepo.sumWithdrawals(userId, ctx.from(), ctx.to());
-                String tag = w.getFilterValue() != null ? w.getFilterValue() : "tag";
-                yield Collections.singletonList(new Object[]{ null, tag, w.getColor(), total });
+                String tag = w.getFilterValue() != null ? w.getFilterValue() : "";
+                if (tag.isBlank()) yield List.of();
+                yield txRepo.categoryBreakdownForTagByAccount(userId, ctx.from(), ctx.to(), tag, accountId);
             }
         };
     }
@@ -354,8 +351,12 @@ public class WidgetService {
     private List<Object[]> fetchMonthlyTrend(DashboardWidget w, UUID userId, EffectiveContext ctx) {
         UUID accountId = ctx.accountId();
         return switch (w.getFilterType()) {
-            // TAG trend uses global monthly data — no per-tag aggregate query exists yet
-            case ALL, TAG -> txRepo.monthlyTrendAllByAccount(userId, ctx.from(), ctx.to(), accountId);
+            case ALL  -> txRepo.monthlyTrendAllByAccount(userId, ctx.from(), ctx.to(), accountId);
+            case TAG  -> {
+                String tag = w.getFilterValue() != null ? w.getFilterValue() : "";
+                yield tag.isBlank() ? List.of()
+                        : txRepo.monthlyTrendForTagByAccount(userId, ctx.from(), ctx.to(), tag, accountId);
+            }
             case CATEGORY -> {
                 Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
                 yield ids.isEmpty() ? List.of() : txRepo.monthlyTrendForIdsByAccount(userId, ctx.from(), ctx.to(), ids, accountId);
@@ -365,17 +366,23 @@ public class WidgetService {
 
     private BigDecimal fetchTotalSpend(DashboardWidget w, UUID userId, EffectiveContext ctx) {
         UUID accountId = ctx.accountId();
-        // TAG total falls through to global sumWithdrawals — no per-tag aggregate query exists yet
-        if (w.getFilterType() == FilterType.CATEGORY) {
-            Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
-            if (ids.isEmpty()) return BigDecimal.ZERO;
-            return txRepo.categoryBreakdownForIdsByAccount(userId, ctx.from(), ctx.to(), ids, accountId).stream()
-                    .map(r -> (BigDecimal) r[3])
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-        return accountId != null
-                ? txRepo.sumWithdrawalsFiltered(userId, ctx.from(), ctx.to(), accountId)
-                : txRepo.sumWithdrawals(userId, ctx.from(), ctx.to());
+        return switch (w.getFilterType()) {
+            case TAG -> {
+                String tag = w.getFilterValue() != null ? w.getFilterValue() : "";
+                yield tag.isBlank() ? BigDecimal.ZERO
+                        : txRepo.sumWithdrawalsForTagByAccount(userId, ctx.from(), ctx.to(), tag, accountId);
+            }
+            case CATEGORY -> {
+                Set<UUID> ids = expandCategorySubtree(w.getFilterValue());
+                if (ids.isEmpty()) yield BigDecimal.ZERO;
+                yield txRepo.categoryBreakdownForIdsByAccount(userId, ctx.from(), ctx.to(), ids, accountId).stream()
+                        .map(r -> (BigDecimal) r[3])
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+            default -> accountId != null
+                    ? txRepo.sumWithdrawalsFiltered(userId, ctx.from(), ctx.to(), accountId)
+                    : txRepo.sumWithdrawals(userId, ctx.from(), ctx.to());
+        };
     }
 
     private Set<UUID> expandCategorySubtree(String filterValue) {

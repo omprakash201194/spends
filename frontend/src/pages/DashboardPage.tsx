@@ -1,3 +1,6 @@
+import { FeatureGuide } from '../components/FeatureGuide'
+import GettingStartedChecklist from '../components/GettingStartedChecklist'
+import ForecastPanel from '../components/ForecastPanel'
 import React, { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
@@ -108,6 +111,10 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <FeatureGuide />
+      {!isLoading && (
+        <GettingStartedChecklist totalTransactions={data?.summary.totalTransactions ?? 0} />
+      )}
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -178,6 +185,8 @@ function DashboardContent({ data, recurringData, goalsData }: {
           </Link>
         </div>
       )}
+
+      {hasData && <ForecastPanel />}
 
       {goalsData && goalsData.length > 0 && (
         <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 flex items-center justify-between mb-4">

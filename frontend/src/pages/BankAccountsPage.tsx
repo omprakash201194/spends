@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, Building2, X, Check } from 'lucide-react'
@@ -44,6 +45,7 @@ export default function BankAccountsPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
+      <FeatureGuide />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bank Accounts</h1>
@@ -130,9 +132,9 @@ function AccountCard({
         <button
           onClick={onDelete}
           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          title="Delete"
+          aria-label="Delete bank account"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
     </div>

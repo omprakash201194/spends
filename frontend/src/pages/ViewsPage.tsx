@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -63,8 +64,9 @@ function ViewCard({ view, onDelete }: { view: ViewResponse; onDelete: () => void
           <button
             onClick={e => { e.stopPropagation(); onDelete() }}
             className="p-1 text-gray-400 hover:text-red-500 rounded"
+            aria-label={`Delete view ${view.name}`}
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -161,11 +163,11 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
     step === 'Type'    ? true : false
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="presentation">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md" role="dialog" aria-modal="true" aria-labelledby="create-view-title">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="font-semibold text-gray-900 dark:text-white">Create View</h2>
+          <h2 id="create-view-title" className="font-semibold text-gray-900 dark:text-white">Create View</h2>
           <div className="flex gap-1">
             {STEPS.map((s, i) => (
               <div key={s} className={clsx('w-2 h-2 rounded-full', s === step ? 'bg-blue-600' : i < STEPS.indexOf(step) ? 'bg-blue-200' : 'bg-gray-200 dark:bg-gray-600')} />
@@ -328,8 +330,9 @@ function CreateViewModal({ onClose }: { onClose: () => void }) {
 export default function ViewsPage() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const { data: views = [], isLoading } = useQuery<ViewResponse[]>({
+  const { data: views = [], isLoading, isError } = useQuery<ViewResponse[]>({
     queryKey: ['views'],
     queryFn: listViews,
   })
@@ -347,8 +350,19 @@ export default function ViewsPage() {
     )
   }
 
+  if (isError) {
+    return (
+      <div className="p-4 sm:p-6">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-6 text-center">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load views. Please try refreshing the page.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <FeatureGuide />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -377,17 +391,42 @@ export default function ViewsPage() {
             <ViewCard
               key={v.id}
               view={v}
-              onDelete={() => {
-                if (confirm(`Delete "${v.name}"? This cannot be undone.`)) {
-                  deleteMut.mutate(v.id)
-                }
-              }}
+              onDelete={() => setConfirmDeleteId(v.id)}
             />
           ))}
         </div>
       )}
 
       {showCreate && <CreateViewModal onClose={() => setShowCreate(false)} />}
+
+      {confirmDeleteId && (() => {
+        const v = views.find(vw => vw.id === confirmDeleteId)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title">
+              <h2 id="confirm-delete-title" className="text-base font-semibold text-gray-900 dark:text-white mb-2">Delete view?</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                <span className="font-medium text-gray-800 dark:text-gray-200">{v?.name}</span> will be permanently deleted. This cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { deleteMut.mutate(confirmDeleteId); setConfirmDeleteId(null) }}
+                  disabled={deleteMut.isPending}
+                  className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

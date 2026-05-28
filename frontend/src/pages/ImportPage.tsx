@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, History, Clock, ChevronDown, ChevronRight } from 'lucide-react'
@@ -188,6 +189,7 @@ export default function ImportPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
+      <FeatureGuide />
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Statements</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

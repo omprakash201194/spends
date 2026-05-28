@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useQuery } from '@tanstack/react-query'
 import { ShieldCheck, AlertCircle, BookOpen, Copy } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -107,6 +108,7 @@ export default function DataHealthPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-6">
+      <FeatureGuide />
 
       {/* Header */}
       <div className="flex items-center gap-3">

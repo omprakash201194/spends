@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Users, Copy, Check, TrendingDown, TrendingUp, Crown } from 'lucide-react'
@@ -41,6 +42,7 @@ export default function HouseholdPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <FeatureGuide />
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Household</h1>
         {data && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{data.month}</p>}

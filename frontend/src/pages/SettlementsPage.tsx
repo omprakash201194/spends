@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, Trash2, Plus, Users, ChevronDown, ChevronRight } from 'lucide-react'
@@ -71,16 +72,18 @@ function SettlementCard({ settlement, onMarkSettled, onDelete }: {
             <button
               onClick={() => onMarkSettled(settlement.id)}
               className="flex items-center gap-1.5 text-xs bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300 px-3 py-1.5 rounded-lg transition-colors"
+              aria-label={`Mark settlement with ${settlement.participantName} as settled`}
             >
-              <CheckCircle size={12} />
+              <CheckCircle size={12} aria-hidden="true" />
               Mark Settled
             </button>
           )}
           <button
             onClick={() => onDelete(settlement.id)}
             className="flex items-center gap-1.5 text-xs bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 px-3 py-1.5 rounded-lg transition-colors"
+            aria-label={`Delete settlement with ${settlement.participantName}`}
           >
-            <Trash2 size={12} />
+            <Trash2 size={12} aria-hidden="true" />
             Delete
           </button>
         </div>
@@ -106,10 +109,10 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (da
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg" role="dialog" aria-modal="true" aria-labelledby="create-settlement-title">
         <div className="p-5 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">New Settlement</h2>
+          <h2 id="create-settlement-title" className="text-lg font-semibold text-gray-900 dark:text-white">New Settlement</h2>
         </div>
         <div className="p-5 space-y-4 max-h-96 overflow-y-auto">
           <div>
@@ -182,8 +185,9 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (da
 export default function SettlementsPage() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, isError } = useQuery({
     queryKey: ['settlements'],
     queryFn: getSettlements,
   })
@@ -208,6 +212,7 @@ export default function SettlementsPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-gray-50 dark:bg-gray-950 min-h-full">
+      <FeatureGuide />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settlements</h1>
@@ -222,9 +227,15 @@ export default function SettlementsPage() {
         </button>
       </div>
 
+      {isError && (
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-6 text-center">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load settlements. Please try refreshing the page.</p>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-gray-400 text-sm">Loading...</div>
-      ) : data.length === 0 ? (
+      ) : !isError && data.length === 0 ? (
         <div className="text-center py-16">
           <Users size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400">No settlements yet.</p>
@@ -242,7 +253,7 @@ export default function SettlementsPage() {
                   key={s.id}
                   settlement={s}
                   onMarkSettled={id => markSettledMutation.mutate(id)}
-                  onDelete={id => deleteMutation.mutate(id)}
+                  onDelete={id => setConfirmDeleteId(id)}
                 />
               ))}
             </div>
@@ -257,7 +268,7 @@ export default function SettlementsPage() {
                   key={s.id}
                   settlement={s}
                   onMarkSettled={id => markSettledMutation.mutate(id)}
-                  onDelete={id => deleteMutation.mutate(id)}
+                  onDelete={id => setConfirmDeleteId(id)}
                 />
               ))}
             </div>
@@ -271,6 +282,35 @@ export default function SettlementsPage() {
           onCreate={data => createMutation.mutate(data)}
         />
       )}
+
+      {confirmDeleteId && (() => {
+        const s = data.find(x => x.id === confirmDeleteId)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-settlement-title">
+              <h2 id="confirm-delete-settlement-title" className="text-base font-semibold text-gray-900 dark:text-white mb-2">Delete settlement?</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                Settlement with <span className="font-medium text-gray-800 dark:text-gray-200">{s?.participantName}</span> will be permanently deleted.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { deleteMutation.mutate(confirmDeleteId); setConfirmDeleteId(null) }}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

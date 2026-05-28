@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -28,6 +29,7 @@ export default function NetWorthPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-gray-50 dark:bg-gray-950 min-h-full">
+      <FeatureGuide />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Net Worth</h1>
         <select

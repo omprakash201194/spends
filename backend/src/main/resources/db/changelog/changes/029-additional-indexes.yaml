@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 029-additional-indexes
+      author: system
+      changes:
+        - sql:
+            sql: >
+              -- Speed up merchant aggregation queries (RecurringService, DashboardService topMerchants)
+              CREATE INDEX IF NOT EXISTS idx_txn_merchant_name
+                ON financial_transaction (merchant_name)
+                WHERE merchant_name IS NOT NULL;
+
+              -- Speed up category + date range breakdowns
+              CREATE INDEX IF NOT EXISTS idx_txn_category_value_date
+                ON financial_transaction (category_id, value_date DESC)
+                WHERE category_id IS NOT NULL;
+
+              -- Speed up rule matching (user rules ordered by priority)
+              CREATE INDEX IF NOT EXISTS idx_rule_user_priority
+                ON category_rule (user_id, priority DESC);
+
+              -- Speed up import history listing (user + time desc)
+              CREATE INDEX IF NOT EXISTS idx_import_batch_user_time
+                ON import_batch (bank_account_id, imported_at DESC);
+
+              -- Speed up withdrawal-only queries used in alert detection
+              CREATE INDEX IF NOT EXISTS idx_txn_withdrawal_date
+                ON financial_transaction (withdrawal_amount, value_date)
+                WHERE withdrawal_amount > 0;

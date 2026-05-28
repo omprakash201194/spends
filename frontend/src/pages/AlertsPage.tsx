@@ -1,3 +1,4 @@
+import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
@@ -30,7 +31,7 @@ export default function AlertsPage() {
   const [month, setMonth] = useState(() => toYearMonth(new Date()))
   const isCurrentMonth = month === toYearMonth(new Date())
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['alerts', month],
     queryFn: () => getAlerts(month),
     staleTime: 60_000,
@@ -40,6 +41,7 @@ export default function AlertsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <FeatureGuide />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 flex items-center justify-center">
@@ -72,6 +74,12 @@ export default function AlertsPage() {
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-6 text-center">
+          <p className="text-sm text-red-600 dark:text-red-400">Failed to load alerts. Please try refreshing the page.</p>
         </div>
       )}
 
