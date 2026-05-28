@@ -83,13 +83,13 @@ public class TransactionDto {
             long count
     ) {}
 
-    // ── Time-aggregates (year/month/week picker counts) ──────────────────────
+    // ── Time-aggregates (year/month/week picker counts + spend totals) ─────────
 
-    public record YearAgg(int year, long total, long uncategorized) {}
+    public record YearAgg(int year, long total, long uncategorized, BigDecimal spent) {}
 
-    public record MonthAgg(int month, long total, long uncategorized) {}
+    public record MonthAgg(int month, long total, long uncategorized, BigDecimal spent) {}
 
-    public record WeekAgg(int bucket, int startDay, int endDay, long total, long uncategorized) {}
+    public record WeekAgg(int bucket, int startDay, int endDay, long total, long uncategorized, BigDecimal spent) {}
 
     public record TimeAggregateResponse(
             List<YearAgg> years,

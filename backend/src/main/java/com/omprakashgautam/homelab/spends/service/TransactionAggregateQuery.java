@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +48,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
+        Expression<BigDecimal> spent = cb.coalesce(
+                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
 
-        q.multiselect(yearExpr, total, uncat);
+        q.multiselect(yearExpr, total, uncat, spent);
         q.groupBy(yearExpr);
         q.orderBy(cb.desc(yearExpr));
 
@@ -56,7 +59,8 @@ public class TransactionAggregateQuery {
                 .map(row -> new YearAgg(
                         ((Number) row[0]).intValue(),
                         ((Number) row[1]).longValue(),
-                        row[2] == null ? 0L : ((Number) row[2]).longValue()))
+                        row[2] == null ? 0L : ((Number) row[2]).longValue(),
+                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]))
                 .toList();
     }
 
@@ -80,8 +84,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
+        Expression<BigDecimal> spent = cb.coalesce(
+                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
 
-        q.multiselect(monthExpr, total, uncat);
+        q.multiselect(monthExpr, total, uncat, spent);
         q.groupBy(monthExpr);
         q.orderBy(cb.asc(monthExpr));
 
@@ -89,7 +95,8 @@ public class TransactionAggregateQuery {
                 .map(row -> new MonthAgg(
                         ((Number) row[0]).intValue(),
                         ((Number) row[1]).longValue(),
-                        row[2] == null ? 0L : ((Number) row[2]).longValue()))
+                        row[2] == null ? 0L : ((Number) row[2]).longValue(),
+                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]))
                 .toList();
     }
 
@@ -123,8 +130,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
+        Expression<BigDecimal> spent = cb.coalesce(
+                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
 
-        q.multiselect(bucket, total, uncat);
+        q.multiselect(bucket, total, uncat, spent);
         q.groupBy(bucket);
         q.orderBy(cb.asc(bucket));
 
@@ -137,7 +146,8 @@ public class TransactionAggregateQuery {
                     return new WeekAgg(
                             b, startDay, endDay,
                             ((Number) row[1]).longValue(),
-                            row[2] == null ? 0L : ((Number) row[2]).longValue());
+                            row[2] == null ? 0L : ((Number) row[2]).longValue(),
+                            row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]);
                 })
                 .toList();
     }

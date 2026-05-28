@@ -184,7 +184,7 @@ public class TransactionService {
                 .collect(java.util.stream.Collectors.toMap(TransactionDto.MonthAgg::month, m -> m));
         List<TransactionDto.MonthAgg> out = new ArrayList<>(12);
         for (int m = 1; m <= 12; m++) {
-            out.add(byMonth.getOrDefault(m, new TransactionDto.MonthAgg(m, 0L, 0L)));
+            out.add(byMonth.getOrDefault(m, new TransactionDto.MonthAgg(m, 0L, 0L, java.math.BigDecimal.ZERO)));
         }
         return out;
     }
@@ -198,7 +198,7 @@ public class TransactionService {
         for (int b = 0; b <= lastBucket; b++) {
             int startDay = b * 7 + 1;
             int endDay = (b == lastBucket) ? lengthOfMonth : startDay + 6;
-            out.add(byBucket.getOrDefault(b, new TransactionDto.WeekAgg(b, startDay, endDay, 0L, 0L)));
+            out.add(byBucket.getOrDefault(b, new TransactionDto.WeekAgg(b, startDay, endDay, 0L, 0L, java.math.BigDecimal.ZERO)));
         }
         return out;
     }
