@@ -52,8 +52,12 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        Expression<BigDecimal> spent = cb.coalesce(
-                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
+        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
+        Expression<BigDecimal> amountPerRow = cb.sum(
+                root.<BigDecimal>get("withdrawalAmount"),
+                root.<BigDecimal>get("depositAmount"));
+        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
 
         q.multiselect(yearExpr, total, uncat, spent);
         q.groupBy(yearExpr);
@@ -88,8 +92,12 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        Expression<BigDecimal> spent = cb.coalesce(
-                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
+        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
+        Expression<BigDecimal> amountPerRow = cb.sum(
+                root.<BigDecimal>get("withdrawalAmount"),
+                root.<BigDecimal>get("depositAmount"));
+        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
 
         q.multiselect(monthExpr, total, uncat, spent);
         q.groupBy(monthExpr);
@@ -134,8 +142,12 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        Expression<BigDecimal> spent = cb.coalesce(
-                cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
+        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
+        Expression<BigDecimal> amountPerRow = cb.sum(
+                root.<BigDecimal>get("withdrawalAmount"),
+                root.<BigDecimal>get("depositAmount"));
+        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
 
         q.multiselect(bucket, total, uncat, spent);
         q.groupBy(bucket);
