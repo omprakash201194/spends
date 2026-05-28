@@ -4,7 +4,7 @@ databaseChangeLog:
       author: system
       changes:
         - sql:
-            sql: >
+            sql: |
               -- Enable pg_trgm for trigram similarity — makes ILIKE fast on large text columns.
               -- Required before creating gin_trgm_ops indexes.
               CREATE EXTENSION IF NOT EXISTS pg_trgm;

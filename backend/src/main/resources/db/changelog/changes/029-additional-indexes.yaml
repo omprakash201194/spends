@@ -4,7 +4,7 @@ databaseChangeLog:
       author: system
       changes:
         - sql:
-            sql: >
+            sql: |
               -- Speed up merchant aggregation queries (RecurringService, DashboardService topMerchants)
               CREATE INDEX IF NOT EXISTS idx_txn_merchant_name
                 ON financial_transaction (merchant_name)
