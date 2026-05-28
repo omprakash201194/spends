@@ -1,5 +1,6 @@
 import { FeatureGuide } from '../components/FeatureGuide'
 import { useState, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Copy, Trash2, History, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import {
@@ -472,19 +473,33 @@ function ReviewQueue({ file }: { file: FileSummary }) {
             {showDups ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
           {showDups && (
-            <div className="divide-y divide-amber-100 dark:divide-amber-900 max-h-60 overflow-y-auto">
-              {file.duplicateRows.map((row, i) => (
-                <div key={i} className="px-4 py-2 bg-white dark:bg-gray-800 flex items-center gap-3 text-xs">
-                  <span className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{row.date}</span>
-                  <span className="font-mono text-gray-600 dark:text-gray-300 flex-shrink-0">
-                    {row.withdrawal > 0
-                      ? <span className="text-red-600">−₹{row.withdrawal.toLocaleString('en-IN')}</span>
-                      : <span className="text-green-600">+₹{row.deposit.toLocaleString('en-IN')}</span>}
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400 truncate">{row.remarks}</span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="px-4 py-2 bg-amber-50/50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900">
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  These transactions were skipped because an identical record (same date, amount, and remarks) already exists in your database from a previous import. Click <span className="font-semibold">View existing</span> to see the matching transaction.
+                </p>
+              </div>
+              <div className="divide-y divide-amber-100 dark:divide-amber-900 max-h-60 overflow-y-auto">
+                {file.duplicateRows.map((row, i) => (
+                  <div key={i} className="px-4 py-2.5 bg-white dark:bg-gray-800 flex items-center gap-3 text-xs">
+                    <span className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{row.date}</span>
+                    <span className="font-mono flex-shrink-0">
+                      {row.withdrawal > 0
+                        ? <span className="text-red-600">−₹{row.withdrawal.toLocaleString('en-IN')}</span>
+                        : <span className="text-green-600">+₹{row.deposit.toLocaleString('en-IN')}</span>}
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400 truncate flex-1">{row.remarks}</span>
+                    <Link
+                      to={`/transactions?dateFrom=${row.date}&dateTo=${row.date}`}
+                      className="flex-shrink-0 text-amber-700 dark:text-amber-400 hover:underline font-medium whitespace-nowrap"
+                      title="Open Transactions filtered to this date to find the existing record"
+                    >
+                      View existing →
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
