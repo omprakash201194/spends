@@ -5,12 +5,12 @@ import com.omprakashgautam.homelab.spends.dto.TransactionDto.WeekAgg;
 import com.omprakashgautam.homelab.spends.dto.TransactionDto.YearAgg;
 import com.omprakashgautam.homelab.spends.model.Transaction;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +25,10 @@ import java.util.List;
  * so the picker counts honor every active filter (search, account, category, type,
  * uncategorizedOnly) without re-implementing the predicate logic in JPQL.
  *
+ * Uses {@link HibernateCriteriaBuilder} for year/month/day extraction so that
+ * Hibernate translates them to EXTRACT(YEAR/MONTH/DAY FROM ...) — required for
+ * PostgreSQL which has no year() / month() / day() SQL functions.
+ *
  * Bucket math for {@link #weekAggregates}: day 1–7 → bucket 0, 8–14 → 1, 15–21 → 2,
  * 22–28 → 3, 29 to end-of-month → 4.
  */
@@ -35,14 +39,14 @@ public class TransactionAggregateQuery {
     private final EntityManager entityManager;
 
     public List<YearAgg> yearAggregates(Specification<Transaction> spec) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        HibernateCriteriaBuilder cb = (HibernateCriteriaBuilder) entityManager.getCriteriaBuilder();
         CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
         Root<Transaction> root = q.from(Transaction.class);
 
         Predicate p = spec.toPredicate(root, q, cb);
         if (p != null) q.where(p);
 
-        Expression<Integer> yearExpr = cb.function("year", Integer.class, root.get("valueDate"));
+        Expression<Integer> yearExpr = cb.year(root.get("valueDate"));
         Expression<Long> total = cb.count(root);
         Expression<Long> uncat = cb.sum(cb.<Long>selectCase()
                 .when(cb.isNull(root.get("category")), 1L)
@@ -65,7 +69,7 @@ public class TransactionAggregateQuery {
     }
 
     public List<MonthAgg> monthAggregates(Specification<Transaction> spec, int year) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        HibernateCriteriaBuilder cb = (HibernateCriteriaBuilder) entityManager.getCriteriaBuilder();
         CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
         Root<Transaction> root = q.from(Transaction.class);
 
@@ -73,8 +77,8 @@ public class TransactionAggregateQuery {
         Predicate specPred = spec.toPredicate(root, q, cb);
         if (specPred != null) predicates.add(specPred);
 
-        Expression<Integer> yearExpr = cb.function("year", Integer.class, root.get("valueDate"));
-        Expression<Integer> monthExpr = cb.function("month", Integer.class, root.get("valueDate"));
+        Expression<Integer> yearExpr  = cb.year(root.get("valueDate"));
+        Expression<Integer> monthExpr = cb.month(root.get("valueDate"));
         predicates.add(cb.equal(yearExpr, year));
 
         q.where(predicates.toArray(new Predicate[0]));
@@ -101,7 +105,7 @@ public class TransactionAggregateQuery {
     }
 
     public List<WeekAgg> weekAggregates(Specification<Transaction> spec, int year, int month) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        HibernateCriteriaBuilder cb = (HibernateCriteriaBuilder) entityManager.getCriteriaBuilder();
         CriteriaQuery<Object[]> q = cb.createQuery(Object[].class);
         Root<Transaction> root = q.from(Transaction.class);
 
@@ -109,9 +113,9 @@ public class TransactionAggregateQuery {
         Predicate specPred = spec.toPredicate(root, q, cb);
         if (specPred != null) predicates.add(specPred);
 
-        Expression<Integer> yearExpr = cb.function("year", Integer.class, root.get("valueDate"));
-        Expression<Integer> monthExpr = cb.function("month", Integer.class, root.get("valueDate"));
-        Expression<Integer> dayExpr = cb.function("day", Integer.class, root.get("valueDate"));
+        Expression<Integer> yearExpr  = cb.year(root.get("valueDate"));
+        Expression<Integer> monthExpr = cb.month(root.get("valueDate"));
+        Expression<Integer> dayExpr   = cb.day(root.get("valueDate"));
 
         predicates.add(cb.equal(yearExpr, year));
         predicates.add(cb.equal(monthExpr, month));
