@@ -6,7 +6,7 @@ import {
   Briefcase, ShoppingCart, Utensils, Car, Home, Heart, Music, Zap,
   TrendingUp, DollarSign, Gift, Coffee, Plane, Book, Smartphone,
   Baby, Dumbbell, Dog, Wallet, Bus, Fuel, Pizza, Shirt,
-  Download, Upload, MoreHorizontal, Package,
+  Download, Upload, MoreHorizontal, Package, RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -184,6 +184,7 @@ function SharePackPanel() {
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.invalidateQueries({ queryKey: ['budgets'] })
       qc.invalidateQueries({ queryKey: ['recurring'] })
+      setTimeout(() => setReapplyCount(null), 5000)
     },
   })
 
@@ -1256,6 +1257,15 @@ function RulesTab() {
             <input ref={rulesImportRef} type="file" accept=".json" className="hidden" onChange={handleRulesImportFile} />
           </div>
 
+          <button
+            onClick={() => reapplyMutation.mutate()}
+            disabled={reapplyMutation.isPending}
+            title="Re-run all rules against your existing transactions"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {reapplyMutation.isPending ? 'Applying…' : 'Re-apply all'}
+          </button>
           <button
             onClick={() => setShowCreate(v => !v)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"

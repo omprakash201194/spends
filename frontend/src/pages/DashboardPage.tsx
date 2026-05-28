@@ -115,6 +115,23 @@ export default function DashboardPage() {
       {!isLoading && (
         <GettingStartedChecklist totalTransactions={data?.summary.totalTransactions ?? 0} />
       )}
+      {/* Import reminder — shown when data is stale (>7 days since last import) */}
+      {data?.summary.dateEnd && (() => {
+        const daysSince = Math.floor(
+          (Date.now() - new Date(data.summary.dateEnd).getTime()) / 86_400_000
+        )
+        if (daysSince < 7) return null
+        return (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Your last import was <span className="font-semibold">{daysSince} days ago</span>. Import a recent statement to keep your forecast and budgets accurate.
+            </p>
+            <Link to="/import" className="flex-shrink-0 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline">
+              Import now →
+            </Link>
+          </div>
+        )
+      })()}
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>

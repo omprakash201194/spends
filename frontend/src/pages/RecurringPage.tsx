@@ -1,8 +1,9 @@
 import { FeatureGuide } from '../components/FeatureGuide'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Repeat, Loader2, Calendar, TrendingDown, TrendingUp } from 'lucide-react'
+import { Repeat, Loader2, Calendar, TrendingDown, TrendingUp, ArrowRight } from 'lucide-react'
 import { clsx } from 'clsx'
+import { Link } from 'react-router-dom'
 import { getRecurring, type RecurringPattern } from '../api/recurring'
 import InsightCard from '../components/InsightCard'
 
@@ -82,13 +83,21 @@ function PatternCard({ p }: { p: RecurringPattern }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          <span>{p.occurrences} months detected</span>
+      <div className="flex items-center justify-between gap-4 text-xs text-gray-400 dark:text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            <span>{p.occurrences} months detected</span>
+          </div>
+          <span>Last: {fmtYearMonth(p.lastMonth)}</span>
+          <span>Next: {fmtYearMonth(p.nextExpected)}</span>
         </div>
-        <span>Last: {fmtYearMonth(p.lastMonth)}</span>
-        <span>Next: {fmtYearMonth(p.nextExpected)}</span>
+        <Link
+          to={`/transactions?search=${encodeURIComponent(p.merchantName)}`}
+          className="flex items-center gap-1 text-blue-500 dark:text-blue-400 hover:underline flex-shrink-0"
+        >
+          View transactions <ArrowRight className="w-3 h-3" />
+        </Link>
       </div>
     </div>
   )

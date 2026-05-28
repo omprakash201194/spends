@@ -22,6 +22,7 @@ import {
   Target,
   Tag,
   ChevronDown,
+  BookOpen,
   Wallet,
   Bell,
 } from 'lucide-react'
@@ -57,10 +58,11 @@ const NAV_GROUPS = [
     key: 'insights',
     label: 'Insights',
     items: [
-      { to: '/recurring',    label: 'Recurring',    icon: Repeat },
-      { to: '/alerts',       label: 'Alerts',       icon: Bell },
-      { to: '/reports',      label: 'Reports',      icon: FileText },
-      { to: '/data-health',  label: 'Data Health',  icon: ShieldCheck },
+      { to: '/recurring',       label: 'Recurring',      icon: Repeat },
+      { to: '/alerts',          label: 'Alerts',         icon: Bell },
+      { to: '/annual-review',   label: 'Annual Review',  icon: BookOpen },
+      { to: '/reports',         label: 'Reports',        icon: FileText },
+      { to: '/data-health',     label: 'Data Health',    icon: ShieldCheck },
     ],
   },
   {

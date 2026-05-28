@@ -23,6 +23,7 @@ import GoalsPage from './pages/GoalsPage'
 import MerchantAliasesPage from './pages/MerchantAliasesPage'
 import SettlementsPage from './pages/SettlementsPage'
 import AlertsPage from './pages/AlertsPage'
+import AnnualReviewPage from './pages/AnnualReviewPage'
 import CustomDashboardPage from './pages/CustomDashboardPage'
 import DashboardListPage from './pages/DashboardListPage'
 import DashboardDetailPage from './pages/DashboardDetailPage'
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="merchant-aliases" element={<MerchantAliasesPage />} />
           <Route path="settlements" element={<SettlementsPage />} />
           <Route path="alerts" element={<AlertsPage />} />
+          <Route path="annual-review" element={<AnnualReviewPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

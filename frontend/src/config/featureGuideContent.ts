@@ -455,6 +455,37 @@ export const PAGE_GUIDES: Record<string, PageGuide> = {
     ],
   },
 
+  '/annual-review': {
+    summary: 'Your year in numbers — savings rate, best and worst months, top categories, and a month-by-month net chart.',
+    features: [
+      {
+        icon: '📅',
+        title: 'Year selector',
+        description: 'Switch between years that have imported data. Only years with at least one transaction appear.',
+      },
+      {
+        icon: '💰',
+        title: 'Savings rate',
+        description: 'Net savings as a percentage of total income. Aim for 20%+ (green). 10–19% is on track (blue). Below 10% shows an alert.',
+      },
+      {
+        icon: '🏆',
+        title: 'Highlights',
+        description: 'Best month (highest net savings), toughest month (biggest deficit), and the category you spent the most on across the year.',
+      },
+      {
+        icon: '📊',
+        title: 'Month bars',
+        description: 'Green bar = net positive (saved money). Red bar = net negative (spent more than earned). Click any bar to jump to that month\'s transactions.',
+      },
+      {
+        icon: '⚠️',
+        title: 'Months in the red',
+        description: 'If you overspent in any months, an amber callout shows how many. Links to Budgets so you can set limits for next year.',
+      },
+    ],
+  },
+
   '/dashboards': {
     summary: 'Build custom chart dashboards with any combination of widgets.',
     features: [

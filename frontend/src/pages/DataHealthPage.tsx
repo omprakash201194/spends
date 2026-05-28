@@ -45,6 +45,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 // ── Near-duplicate row ────────────────────────────────────────────────────────
 
 function DupRow({ dup }: { dup: NearDuplicate }) {
+  // Link to transactions page filtered to that exact date so the user can inspect and delete the duplicate
+  const reviewHref = `/transactions?dateFrom=${dup.date}&dateTo=${dup.date}`
   return (
     <tr className="border-t border-gray-100 dark:border-gray-700">
       <td className="py-3 pr-4 text-sm text-gray-700 dark:text-gray-300">{formatDate(dup.date)}</td>
@@ -54,6 +56,14 @@ function DupRow({ dup }: { dup: NearDuplicate }) {
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
           {dup.count}× duplicate
         </span>
+      </td>
+      <td className="py-3 pl-2 text-sm">
+        <Link
+          to={reviewHref}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
+        >
+          Review →
+        </Link>
       </td>
     </tr>
   )
