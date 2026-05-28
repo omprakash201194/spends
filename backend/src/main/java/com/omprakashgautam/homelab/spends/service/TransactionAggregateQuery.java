@@ -52,14 +52,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
-        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
-        Expression<BigDecimal> amountPerRow = cb.sum(
-                root.<BigDecimal>get("withdrawalAmount"),
-                root.<BigDecimal>get("depositAmount"));
-        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
+        Expression<BigDecimal> debit  = cb.coalesce(cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        Expression<BigDecimal> credit = cb.coalesce(cb.sum(root.<BigDecimal>get("depositAmount")),    BigDecimal.ZERO);
 
-        q.multiselect(yearExpr, total, uncat, spent);
+        q.multiselect(yearExpr, total, uncat, debit, credit);
         q.groupBy(yearExpr);
         q.orderBy(cb.desc(yearExpr));
 
@@ -68,7 +64,8 @@ public class TransactionAggregateQuery {
                         ((Number) row[0]).intValue(),
                         ((Number) row[1]).longValue(),
                         row[2] == null ? 0L : ((Number) row[2]).longValue(),
-                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]))
+                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3],
+                        row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4]))
                 .toList();
     }
 
@@ -92,14 +89,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
-        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
-        Expression<BigDecimal> amountPerRow = cb.sum(
-                root.<BigDecimal>get("withdrawalAmount"),
-                root.<BigDecimal>get("depositAmount"));
-        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
+        Expression<BigDecimal> debit  = cb.coalesce(cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        Expression<BigDecimal> credit = cb.coalesce(cb.sum(root.<BigDecimal>get("depositAmount")),    BigDecimal.ZERO);
 
-        q.multiselect(monthExpr, total, uncat, spent);
+        q.multiselect(monthExpr, total, uncat, debit, credit);
         q.groupBy(monthExpr);
         q.orderBy(cb.asc(monthExpr));
 
@@ -108,7 +101,8 @@ public class TransactionAggregateQuery {
                         ((Number) row[0]).intValue(),
                         ((Number) row[1]).longValue(),
                         row[2] == null ? 0L : ((Number) row[2]).longValue(),
-                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]))
+                        row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3],
+                        row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4]))
                 .toList();
     }
 
@@ -142,14 +136,10 @@ public class TransactionAggregateQuery {
                 .when(cb.isNull(root.get("category")), 1L)
                 .otherwise(0L)
                 .as(Long.class));
-        // Sum withdrawalAmount + depositAmount per row — one is always 0, so this gives the
-        // correct amount whether the Specification filters to DEBIT, CREDIT, or ALL.
-        Expression<BigDecimal> amountPerRow = cb.sum(
-                root.<BigDecimal>get("withdrawalAmount"),
-                root.<BigDecimal>get("depositAmount"));
-        Expression<BigDecimal> spent = cb.coalesce(cb.sum(amountPerRow), BigDecimal.ZERO);
+        Expression<BigDecimal> debit  = cb.coalesce(cb.sum(root.<BigDecimal>get("withdrawalAmount")), BigDecimal.ZERO);
+        Expression<BigDecimal> credit = cb.coalesce(cb.sum(root.<BigDecimal>get("depositAmount")),    BigDecimal.ZERO);
 
-        q.multiselect(bucket, total, uncat, spent);
+        q.multiselect(bucket, total, uncat, debit, credit);
         q.groupBy(bucket);
         q.orderBy(cb.asc(bucket));
 
@@ -163,7 +153,8 @@ public class TransactionAggregateQuery {
                             b, startDay, endDay,
                             ((Number) row[1]).longValue(),
                             row[2] == null ? 0L : ((Number) row[2]).longValue(),
-                            row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]);
+                            row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3],
+                            row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4]);
                 })
                 .toList();
     }

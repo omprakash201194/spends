@@ -110,14 +110,16 @@ export interface YearAgg {
   year: number
   total: number
   uncategorized: number
-  spent: number
+  debit: number
+  credit: number
 }
 
 export interface MonthAgg {
   month: number
   total: number
   uncategorized: number
-  spent: number
+  debit: number
+  credit: number
 }
 
 export interface WeekAgg {
@@ -126,7 +128,8 @@ export interface WeekAgg {
   endDay: number
   total: number
   uncategorized: number
-  spent: number
+  debit: number
+  credit: number
 }
 
 export interface TimeAggregateResponse {

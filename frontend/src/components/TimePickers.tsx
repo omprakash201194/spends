@@ -16,6 +16,8 @@ function inr(n: number) {
 // ── Year pill ─────────────────────────────────────────────────────────────────
 
 function YearPill({ y, selected, onClick }: { y: YearAgg; selected: boolean; onClick: () => void }) {
+  const hasDebit  = y.debit  > 0
+  const hasCredit = y.credit > 0
   return (
     <button
       type="button"
@@ -28,9 +30,16 @@ function YearPill({ y, selected, onClick }: { y: YearAgg; selected: boolean; onC
       )}
     >
       <span className="font-semibold">{y.year}</span>
-      <span className={clsx('text-xs', selected ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500')}>
-        {inr(y.spent)}
-      </span>
+      {hasDebit && (
+        <span className={clsx('text-xs', selected ? 'text-red-100' : 'text-red-500 dark:text-red-400')}>
+          −{inr(y.debit)}
+        </span>
+      )}
+      {hasCredit && (
+        <span className={clsx('text-xs', selected ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400')}>
+          +{inr(y.credit)}
+        </span>
+      )}
     </button>
   )
 }
@@ -38,11 +47,14 @@ function YearPill({ y, selected, onClick }: { y: YearAgg; selected: boolean; onC
 // ── Month card ────────────────────────────────────────────────────────────────
 
 function MonthCard({
-  m, selected, maxSpent, onClick,
-}: { m: MonthAgg; selected: boolean; maxSpent: number; onClick: () => void }) {
+  m, selected, maxAmount, onClick,
+}: { m: MonthAgg; selected: boolean; maxAmount: number; onClick: () => void }) {
   const isEmpty   = m.total === 0
-  const barPct    = maxSpent > 0 ? Math.max(2, (m.spent / maxSpent) * 100) : 0
+  const totalAmt  = m.debit + m.credit
+  const barPct    = maxAmount > 0 ? Math.max(2, (totalAmt / maxAmount) * 100) : 0
   const hasUncat  = m.uncategorized > 0
+  const hasDebit  = m.debit  > 0
+  const hasCredit = m.credit > 0
 
   return (
     <button
@@ -74,15 +86,32 @@ function MonthCard({
         {MONTH_LABELS[m.month - 1]}
       </span>
 
-      {/* Spend amount */}
-      <span className={clsx(
-        'text-base font-bold leading-tight',
-        selected
-          ? 'text-blue-700 dark:text-blue-200'
-          : isEmpty ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white',
-      )}>
-        {isEmpty ? '—' : inr(m.spent)}
-      </span>
+      {/* Debit amount */}
+      {hasDebit && (
+        <span className={clsx(
+          'text-sm font-bold leading-tight',
+          'text-red-600 dark:text-red-400',
+        )}>
+          −{inr(m.debit)}
+        </span>
+      )}
+
+      {/* Credit amount */}
+      {hasCredit && (
+        <span className={clsx(
+          'text-sm font-bold leading-tight',
+          'text-emerald-600 dark:text-emerald-400',
+        )}>
+          +{inr(m.credit)}
+        </span>
+      )}
+
+      {/* Empty placeholder */}
+      {isEmpty && (
+        <span className="text-base font-bold leading-tight text-gray-300 dark:text-gray-600">
+          —
+        </span>
+      )}
 
       {/* Transaction count */}
       <span className={clsx(
@@ -92,7 +121,7 @@ function MonthCard({
         {isEmpty ? 'no data' : `${m.total} tx`}
       </span>
 
-      {/* Spend bar */}
+      {/* Total spend bar */}
       {!isEmpty && (
         <div className="mt-2 w-full h-1 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
           <div
@@ -111,11 +140,14 @@ function MonthCard({
 // ── Week card ─────────────────────────────────────────────────────────────────
 
 function WeekCard({
-  w, selected, maxSpent, onClick,
-}: { w: WeekAgg; selected: boolean; maxSpent: number; onClick: () => void }) {
-  const isEmpty  = w.total === 0
-  const barPct   = maxSpent > 0 ? Math.max(2, (w.spent / maxSpent) * 100) : 0
-  const hasUncat = w.uncategorized > 0
+  w, selected, maxAmount, onClick,
+}: { w: WeekAgg; selected: boolean; maxAmount: number; onClick: () => void }) {
+  const isEmpty   = w.total === 0
+  const totalAmt  = w.debit + w.credit
+  const barPct    = maxAmount > 0 ? Math.max(2, (totalAmt / maxAmount) * 100) : 0
+  const hasUncat  = w.uncategorized > 0
+  const hasDebit  = w.debit  > 0
+  const hasCredit = w.credit > 0
 
   return (
     <button
@@ -123,7 +155,7 @@ function WeekCard({
       disabled={isEmpty}
       onClick={onClick}
       className={clsx(
-        'relative flex flex-col items-start rounded-xl border-2 px-3 py-2.5 text-left transition-all duration-150 min-w-[80px]',
+        'relative flex flex-col items-start rounded-xl border-2 px-3 py-2.5 text-left transition-all duration-150 min-w-[88px]',
         selected
           ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 shadow-sm'
           : isEmpty
@@ -142,12 +174,19 @@ function WeekCard({
         {w.startDay}–{w.endDay}
       </span>
 
-      <span className={clsx(
-        'text-sm font-bold mt-0.5',
-        selected ? 'text-indigo-700 dark:text-indigo-200' : 'text-gray-900 dark:text-white',
-      )}>
-        {isEmpty ? '—' : inr(w.spent)}
-      </span>
+      {hasDebit && (
+        <span className="text-xs font-bold mt-0.5 text-red-600 dark:text-red-400">
+          −{inr(w.debit)}
+        </span>
+      )}
+      {hasCredit && (
+        <span className="text-xs font-bold mt-0.5 text-emerald-600 dark:text-emerald-400">
+          +{inr(w.credit)}
+        </span>
+      )}
+      {isEmpty && (
+        <span className="text-sm font-bold mt-0.5 text-gray-300 dark:text-gray-600">—</span>
+      )}
 
       <span className="text-[11px] text-gray-400 dark:text-gray-500">
         {isEmpty ? '' : `${w.total} tx`}
@@ -190,12 +229,12 @@ export function TimePickers({
     )
   }
 
-  const maxMonthSpent = data.months
-    ? Math.max(...data.months.map(m => m.spent), 0)
+  const maxMonthAmount = data.months
+    ? Math.max(...data.months.map(m => m.debit + m.credit), 0)
     : 0
 
-  const maxWeekSpent = data.weeks
-    ? Math.max(...data.weeks.map(w => w.spent), 0)
+  const maxWeekAmount = data.weeks
+    ? Math.max(...data.weeks.map(w => w.debit + w.credit), 0)
     : 0
 
   const selectedMonthLabel = month != null ? MONTH_FULL[month - 1] : null
@@ -212,16 +251,6 @@ export function TimePickers({
             onClick={() => onYearChange(y.year)}
           />
         ))}
-        {year !== null && (
-          <button
-            type="button"
-            onClick={() => { onYearChange(year) }}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2 ml-1"
-            title="Showing all months for this year"
-          >
-            {year}
-          </button>
-        )}
       </div>
 
       {/* ── Month grid ──────────────────────────────────────────────────── */}
@@ -233,7 +262,7 @@ export function TimePickers({
                 key={m.month}
                 m={m}
                 selected={month === m.month}
-                maxSpent={maxMonthSpent}
+                maxAmount={maxMonthAmount}
                 onClick={() => onMonthChange(m.month)}
               />
             ))}
@@ -272,7 +301,7 @@ export function TimePickers({
                 key={w.bucket}
                 w={w}
                 selected={weekBucket === w.bucket}
-                maxSpent={maxWeekSpent}
+                maxAmount={maxWeekAmount}
                 onClick={() => onWeekChange(weekBucket === w.bucket ? null : w.bucket)}
               />
             ))}
