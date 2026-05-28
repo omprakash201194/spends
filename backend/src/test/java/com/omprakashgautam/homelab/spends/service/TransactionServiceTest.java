@@ -209,8 +209,8 @@ class TransactionServiceTest {
     void getTimeAggregates_returnsYearsOnly_whenYearNotSet() {
         UUID userId = UUID.randomUUID();
         when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
-                new TransactionDto.YearAgg(2026, 424, 37),
-                new TransactionDto.YearAgg(2025, 1200, 50)
+                new TransactionDto.YearAgg(2026, 424, 37, java.math.BigDecimal.ZERO),
+                new TransactionDto.YearAgg(2025, 1200, 50, java.math.BigDecimal.ZERO)
         ));
 
         TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
@@ -228,10 +228,10 @@ class TransactionServiceTest {
     void getTimeAggregates_returnsMonthsArray_whenYearSet_zeroFillsAllTwelve() {
         UUID userId = UUID.randomUUID();
         when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
-                new TransactionDto.YearAgg(2026, 424, 37)));
+                new TransactionDto.YearAgg(2026, 424, 37, java.math.BigDecimal.ZERO)));
         when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
-                new TransactionDto.MonthAgg(5, 142, 18),
-                new TransactionDto.MonthAgg(6, 80, 4)
+                new TransactionDto.MonthAgg(5, 142, 18, java.math.BigDecimal.ZERO),
+                new TransactionDto.MonthAgg(6, 80, 4, java.math.BigDecimal.ZERO)
         ));
 
         TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
@@ -253,12 +253,12 @@ class TransactionServiceTest {
     void getTimeAggregates_returnsWeekBuckets_whenYearAndMonthSet_zeroFillsBuckets() {
         UUID userId = UUID.randomUUID();
         when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
-                new TransactionDto.YearAgg(2026, 424, 37)));
+                new TransactionDto.YearAgg(2026, 424, 37, java.math.BigDecimal.ZERO)));
         when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
-                new TransactionDto.MonthAgg(5, 142, 18)));
+                new TransactionDto.MonthAgg(5, 142, 18, java.math.BigDecimal.ZERO)));
         when(aggregateQuery.weekAggregates(any(), eq(2026), eq(5))).thenReturn(List.of(
-                new TransactionDto.WeekAgg(0, 1, 7, 34, 5),
-                new TransactionDto.WeekAgg(2, 15, 21, 28, 7)
+                new TransactionDto.WeekAgg(0, 1, 7, 34, 5, java.math.BigDecimal.ZERO),
+                new TransactionDto.WeekAgg(2, 15, 21, 28, 7, java.math.BigDecimal.ZERO)
         ));
 
         TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
@@ -279,9 +279,9 @@ class TransactionServiceTest {
     void getTimeAggregates_zeroFillsCorrectBucketCount_forFebruaryNonLeap() {
         UUID userId = UUID.randomUUID();
         when(aggregateQuery.yearAggregates(any())).thenReturn(List.of(
-                new TransactionDto.YearAgg(2026, 100, 5)));
+                new TransactionDto.YearAgg(2026, 100, 5, java.math.BigDecimal.ZERO)));
         when(aggregateQuery.monthAggregates(any(), eq(2026))).thenReturn(List.of(
-                new TransactionDto.MonthAgg(2, 50, 3)));
+                new TransactionDto.MonthAgg(2, 50, 3, java.math.BigDecimal.ZERO)));
         when(aggregateQuery.weekAggregates(any(), eq(2026), eq(2))).thenReturn(List.of());
 
         TransactionDto.TimeAggregateResponse result = transactionService.getTimeAggregates(
