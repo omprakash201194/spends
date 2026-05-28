@@ -448,11 +448,16 @@ function TopCategoriesList({ categories }: { categories: DashboardLifetime['cate
           const pct = max > 0 ? (c.amount / max) * 100 : 0
           const color = c.color || FALLBACK_PALETTE[i % FALLBACK_PALETTE.length]
           return (
-            <div key={i} className="flex items-center gap-3">
+            <Link
+              key={i}
+              to={`/transactions?search=${encodeURIComponent(c.name)}`}
+              className="flex items-center gap-3 group rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors -mx-1 px-1 py-0.5"
+              title={`View ${c.name} transactions`}
+            >
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{c.name}</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors">{c.name}</span>
                   <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2 flex-shrink-0">{inrFull(c.amount)}</span>
                 </div>
                 <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
@@ -462,7 +467,7 @@ function TopCategoriesList({ categories }: { categories: DashboardLifetime['cate
                   />
                 </div>
               </div>
-            </div>
+            </Link>
           )
         })}
       </div>
@@ -520,8 +525,13 @@ export const ALERT_META: Record<AlertType, { icon: React.ElementType; color: str
 export function AlertRow({ alert }: { alert: Alert }) {
   const meta = ALERT_META[alert.type]
   const Icon = meta.icon
-  return (
-    <div className="flex items-center gap-3 px-4 py-3">
+  const isMerchantAlert = alert.type === 'LARGE_TRANSACTION' || alert.type === 'NEW_MERCHANT'
+  const txLink = isMerchantAlert
+    ? `/transactions?search=${encodeURIComponent(alert.title)}`
+    : null
+
+  const inner = (
+    <>
       <div className={`w-8 h-8 rounded-lg ${meta.bg} flex items-center justify-center flex-shrink-0`}>
         <Icon className={`w-4 h-4 ${meta.color}`} />
       </div>
@@ -532,8 +542,23 @@ export function AlertRow({ alert }: { alert: Alert }) {
       <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 ml-2">
         {inrCompact(alert.amount)}
       </span>
-    </div>
+    </>
   )
+
+  if (txLink) {
+    return (
+      <Link
+        to={txLink}
+        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        title={`View transactions for ${alert.title}`}
+      >
+        {inner}
+        <ArrowRight className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0" aria-hidden="true" />
+      </Link>
+    )
+  }
+
+  return <div className="flex items-center gap-3 px-4 py-3">{inner}</div>
 }
 
 function AlertPopover({ data, onClose }: { data: AlertSummary; onClose: () => void }) {

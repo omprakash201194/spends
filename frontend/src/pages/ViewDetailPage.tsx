@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, List, LayoutGrid, BarChart2, Loader2, X } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -99,7 +99,18 @@ function ListTab({ viewId }: { viewId: string }) {
                   <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-2 pr-4 pl-1 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(tx.valueDate)}</td>
                     <td className="py-2 pr-4 max-w-[180px]">
-                      <p className="truncate font-medium text-gray-800 dark:text-gray-100">{tx.merchantName ?? '—'}</p>
+                      {tx.merchantName
+                        ? (
+                          <Link
+                            to={`/transactions?search=${encodeURIComponent(tx.merchantName)}`}
+                            className="truncate font-medium text-blue-600 dark:text-blue-400 hover:underline block"
+                            title={`View all ${tx.merchantName} transactions`}
+                          >
+                            {tx.merchantName}
+                          </Link>
+                        )
+                        : <p className="truncate font-medium text-gray-800 dark:text-gray-100">—</p>
+                      }
                       <p className="truncate text-xs text-gray-400 dark:text-gray-500">{tx.rawRemarks}</p>
                       <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{tx.bankName}</p>
                     </td>
@@ -195,7 +206,17 @@ function BoardTab({ viewId }: { viewId: string }) {
               <div className="space-y-2">
                 {txs.map(tx => (
                   <div key={tx.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.merchantName ?? tx.rawRemarks.slice(0, 30)}</p>
+                    {tx.merchantName
+                      ? (
+                        <Link
+                          to={`/transactions?search=${encodeURIComponent(tx.merchantName)}`}
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline truncate block"
+                        >
+                          {tx.merchantName}
+                        </Link>
+                      )
+                      : <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{tx.rawRemarks.slice(0, 30)}</p>
+                    }
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-400 dark:text-gray-500">{fmtDate(tx.valueDate)}</span>
                       <span className="text-xs font-mono font-semibold text-red-600">{fmt(tx.withdrawalAmount)}</span>

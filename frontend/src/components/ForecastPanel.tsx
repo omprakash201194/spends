@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react'
+import { TrendingUp, ChevronDown, ChevronUp, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Link } from 'react-router-dom'
 import { getMonthlyForecast, type PendingCharge } from '../api/forecast'
@@ -26,20 +26,29 @@ function CategoryDot({ color }: { color: string | null }) {
 
 function PendingRow({ charge }: { charge: PendingCharge }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
+    <Link
+      to={`/transactions?search=${encodeURIComponent(charge.merchantName)}`}
+      className="flex items-center justify-between gap-3 py-1.5 group hover:bg-indigo-100/40 dark:hover:bg-indigo-900/20 rounded-md px-1 -mx-1 transition-colors"
+      title={`View ${charge.merchantName} transactions`}
+    >
       <div className="flex items-center gap-2 min-w-0">
         <CategoryDot color={charge.categoryColor} />
-        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{charge.merchantName}</span>
+        <span className="text-sm text-gray-700 dark:text-gray-300 truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
+          {charge.merchantName}
+        </span>
         {charge.categoryName && (
           <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 truncate">
             {charge.categoryName}
           </span>
         )}
       </div>
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-200 flex-shrink-0 tabular-nums">
-        {inrFull(charge.expectedAmount)}
-      </span>
-    </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 tabular-nums">
+          {inrFull(charge.expectedAmount)}
+        </span>
+        <ArrowRight className="w-3 h-3 text-indigo-300 dark:text-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+      </div>
+    </Link>
   )
 }
 
