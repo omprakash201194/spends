@@ -103,7 +103,7 @@ spends/
 │       ├── java/com/omprakashgautam/homelab/spends/
 │       │   ├── SpendsApplication.java
 │       │   ├── config/SecurityConfig.java
-│       │   ├── controller/{Auth,BankAccount,Import,Category,Transaction,Dashboard,Budget,Household,Alert,UserSettings,Insight}Controller.java
+│       │   ├── controller/{Auth,BankAccount,Import,Category,CategoryRule,CategoryBundle,Transaction,TransactionSplit,Tag,Dashboard,CustomDashboard,Widget,Budget,AnnualBudget,Household,Alert,UserSettings,Insight,Recurring,Report,Export,DataHealth,NetWorth,MerchantAlias,Settlement,SavingsGoal,Forecast,DangerZone,View}Controller.java
 │       │   ├── dto/{auth/*,BudgetDto,HouseholdDto,AlertDto,UserSettingsDto,InsightDto}.java
 │       │   ├── exception/GlobalExceptionHandler.java
 │       │   ├── model/{User,Household,BankAccount,Category,Transaction,CategoryRule,Budget,Role}.java
@@ -116,11 +116,10 @@ spends/
 │           ├── application-k8s.yml     ← postgres.homelab.svc.cluster.local
 │           └── db/changelog/
 │               ├── db.changelog-master.xml
-│               ├── 001-initial-schema.sql
-│               ├── 002-seed-categories.sql
-│               ├── 003-category-rule-global.sql
-│               ├── 004-global-rules-seed.sql
-│               └── 005-user-claude-api-key.sql
+│               ├── 001-005 ... (initial schema, seeds, claude-api-key — *.sql)
+│               └── changes/   ← 006-030 *.yaml/*.sql (custom categories, views, import batch,
+│                                  goals, splits, annual budgets, aliases, settlements, widgets,
+│                                  dashboards, bundles, password reset, constraints+trgm indexes)
 ├── frontend/
 │   ├── package.json                   ← React 18, Vite 5, Tailwind 3
 │   ├── Dockerfile
@@ -161,7 +160,7 @@ spends/
 | GET | `/api/transactions` | JWT | Paginated list (search, categoryId, accountId, type, dateFrom, dateTo, sortBy, sortDir, page, size) |
 | PATCH | `/api/transactions/{id}/category` | JWT | Update category; optionally create CategoryRule |
 | PATCH | `/api/transactions/{id}/reviewed` | JWT | Toggle reviewed flag |
-| GET | `/api/dashboard/summary` | JWT | Monthly stats, category breakdown, 12-month trend, top merchants |
+| GET | `/api/dashboard/summary` | JWT | Lifetime overview: totals, category breakdown (rolled up to roots), bank activity, 24-month trend, per-year spending; `?accountId=` filter |
 | GET | `/api/budgets` | JWT | All categories with limit + spent for anchor month |
 | POST | `/api/budgets` | JWT | Set/update budget limit for a category+month |
 | DELETE | `/api/budgets/{id}` | JWT | Remove a budget limit |
@@ -214,6 +213,16 @@ spends/
 | PATCH | `/api/settlements/{id}/settle` | JWT | Mark a settlement as SETTLED |
 | DELETE | `/api/settlements/{id}` | JWT | Delete a settlement; returns 204 |
 | PUT | `/api/settings/notification-email` | JWT | Save or remove the daily digest notification email |
+| GET | `/api/transactions/summary` | JWT | Aggregate totals (spent/income/net/count) for the current filter set (no pagination) |
+| GET | `/api/transactions/time-aggregates` | JWT | Year/month/week spending aggregates for the visual time-picker drill-down (zero-filled) |
+| GET | `/api/transactions/tags` | JWT | Distinct tags extracted from the user's transaction remarks/merchants |
+| POST | `/api/category-rules/reapply` | JWT | Re-run all rules against existing transactions; returns counts changed |
+| GET | `/api/categories/bundle/export` | JWT | Export categories + rules + descriptions + exclusions as a shareable JSON bundle |
+| POST | `/api/categories/bundle/import` | JWT | Import a category bundle into the household |
+| POST | `/api/categories/bundle/preview` | JWT | Preview what a category bundle import would create/change (no writes) |
+| GET | `/api/forecast/monthly` | JWT | Project end-of-month total: anchor-month actual spend + pending recurring charges |
+| GET | `/api/widgets` · POST · PUT/{id} · DELETE/{id} · POST/{id}/move · GET/{id}/data · POST/preview | JWT | Custom dashboard widget CRUD + data + preview |
+| GET | `/api/dashboards` · POST · PATCH/{id} · DELETE/{id} · GET/{id}/widgets · POST/{id}/widgets | JWT | Multiple custom dashboards CRUD + per-dashboard widgets |
 
 ---
 
@@ -228,6 +237,9 @@ spends/
 | `GOOGLE_CLIENT_ID` | k8s SealedSecret `spends-oauth2-secret` | Google OAuth2 client ID |
 | `GOOGLE_CLIENT_SECRET` | k8s SealedSecret `spends-oauth2-secret` | Google OAuth2 client secret |
 | `FRONTEND_URL` | k8s ConfigMap (optional) | Base URL for post-OAuth2 redirect; defaults to `https://spends.onelifestack.com` |
+| `CORS_ALLOWED_ORIGINS` | k8s ConfigMap (optional) | Comma-separated explicit origins for CORS; defaults are scoped, not `*` |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | k8s Secret | SMTP config for anomaly digest + password-reset emails |
+| `NOTIFICATION_ENABLED` | k8s ConfigMap | Feature flag for the daily anomaly digest scheduler |
 
 ### Frontend
 None — API calls go to same-origin `/api/` and nginx proxies to backend.
@@ -659,3 +671,41 @@ Forgot-password flow: user enters email → backend sends a one-time reset link 
 - **Backend** — migration `027-password-reset-tokens.yaml` creates `password_reset_tokens` table (user FK cascade delete, SHA-256 hashed token, 1-hour expiry); `PasswordResetToken` entity; `PasswordResetService` silently ignores unknown emails (prevents email enumeration), deletes old token before issuing new one, sends email via `JavaMailSender`; two endpoints on `AuthController`: `POST /api/auth/forgot-password` and `POST /api/auth/reset-password`
 - **Frontend** — `ForgotPasswordPage.tsx` (public route `/forgot-password`): email form, shows "check your inbox" after submit without revealing registration status; `ResetPasswordPage.tsx` (public route `/reset-password`): reads `?token=` from URL, client-side password match validation, redirects to `/login` with success toast on completion; "Forgot password?" link below sign-in button on `LoginPage.tsx`
 - **Env vars** — reuses existing `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` from Phase 23; `app.frontend-url` in `application.yml` controls the reset link base URL (defaults to `https://spends.onelifestack.com`)
+
+### Feature — Lifetime Dashboard Redesign ✅ COMPLETE
+Home page reframed from "this month at a glance" to a lifetime overview.
+- **Backend** — two new `TransactionRepository` queries: `bankBreakdown` (per-bank total + count), `yearlySpending` (per-year withdrawal sum); `DashboardDto.Lifetime` + nested records (`LifetimeSummary`, `CategoryAmount`, `BankActivity`, `MonthlyPoint`, `YearlyPoint`); `DashboardService.getLifetime` reuses earliest/latest date + sums + `categoryBreakdown` over the full span, rolls child categories up to roots, builds a zero-filled last-24-month trend anchored on most recent data month
+- **Frontend** — `DashboardPage` rebuilt as lifetime cards + bank activity + per-year + 24-month trend; amber **import-reminder banner** when the most recent imported transaction is >7 days behind today
+
+### Feature — Category Bundles (shareable) ✅ COMPLETE
+- **Migration 025** — additive `category.description` + `category_rule.is_exclusion`
+- **`CategoryBundleController`** at `/api/categories/bundle` — `GET /export`, `POST /import`, `POST /preview`; packages categories + per-category rules + descriptions + exclusion rules into one JSON for cross-household sharing
+- **`CategorizationService`** — two-pass match so **exclusion rules** suppress their target category; empty-set fast path keeps existing behavior unchanged
+- **Frontend** — `categoryBundle.ts` client; `CategoriesPage` bundle share panel with raw-JSON editor, exclusion rules, and offer to re-apply to existing transactions after import
+- Legacy `/api/categories/{export,import}` and `/api/category-rules/{export,import}` still work; **`POST /api/category-rules/reapply`** + a standalone "Re-apply all" button in the Rules tab
+
+### Feature — Transaction Tags ✅ COMPLETE
+- **`TagController`** — `GET /api/transactions/tags` returns distinct tokens extracted from remarks/merchants (no noise filter — all tokens shown)
+- **Frontend** — inline tag chips on each transaction row; clicking a tag **appends** to the search box (not replace); `TagsPanel` to filter, assign categories, and create views from tags; year quick-filter chips
+
+### Feature — Visual Time-Picker Drill-Down ✅ COMPLETE
+- **`TransactionAggregateQuery`** + `GET /api/transactions/time-aggregates` — year → month → week spending aggregates, zero-filled; uses `HibernateCriteriaBuilder.year/month/day` for PostgreSQL portability
+- **`GET /api/transactions/summary`** — aggregate totals for the current filter set (no pagination)
+- **Frontend** — `TimePickers` component + view-switcher pill; URL-driven year/month/week state (clamps out-of-range week param to full-month range); per-card debit/credit split; **merchant drill-down**: clicking any merchant filters transactions to it
+- **`spent` field** correctly sums `withdrawalAmount + depositAmount` in by-time cards
+
+### Feature — Forecasting + Onboarding + Security Hardening ✅ COMPLETE
+- **Security** — CORS scoped to explicit origins (`CORS_ALLOWED_ORIGINS`); **Bucket4j rate limiting** via `RateLimitFilter` (10/min login, 5/min import + insights); `ResponseStatusException` handler in `GlobalExceptionHandler` for uniform error shape; `NetworkPolicy` restricting pod-to-pod traffic; audit logging (WARN) on bulk deletes, view create/delete, and API-key changes; nightly purge of expired password-reset tokens
+- **Performance** — JPA batch fetch size 25 (N+1 on tx list); **migrations 028–030**: unique constraints on `bank_account` + widget position, 5 new indexes, `pg_trgm` extension + GIN indexes for fast ILIKE search
+- **Forecasting** — `ForecastService` + `ForecastController`: `GET /api/forecast/monthly` combines anchor-month actual spend with pending recurring charges to project end-of-month total; `ForecastPanel` on Dashboard (progress bar, pending charges, stale-data warning)
+- **Onboarding** — persona picker (Personal / Household / Power User) on first login (`personaStore.ts`, `OnboardingPage`); nav filters to persona-relevant routes; `FeatureGuide` collapsible "How this page works" panel on 17 pages (per-page localStorage); `GettingStartedChecklist` on Dashboard (auto-checks from query cache, dismissible)
+- **TAG widget filter** implemented with real per-tag breakdown/trend/sum queries (was a stub)
+- **k8s** — frontend `livenessProbe` added; backend `startupProbe` failureThreshold 30→50 for slow Liquibase
+
+### Feature — Annual Review + UX deep-links ✅ COMPLETE
+- **`AnnualReviewPage`** (`/annual-review`, Insights nav) — year selector, 4 stat cards (spent/income/net/savings rate w/ emoji), highlights (best/toughest month, top category), amber callout for red months, month-by-month net bar chart (green=saved, red=deficit; bars link to filtered transactions), top-8 category breakdown
+- **Deep-links** — `DataHealthPage` near-duplicate rows link to `/transactions?dateFrom=&dateTo=`; `RecurringPage` "View transactions →" links to `/transactions?search={merchant}`
+
+### Docs
+- **`PRODUCTION-READINESS.md`** — 24-item audit across 3 tiers (🔴 critical security/DR, 🟡 high observability/HA/testing, 🟢 medium); each item has risk, steps, acceptance criteria, effort, files, and a progress table
+- **`README.md`** (open source) + **`USER-GUIDE.md`** (user-facing; partially stale — phase sections beyond auth marked "coming")
